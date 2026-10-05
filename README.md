@@ -1,53 +1,72 @@
 # mUSD Pocket
 
-> Create a payment request. Share it. Get paid in mUSD.
+> One balance. Any chain. Spend your Bitcoin without selling it.
 
-A deliberately narrow payments app on **Mezo**: request money, share a link or QR,
-the payer sends mUSD, and Pocket independently verifies the on-chain transfer and
-flips the request to **Paid**. No custody — funds go wallet-to-wallet.
+**Live:** https://mpocket.vercel.app
 
-## Stack
+## The idea
 
-- **Next.js 16** (App Router) · TypeScript · Tailwind v4
-- **wagmi v3 + viem** for wallet + chain reads/writes (injected wallets)
-- **TanStack Query** for client data
-- **Prisma + PostgreSQL** for request/contact records
-- **qrcode** for shareable QR codes
+Mezo gives Bitcoin holders a way to earn without selling. But the moment they want
+to *spend* that money, it's stranded — on one chain, behind a bridge, behind a
+second gas token, behind a seed phrase some people never write down.
 
-## Mezo config
+Pocket collapses all of that into a single balance.
 
-Single-sourced in `lib/mezo/config.ts`. Switch env with `NEXT_PUBLIC_MEZO_ENV`
-(`testnet` default, or `mainnet`).
+You sign in with X or Telegram and get a wallet that has no seed phrase. You send
+money to a username, a link, or a plain address. You get paid the same way. At no
+point does the chain, the bridge, or the gas token come up — because it shouldn't
+have to.
 
-| Env     | Chain ID | mUSD (18 decimals)                           |
-| ------- | -------- | -------------------------------------------- |
-| Mainnet | 31612    | `0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186` |
-| Testnet | 31611    | `0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503` |
+## How it works
 
-> Gas on Mezo is paid in **BTC**, not mUSD. Payers need a little BTC to pay a request.
+Your money lives in a vault on Mezo. When you deposit, it goes into that vault and
+your balance goes up. When you send, the vault pays the other person directly.
 
-## Payment verification (the trust boundary)
+In between, the app keeps a ledger — the same one you see as your balance — with
+one detail worth caring about. When you send money, that amount is *committed*
+rather than spent: it's held against the payment while the transfer is in flight,
+and only really leaves when the chain confirms it. If something goes wrong, the
+money goes back. Nobody's balance ever flickers.
 
-The frontend only submits a tx hash. The **server** (`lib/mezo/verify.ts`) reads the
-chain, parses `Transfer` logs emitted by the mUSD contract, and confirms the recipient
-and exact amount before marking a request paid. The client is never trusted.
+The person receiving never needs to hold any cryptocurrency for gas. Pocket pays
+that on their behalf. On Mezo, gas isn't paid in mUSD — it's paid in Bitcoin — and
+the entire point of the design is that a user should never have to know that.
 
-## Getting started
+## What's real, and what's a demo
 
-```bash
-pnpm install
+Pocket talks about three chains. Being honest about which ones are real matters
+more than the number being three.
 
-# 1. Point DATABASE_URL at your Postgres (Neon) in .env  (see .env.example)
-# 2. Create the tables
-pnpm exec prisma db push
+**Mezo is real.** It's the one chain the app actually transacts on, and every
+deposit, payout, and withdrawal is a real on-chain transaction on Mezo testnet.
 
-pnpm dev
-```
+**Base and Ethereum are modeled.** Their token and bridge addresses are real
+reference data, but no spendable mUSD exists on those testnets, so a free live
+demo can't use them. Cross-chain sends there are simulated end to end — the app
+records what *would* move, nets it against everything else in flight, and settles
+the difference. It's a faithful sketch of a settlement system, and it is a sketch.
 
-Open http://localhost:3000.
+## Who can move your money
 
-## Demo flow
+This is the part worth being straight about.
 
-1. Wallet A opens Pocket → **Request money** → 25 mUSD → gets a QR / link
-2. Wallet B opens the link → connects → **Pay 25 mUSD**
-3. Server verifies the Transfer → request shows **✓ Paid** on both sides
+Your funds aren't held by a company's wallet. They sit in a smart contract, and
+the only way out is through a key the app's server controls. That key can move
+money in the vault — it can pay people and cash people out — but it can never
+hold your money, and it can't take funds the vault doesn't have. It can also be
+replaced without touching anyone's balance.
+
+That's still a key someone has to be trusted with. A production version would
+split that authority across many parties so no single one could move funds alone.
+Calling that out is more useful than pretending it's not there.
+
+## Where it stands
+
+Pocket runs on Mezo testnet today with the real money path wired up: real
+deposits, real payouts, real gasless receives, and a ledger that holds its
+balance invariants under failure. Base and Ethereum routing is modeled, the
+server key is a single point of trust, and shareable payment links exist in the
+data model but aren't the main way people send yet.
+
+The demo funds live in a vault on Mezo testnet —
+[`0x251B…1735`](https://explorer.mezo.org/address/0x251B3302c0CcB1cFBeb0cda3dE06C2D312a41735).
