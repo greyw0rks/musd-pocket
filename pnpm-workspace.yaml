@@ -5,6 +5,9 @@ allowBuilds:
   bufferutil: false
   keccak: false
   prisma: true
+  # Native resolver used only by ESLint (not the Next build); napi-rs ships its
+  # platform binaries as optional deps, so the postinstall isn't needed.
+  unrs-resolver: false
   utf-8-validate: false
 onlyBuiltDependencies:
   - "@prisma/client"
