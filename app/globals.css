@@ -1,0 +1,200 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/*
+  Pocket — Spend your Bitcoin without selling it.
+  Mezo infrastructure × consumer fintech
+  Supports light and dark mode via .dark class on html element
+*/
+:root {
+  /* Light mode colors */
+  --background: #f7f8f6;
+  --surface: #ffffff;
+  --surface-2: #f1f3f0;
+  --foreground: #111312;
+  --muted: #6b716d;
+  --border: #e4e7e4;
+  --primary: #18a86b; /* MUSD green */
+  --primary-dark: #087a4b;
+  --primary-foreground: #ffffff;
+  --primary-soft: #e4f4ec;
+  --success: #18a86b;
+  --success-soft: #e4f4ec;
+  --warning: #e7a83b;
+  --warning-soft: #fbf0dc;
+  --error: #d64545;
+  --error-soft: #fbe7e7;
+  --radius: 0.875rem;
+  /* Mezo colors for accent */
+  --mezo: #FF5A36;
+  --mezo-soft: #FF7A5E;
+  --mezo-dark: #C93F25;
+
+  /*
+    shadcn/ui token aliases (components/shadcn/*). Defined ONCE in :root as
+    references to Pocket's own tokens — every referenced var is redefined under
+    .dark, so these resolve correctly in both themes without duplication.
+    Never set them to literals; that would fork the palette.
+  */
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--foreground);
+  --muted-foreground: var(--muted);
+  --accent: var(--surface-2);
+  --accent-foreground: var(--foreground);
+  --destructive: var(--error);
+  --destructive-foreground: #ffffff;
+  --input: var(--border);
+  --ring: var(--primary);
+}
+
+.dark {
+  /* Dark mode colors */
+  --background: #0A0A0A;
+  --surface: #111111;
+  --surface-2: #171717;
+  --border: #292929;
+  --foreground: #F5F5F0;
+  --muted: #A3A3A0;
+  --primary: #FF5A36; /* Mezo orange as primary in dark */
+  --primary-dark: #E94E2F;
+  --primary-foreground: #FFFFFF;
+  --primary-soft: #FF7A5E20; /* 20% opacity */
+  --success: #72D49A;
+  /* Note: we keep the same mezo colors */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-dark: var(--primary-dark);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-error: var(--error);
+  --color-error-soft: var(--error-soft);
+  --color-mezo: var(--mezo);
+  --color-mezo-soft: var(--mezo-soft);
+  --color-mezo-dark: var(--mezo-dark);
+
+  /* shadcn/ui utility mappings — lets components/shadcn/* use bg-card, ring-ring, etc. */
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tabular figures for amounts */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* For technical numbers */
+.technical {
+  font-variant-numeric: tabular-nums;
+}
+
+.mezo {
+  color: var(--mezo);
+}
+
+/* ---------------------------------------------------------------------------
+   Landing-page motion.
+
+   Orchestration (reveals, count-ups) lives in components/landing/* via `motion`.
+   What remains here are the ambient CSS loops that run with no JS at all:
+   the mUSD token travelling along the BTC → mUSD → Pay connectors.
+   (`left`/`top` are animated rather than transform so the dot can travel a
+   percentage of an arbitrary-width connector.)
+--------------------------------------------------------------------------- */
+@keyframes flow-x {
+  0% {
+    left: 0;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
+}
+
+@keyframes flow-y {
+  0% {
+    top: 0;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+/* Anchor jumps should land below the sticky header. */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Honour the OS setting: kill ambient loops and smooth scrolling entirely. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,12 @@
+# Foundry
+out/
+cache/
+broadcast/*/*/dry-run/
+
+# Dependencies are restored with `forge install`, not vendored (see README).
+lib/
+
+# Secrets — never commit real keys/RPCs
+.env
+.env.*
+!.env.example

@@ -1,0 +1,10 @@
+import { createPublicClient, http } from "viem";
+import { mezoTestnet } from "viem/chains";
+const client = createPublicClient({ chain: mezoTestnet, transport: http("https://rpc.test.mezo.org") });
+const r = await client.getTransactionReceipt({ hash: process.argv[2] });
+console.log("status:  ", r.status);
+console.log("block:   ", r.blockNumber.toString());
+console.log("gasUsed: ", r.gasUsed.toString());
+console.log("from:    ", r.from);
+console.log("to:      ", r.to);
+console.log("logs:    ", r.logs.length);

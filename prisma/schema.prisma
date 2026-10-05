@@ -1,0 +1,253 @@
+// MUSD Pocket — chain-abstracted payment ledger.
+//
+// The DB is an INDEXED REPRESENTATION of on-chain state, not the source of truth.
+// On-chain (real, Mezo testnet): vault balances, deposits, withdrawals, payouts.
+// Off-chain (here): users, ledger balances, routing/settlement accounting, history.
+// Addresses stored LOWERCASE for lookups; the UI re-checksums for display.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+/// Supported chains. Only MEZO is real on testnet; BASE/ETHEREUM are modeled.
+enum ChainKey {
+  MEZO
+  BASE
+  ETHEREUM
+}
+
+enum TxType {
+  DEPOSIT
+  SEND
+  RECEIVE
+  WITHDRAW
+  SETTLEMENT
+}
+
+enum TxStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  SETTLED
+}
+
+enum PaymentStatus {
+  PENDING // created, not yet paid out
+  PAID // instant payout delivered on destination chain
+  SETTLED // obligation netted + settled across vaults
+  FAILED // payout failed on-chain; funds returned to the sender
+}
+
+enum ObligationStatus {
+  OPEN
+  NETTED
+  SETTLED
+}
+
+// <!-- APPEND-MARKER -->
+
+/// A marketing-site waitlist signup. Deliberately NOT a User — these are
+/// anonymous emails captured before launch, with no wallet or identity.
+model Waitlist {
+  id        String   @id @default(cuid())
+  email     String   @unique // normalised to lowercase before storage
+  source    String? // which surface captured it, e.g. "landing"
+  createdAt DateTime @default(now())
+
+  @@map("waitlist")
+}
+
+/// A Pocket user. Identity = X/Telegram; the embedded Privy wallet is one EVM
+/// address usable on every chain. Balance split into available vs frozen (held
+/// against an in-flight payment until it settles).
+model User {
+  id               String   @id @default(cuid())
+  username         String   @unique
+  xId              String?  @unique
+  xHandle          String?
+  telegramId       String?  @unique
+  telegramHandle   String?
+  walletAddress    String   @unique // lowercase embedded-wallet EOA
+  preferredChain   ChainKey @default(MEZO)
+  availableBalance Decimal  @default(0) @db.Decimal(38, 18)
+  frozenBalance    Decimal  @default(0) @db.Decimal(38, 18)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  transactions     Transaction[]
+  deposits         Deposit[]
+  withdrawals      Withdrawal[]
+  sentPayments     Payment[]     @relation("PaymentSender")
+  receivedPayments Payment[]     @relation("PaymentRecipient")
+
+  @@index([walletAddress])
+  @@map("users")
+}
+
+/// Flat activity feed row (what the Activity screen renders).
+model Transaction {
+  id           String    @id @default(cuid())
+  type         TxType
+  userId       String
+  user         User      @relation(fields: [userId], references: [id])
+  counterparty String? // @username or address, display-only
+  amount       Decimal   @db.Decimal(38, 18)
+  token        String // mUSD contract (lowercase)
+  sourceChain  ChainKey?
+  destChain    ChainKey?
+  status       TxStatus  @default(PENDING)
+  paymentId    String? // links SEND/RECEIVE to a Payment
+  txHash       String?
+  note         String?
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
+  @@index([status])
+  @@map("transactions")
+}
+
+/// Inbound funding: MUSD lands in a vault, ledger credits the user.
+model Deposit {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  chain        ChainKey
+  amount       Decimal  @db.Decimal(38, 18)
+  txHash       String   @unique // the on-chain Transfer into the vault
+  vaultAddress String
+  status       TxStatus @default(PROCESSING)
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@map("deposits")
+}
+
+/// Outbound: vault pays MUSD to an external address on the chosen chain.
+model Withdrawal {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  chain     ChainKey
+  toAddress String // lowercase
+  amount    Decimal  @db.Decimal(38, 18)
+  status    TxStatus @default(PENDING)
+  txHash    String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("withdrawals")
+}
+
+/// A Pocket-to-Pocket (or Pocket-to-address) send. `paymentId` is the bytes32
+/// handle the on-chain vault payout is tagged with (idempotency key).
+model Payment {
+  id               String        @id @default(cuid())
+  paymentId        String        @unique // bytes32 hex
+  senderId         String
+  sender           User          @relation("PaymentSender", fields: [senderId], references: [id])
+  recipientId      String?
+  recipient        User?         @relation("PaymentRecipient", fields: [recipientId], references: [id])
+  recipientAddress String? // lowercase, for non-Pocket recipients
+  amount           Decimal       @db.Decimal(38, 18)
+  note             String?
+  destChain        ChainKey
+  status           PaymentStatus @default(PENDING)
+  payoutTxHash     String? // real tx when destChain == MEZO
+  createdAt        DateTime      @default(now())
+  paidAt           DateTime?
+  settledAt        DateTime?
+
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([status])
+  @@map("payments")
+}
+
+/// Point-in-time vault liquidity per chain — feeds the protocol dashboard.
+model VaultSnapshot {
+  id          String   @id @default(cuid())
+  chain       ChainKey
+  balance     Decimal  @db.Decimal(38, 18)
+  blockNumber BigInt?
+  capturedAt  DateTime @default(now())
+
+  @@index([chain])
+  @@map("vault_snapshots")
+}
+
+/// A cross-chain IOU created when a payout happens on a chain other than where
+/// the source liquidity sits. Netted + settled in batches.
+model SettlementObligation {
+  id        String           @id @default(cuid())
+  fromChain ChainKey
+  toChain   ChainKey
+  amount    Decimal          @db.Decimal(38, 18)
+  status    ObligationStatus @default(OPEN)
+  window    String? // settlement window id once netted
+  paymentId String?
+  createdAt DateTime         @default(now())
+
+  @@index([status])
+  @@map("settlement_obligations")
+}
+
+/// A settlement batch: the net movements executed (simulated NTT) in a window.
+model Settlement {
+  id           String    @id @default(cuid())
+  window       String    @unique
+  netMovements Json // [{ fromChain, toChain, amount }]
+  status       TxStatus  @default(PENDING)
+  executedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@map("settlements")
+}
+
+model Contact {
+  id             String   @id @default(cuid())
+  ownerAddress   String // lowercase
+  contactAddress String // lowercase
+  label          String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([ownerAddress, contactAddress])
+  @@index([ownerAddress])
+  @@map("contacts")
+}
+
+/// Retained for P1 (QR / shareable payment links). Status flow unchanged.
+model PaymentRequest {
+  id               String        @id @default(cuid())
+  shortId          String        @unique
+  creatorAddress   String
+  recipientAddress String
+  amount           Decimal       @db.Decimal(38, 18)
+  token            String
+  chainId          Int
+  description      String?
+  status           RequestStatus @default(PENDING)
+  txHash           String?
+  payerAddress     String?
+  expiresAt        DateTime?
+  createdAt        DateTime      @default(now())
+  paidAt           DateTime?
+
+  @@index([creatorAddress])
+  @@index([status])
+  @@map("payment_requests")
+}
+
+enum RequestStatus {
+  PENDING
+  PROCESSING
+  PAID
+  EXPIRED
+}
