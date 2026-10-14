@@ -46,5 +46,8 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Everything under `_next` is Next's own machinery — assets, the image
+  // optimiser, and the dev HMR socket. Intercepting those breaks hot reload,
+  // so they are excluded wholesale rather than one path at a time.
+  matcher: ["/((?!_next|favicon.ico).*)"],
 };

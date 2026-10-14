@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:amount": "node --experimental-strip-types features/payments/amount.test.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
