@@ -1,0 +1,1006 @@
+/*
+  Pocket — the design system.
+
+  Ported from the wallet mock-up the product was drawn from: one flat, high
+  contrast surface language, Poppins, a purple/yellow accent pair, and no
+  transparency anywhere. That last part is the whole difference from the
+  pass this replaced. Glass reads well on a dark screen and turns to mud on a
+  light one, so the moment the app had to work in both, the surfaces had to
+  become opaque and the hierarchy had to be carried by *fill* instead of by
+  blur — a yellow card, a purple card, a white card, and nothing stacked.
+
+  Everything below is driven by the token block at the top. Light and dark are
+  the same stylesheet with a different set of values, which is the only way to
+  keep two themes from drifting apart.
+
+  Colours are named as *roles*, never as pigments: `--s` is a surface, `--t` is
+  text on it, `--inv` is the one inverse pair the primary button uses. A rule
+  that hard-codes a hex is a rule that breaks in the other theme, so there are
+  none below this comment.
+
+  `data-theme` on `.pocket-root` decides the theme. Left unset, the OS setting
+  decides — the same contract the reference used.
+*/
+
+/* ------------------------------------------------------------------ tokens */
+
+.pocket-root {
+  --bg: #f4f4f6;
+  --s: #ffffff;
+  --s2: #f1f1f4;
+  --t: #0b0b0d;
+  --m: #8a8a93;
+  --p: #a63fd9;
+  --y: #ffc83d;
+  --g: #22c55e;
+  --r: #ef4444;
+  /*
+    Green is two colours, not one.
+
+    `--g` is a *fill*: the checkmark disc, the success circle, the tick on a
+    contact. It is deliberately bright, and it carries white on top of it.
+
+    `--g-ink` is the same idea used as *text* — the "+$120.00" on a settled
+    row, the settled pill, the valid-username hint. The bright green is
+    unreadable as ink on a white page (2.3:1), which is invisible when you are
+    looking at a screenshot and obvious when you are looking at a phone in
+    daylight. So the ink is a darker green in the light theme and reverts to the
+    bright one in the dark theme, where the fill colour is already the readable
+    choice. Same split as the `pk-pill--warn` mix, expressed as a token because
+    this one is used in prose.
+  */
+  --g-ink: #15803d;
+  --ph: #dcdce2;
+  --inv: #0b0b0d;
+  --invt: #ffffff;
+
+  /*
+    A hairline, derived rather than picked: the reference has no borders at
+    all, and adding two hand-chosen greys would be two more values to keep in
+    step across themes. This is the text colour at 8%, so it inverts with it.
+  */
+  --line: color-mix(in srgb, var(--t) 8%, transparent);
+  /* The wash detail cells sit on inside the yellow and purple cards. */
+  --wash: color-mix(in srgb, #000 11%, transparent);
+
+  color-scheme: light;
+  color: var(--t);
+  background: var(--ph);
+  font-family: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 500;
+}
+
+@media (prefers-color-scheme: dark) {
+  .pocket-root:not([data-theme="light"]) {
+    --bg: #000000;
+    --s: #161618;
+    --s2: #222226;
+    --t: #ffffff;
+    --m: #85858f;
+    --ph: #1c1c20;
+    --inv: #ffffff;
+    --invt: #000000;
+    --g-ink: var(--g);
+    --line: color-mix(in srgb, var(--t) 14%, transparent);
+    color-scheme: dark;
+  }
+}
+
+.pocket-root[data-theme="dark"] {
+  --bg: #000000;
+  --s: #161618;
+  --s2: #222226;
+  --t: #ffffff;
+  --m: #85858f;
+  --ph: #1c1c20;
+  --inv: #ffffff;
+  --invt: #000000;
+  --g-ink: var(--g);
+  --line: color-mix(in srgb, var(--t) 14%, transparent);
+  color-scheme: dark;
+}
+
+/* ------------------------------------------------------------------- shell */
+
+/*
+  The app column.
+
+  On a phone this is simply the viewport. On anything wider it stays a phone's
+  width and rounds off, so the layout is the one that was designed rather than
+  a mobile grid stretched across a desktop.
+*/
+.pk-app {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(100vw, 400px);
+  min-height: 100svh;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+@media (min-width: 420px) {
+  .pk-app {
+    min-height: min(100svh, 820px);
+    height: min(100svh, 820px);
+    border-radius: 44px;
+  }
+}
+
+/*
+  A screen.
+
+  A flex child of the motion layer rather than an absolutely positioned box,
+  because the layer is what animates between screens — two absolutely
+  positioned screens would both be in the flow at once and the transition would
+  have nothing to move. It scrolls itself, so a screen is plain content and
+  never nests a second scroller.
+*/
+.pk-scr {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px calc(110px + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  background: var(--bg);
+}
+
+.pk-scr::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+  A screen with no dock under it — a full-screen flow like the send sheet.
+  It still scrolls; it just does not reserve room for a bar that is not there.
+*/
+.pk-scr--plain {
+  padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+}
+
+/* ------------------------------------------------------------------ sheets */
+
+/*
+  The panel that rises over a screen.
+
+  Opaque, like everything else here — a translucent sheet over an opaque app is
+  the one place the old glass recipe still half-worked, and it still read as a
+  different material. It is the same surface colour as a card, with a heavier
+  radius and a grab handle, which is enough to say "this is on top".
+*/
+.pk-sheet {
+  border-radius: 32px 32px 0 0;
+  background: var(--s);
+  color: var(--t);
+  box-shadow: 0 -12px 40px rgb(0 0 0 / 0.28);
+}
+
+.pk-sheet-handle {
+  width: 36px;
+  height: 4px;
+  margin: 0 auto 12px;
+  border-radius: 2px;
+  background: var(--ph);
+}
+
+/*
+  The shell contract, kept from the previous pass because it is still load-
+  bearing: a screen inside the absolutely positioned motion layer has to be
+  allowed to shrink below its content, or it grows past the shell, gets clipped
+  by `overflow: hidden`, and its inner scroll container never scrolls.
+*/
+.pocket-layer > * {
+  min-height: 0;
+}
+
+/* ------------------------------------------------------------------- type */
+
+.pk-h1 {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 8px 0 4px;
+}
+
+.pk-h2 {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.pk-m {
+  color: var(--m);
+  font-size: 12px;
+}
+
+.pk-big {
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+}
+
+.pk-amt {
+  font-size: 52px;
+  font-weight: 600;
+  text-align: center;
+  margin: 14px 0 4px;
+  letter-spacing: -1px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pk-pos {
+  color: var(--g-ink);
+}
+
+/* ------------------------------------------------------------------ layout */
+
+.pk-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pk-sp {
+  justify-content: space-between;
+}
+
+.pk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  margin-bottom: 14px;
+  flex: none;
+}
+
+.pk-bar > .pk-h2 {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pk-center {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 10px;
+  align-content: center;
+  padding: 24px 0;
+}
+
+/* ------------------------------------------------------------- controls */
+
+.pk-ib {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 50%;
+  border: 0;
+  display: grid;
+  place-items: center;
+  background: var(--s);
+  color: var(--t);
+  cursor: pointer;
+  font: inherit;
+  transition: transform 0.2s;
+}
+
+.pk-ib--flat {
+  background: var(--s2);
+}
+
+.pk-ib:active,
+.pk-btn:active,
+.pk-li:active,
+.pk-tile:active,
+.pk-chip:active {
+  transform: scale(0.95);
+}
+
+.pk-av {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #a63fd9, #ffc83d);
+  color: #fff;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.pk-av--s {
+  width: 40px;
+  height: 40px;
+  font-size: 13px;
+}
+
+.pk-av--l {
+  width: 84px;
+  height: 84px;
+  font-size: 30px;
+}
+
+.pk-btn {
+  width: 100%;
+  min-height: 54px;
+  border-radius: 27px;
+  border: 0;
+  padding: 0 22px;
+  background: var(--inv);
+  color: var(--invt);
+  font: 600 15px var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.pk-btn--alt {
+  background: var(--s);
+  color: var(--t);
+}
+
+.pk-btn--pu {
+  background: var(--p);
+  color: #fff;
+}
+
+.pk-btn--rd {
+  background: var(--r);
+  color: #fff;
+}
+
+.pk-btn[disabled] {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.pk-in {
+  width: 100%;
+  height: 54px;
+  border-radius: 16px;
+  border: 1.5px solid transparent;
+  background: var(--s);
+  color: var(--t);
+  font: 500 15px var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  padding: 0 16px;
+  outline: 0;
+  transition: border-color 0.2s;
+}
+
+.pk-in::placeholder {
+  color: var(--m);
+}
+
+.pk-in:focus {
+  border-color: var(--p);
+}
+
+.pk-chips {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.pk-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.pk-chip {
+  flex: none;
+  padding: 9px 16px;
+  border-radius: 20px;
+  border: 0;
+  background: var(--s);
+  color: var(--t);
+  font: 500 13px var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.pk-chip--on {
+  background: var(--inv);
+  color: var(--invt);
+}
+
+.pk-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--s2);
+  color: var(--m);
+}
+
+.pk-pill--ok {
+  background: color-mix(in srgb, var(--g) 20%, transparent);
+  color: var(--g-ink);
+}
+
+.pk-pill--warn {
+  background: color-mix(in srgb, var(--y) 26%, transparent);
+  color: color-mix(in srgb, var(--y) 55%, var(--t));
+}
+
+.pk-pill--info {
+  background: color-mix(in srgb, var(--p) 18%, transparent);
+  color: var(--p);
+}
+
+/* Toggle switch — settings rows. */
+.pk-tg {
+  width: 50px;
+  height: 30px;
+  flex: none;
+  border-radius: 15px;
+  border: 0;
+  background: var(--s2);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.pk-tg::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.3s;
+}
+
+.pk-tg--on {
+  background: var(--p);
+}
+
+.pk-tg--on::after {
+  transform: translateX(20px);
+}
+
+/* ------------------------------------------------------------------ cards */
+
+.pk-card {
+  background: var(--s);
+  border-radius: 24px;
+  padding: 16px;
+}
+
+.pk-li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.pk-li--static {
+  cursor: default;
+}
+
+.pk-li > .pk-f {
+  flex: 1;
+  min-width: 0;
+}
+
+.pk-li > .pk-f > b {
+  font-weight: 600;
+  display: block;
+}
+
+.pk-li--static:active {
+  transform: none;
+}
+
+.pk-ico {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--s2);
+  display: grid;
+  place-items: center;
+}
+
+.pk-ico--lg {
+  width: 70px;
+  height: 70px;
+}
+
+.pk-ico--xl {
+  width: 80px;
+  height: 80px;
+}
+
+/*
+  A titled group of rows. The heading sits outside the card so the card itself
+  stays a pure surface — which is what lets the same card type hold a form, a
+  list or a keypad without any of them looking like a different component.
+*/
+.pk-group {
+  margin-top: 16px;
+}
+
+.pk-group > .pk-m {
+  margin-bottom: 6px;
+}
+
+.pk-group > .pk-card {
+  padding: 4px 16px;
+}
+
+/* ------------------------------------------------------- balance card stack */
+
+/*
+  Two cards stacked with the bottom one peeking out above the top one, and a
+  tap swapping which is which. The peek is what advertises that there is a
+  second card at all; the swap is the only interaction on the screen that is
+  not a button.
+*/
+.pk-cards {
+  position: relative;
+  height: 262px;
+  margin: 6px 0 18px;
+  flex: none;
+}
+
+.pk-cd {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-radius: 26px;
+  padding: 18px 20px;
+  color: #111;
+  transition:
+    transform 0.6s cubic-bezier(0.3, 1.2, 0.4, 1),
+    top 0.6s cubic-bezier(0.3, 1.2, 0.4, 1);
+}
+
+.pk-cd--back {
+  top: 0;
+  height: 150px;
+  padding: 13px 20px;
+  background: var(--y);
+  z-index: 1;
+  cursor: pointer;
+}
+
+.pk-cd--front {
+  top: 44px;
+  height: 218px;
+  background: var(--p);
+  color: #fff;
+  z-index: 2;
+  box-shadow: 0 -10px 30px #0004;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.pk-cards--flip .pk-cd--back {
+  top: 112px;
+  z-index: 3;
+  transform: scale(0.97);
+}
+
+.pk-cards--flip .pk-cd--front {
+  top: 0;
+  z-index: 2;
+  transform: scale(0.95);
+}
+
+.pk-det {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.5s 0.15s;
+}
+
+.pk-cards--flip .pk-det {
+  opacity: 1;
+  transform: none;
+}
+
+.pk-det > div {
+  background: var(--wash);
+  border-radius: 16px;
+  padding: 10px 12px;
+}
+
+.pk-det span {
+  font-size: 11px;
+  opacity: 0.7;
+  display: block;
+}
+
+.pk-det b {
+  font-size: 16px;
+  display: block;
+}
+
+.pk-det small {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+/*
+  The inverse corner where the Repay button meets the purple card.
+
+  Two circles of the page colour, one at the top-right of the notch and one at
+  its bottom-left, carve a fillet out of the card's corner so the button looks
+  welded to the card rather than dropped onto it.
+*/
+.pk-notch {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: 8px;
+  background: var(--bg);
+  border-top-left-radius: 34px;
+}
+
+.pk-notch::before,
+.pk-notch::after {
+  content: "";
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  background: radial-gradient(circle at 0 0, transparent 22px, var(--bg) 22px);
+}
+
+.pk-notch::before {
+  right: 0;
+  top: -22px;
+}
+
+.pk-notch::after {
+  left: -22px;
+  bottom: 0;
+}
+
+.pk-rep {
+  height: 50px;
+  padding: 0 26px;
+  border-radius: 25px;
+  background: #0b0b0d;
+  color: #fff;
+  border: 0;
+  box-shadow: inset 0 0 0 1px #2a2a2e;
+  font: 600 14px var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.pk-rep:active {
+  transform: scale(0.95);
+}
+
+/* ----------------------------------------------------------- action tiles */
+
+.pk-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  text-align: center;
+  padding: 18px 8px;
+}
+
+.pk-tile {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  background: none;
+  border: 0;
+  color: var(--t);
+  font: 500 12px var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.pk-tile > span {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: var(--s2);
+  display: grid;
+  place-items: center;
+}
+
+/* ------------------------------------------------------------------ keypad */
+
+.pk-key {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 10px 0;
+  flex: none;
+}
+
+.pk-key > button {
+  height: 56px;
+  border: 0;
+  border-radius: 16px;
+  background: none;
+  color: var(--t);
+  font: 500 24px var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.pk-key > button:active {
+  background: var(--s);
+}
+
+/* ------------------------------------------------------------- swipe to pay */
+
+.pk-sw {
+  position: relative;
+  height: 58px;
+  flex: none;
+  border-radius: 29px;
+  background: var(--s);
+  overflow: hidden;
+  user-select: none;
+  touch-action: none;
+}
+
+.pk-sw > i {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-style: normal;
+  color: var(--m);
+  font-weight: 500;
+  font-size: 13px;
+}
+
+/*
+  The handle that arms the payment, and the trail it leaves behind.
+
+  The inverse fill, not the brand purple. The reference puts the brand colour
+  on the pair of cards that *hold* the money and the inverse on every control
+  that *moves* it — Repay is black, the primary button is black — and a purple
+  handle here would be the one money-moving control in the app speaking the
+  language of the balance display. The purple stays where it means something.
+*/
+.pk-sw > .pk-sw-k {
+  position: absolute;
+  left: 5px;
+  top: 5px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--inv);
+  display: grid;
+  place-items: center;
+  color: var(--invt);
+  cursor: grab;
+  font-size: 20px;
+}
+
+/*
+  The trail the handle leaves behind.
+
+  Inset to the handle's own box rather than filling the track. The trail used
+  to run the full height from the very left edge, which meant that at rest —
+  before anyone had dragged anything — there was already a grey slab sitting
+  under the handle, taller than it and sticking out to its left. It read as a
+  smudge. Matching the handle's box means the trail is exactly hidden behind
+  the handle at rest and only appears as the handle uncovers it.
+*/
+.pk-sw > .pk-sw-fl {
+  position: absolute;
+  left: 5px;
+  top: 5px;
+  bottom: 5px;
+  width: 0;
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--inv) 18%, transparent);
+}
+
+.pk-sw[data-disabled="true"] {
+  opacity: 0.4;
+}
+
+/* -------------------------------------------------------------------- dock */
+
+/*
+  The floating dock.
+
+  Always dark, in both themes. It floats over content that scrolls beneath it,
+  so it has to stay legible whatever passes under — the same reasoning that
+  made it the one dark object in the light theme's reference. The active tab
+  grows a white pill and reveals its label, which is what makes three icons
+  readable as navigation instead of as three buttons.
+*/
+.pk-nav {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  width: fit-content;
+  margin-inline: auto;
+  z-index: 40;
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 30px;
+  background: #0b0b0d;
+  box-shadow: 0 8px 24px #0005;
+}
+
+.pk-nav > button {
+  height: 46px;
+  min-width: 46px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 23px;
+  background: none;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  font: 600 14px var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  transition: all 0.35s;
+}
+
+.pk-nav > button[aria-current="page"] {
+  background: #fff;
+  color: #000;
+}
+
+.pk-nav > button > span {
+  display: none;
+}
+
+.pk-nav > button[aria-current="page"] > span {
+  display: inline;
+}
+
+/* --------------------------------------------------------------- feedback */
+
+.pk-circ {
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 48px;
+  color: #fff;
+  animation: pk-pop 0.6s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+.pk-spin {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  border: 5px solid var(--s2);
+  border-top-color: var(--p);
+  animation: pk-rot 0.8s linear infinite;
+}
+
+.pk-toast {
+  position: absolute;
+  top: calc(18px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  z-index: 60;
+  transform: translate(-50%, -90px);
+  padding: 12px 20px;
+  border-radius: 24px;
+  background: var(--inv);
+  color: var(--invt);
+  font-weight: 500;
+  font-size: 13px;
+  transition: transform 0.5s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+.pk-toast--on {
+  transform: translate(-50%, 0);
+}
+
+.pk-qr {
+  background: #fff;
+  border-radius: 24px;
+  padding: 18px;
+  width: 230px;
+  margin: 14px auto;
+  animation: pk-pop 0.6s both;
+}
+
+/* --------------------------------------------------------------- animation */
+
+@keyframes pk-pop {
+  from {
+    transform: scale(0);
+  }
+}
+
+@keyframes pk-rot {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pk-up {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+}
+
+@keyframes pk-grow {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+/*
+  Entrance stagger.
+
+  Applied to a screen's direct children by `Stagger`, so a list arrives as a
+  list rather than as one block. Capped at six delays: past that the last row
+  would still be arriving after the user has started reading it.
+*/
+.pk-up {
+  animation: pk-up 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.pk-up:nth-child(2) {
+  animation-delay: 0.05s;
+}
+.pk-up:nth-child(3) {
+  animation-delay: 0.1s;
+}
+.pk-up:nth-child(4) {
+  animation-delay: 0.15s;
+}
+.pk-up:nth-child(5) {
+  animation-delay: 0.2s;
+}
+.pk-up:nth-child(n + 6) {
+  animation-delay: 0.25s;
+}
+
+/* The bar chart in Spending: one bar at a time, left to right. */
+.pk-bar-grow {
+  transform-origin: 0 125px;
+  animation: pk-grow 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Hide scrollbars on any horizontal scroller (chips, recent people). */
+.pocket-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.pocket-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pocket-root *,
+  .pocket-root *::before,
+  .pocket-root *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
