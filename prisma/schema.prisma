@@ -40,6 +40,7 @@ enum TxStatus {
 
 enum PaymentStatus {
   PENDING // created, not yet paid out
+  UNCLAIMED // held by Pocket for someone who has no account yet
   PAID // instant payout delivered on destination chain
   SETTLED // obligation netted + settled across vaults
   FAILED // payout failed on-chain; funds returned to the sender
@@ -49,6 +50,14 @@ enum ObligationStatus {
   OPEN
   NETTED
   SETTLED
+}
+
+/// Kept so the schema still describes the live database, which carries this
+/// column on every user row (all currently PERSONAL). A retired design — see
+/// the note on Payment.claimHandle. Do not build on it.
+enum AccountRole {
+  PERSONAL
+  MERCHANT
 }
 
 // <!-- APPEND-MARKER -->
@@ -75,9 +84,10 @@ model User {
   telegramId       String?  @unique
   telegramHandle   String?
   walletAddress    String   @unique // lowercase embedded-wallet EOA
-  preferredChain   ChainKey @default(MEZO)
-  availableBalance Decimal  @default(0) @db.Decimal(38, 18)
-  frozenBalance    Decimal  @default(0) @db.Decimal(38, 18)
+  preferredChain   ChainKey    @default(MEZO)
+  role             AccountRole @default(PERSONAL)
+  availableBalance Decimal     @default(0) @db.Decimal(38, 18)
+  frozenBalance    Decimal     @default(0) @db.Decimal(38, 18)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -159,6 +169,11 @@ model Payment {
   recipientId      String?
   recipient        User?         @relation("PaymentRecipient", fields: [recipientId], references: [id])
   recipientAddress String? // lowercase, for non-Pocket recipients
+  /// Retired "hold and claim" design: the recipient had no account yet, so the
+  /// send was reserved against a name and released when someone registered it.
+  /// One live row still carries this — a PAID payment reserved for "musd_pocket".
+  /// Kept only so the schema describes the live database. Nothing reads it.
+  claimHandle      String? // reserved for a name that has no account yet
   amount           Decimal       @db.Decimal(38, 18)
   note             String?
   destChain        ChainKey
@@ -167,10 +182,12 @@ model Payment {
   createdAt        DateTime      @default(now())
   paidAt           DateTime?
   settledAt        DateTime?
+  claimedAt        DateTime? // when a reserved payment found its owner
 
   @@index([senderId])
   @@index([recipientId])
   @@index([status])
+  @@index([claimHandle, status])
   @@map("payments")
 }
 
