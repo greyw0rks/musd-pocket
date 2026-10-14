@@ -87,6 +87,10 @@ export async function POST(req: NextRequest) {
           toAddress: toAddress.toLowerCase(),
           amount,
           status: "PROCESSING",
+          // Persisted so the reconciler can ask the vault's `processed` mapping
+          // whether this release happened. Without it, an uncertain withdrawal
+          // has no on-chain handle and can never be safely resolved.
+          paymentId,
         },
       });
       const txRow = await tx.transaction.create({

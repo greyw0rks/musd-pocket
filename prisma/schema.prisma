@@ -139,6 +139,10 @@ model Withdrawal {
   amount    Decimal  @db.Decimal(38, 18)
   status    TxStatus @default(PENDING)
   txHash    String?
+  /// The bytes32 tag the on-chain `withdraw` was called with. Needed to ask the
+  /// vault's `processed` mapping whether the release happened — without it a
+  /// withdrawal whose outcome is unknown cannot be reconciled safely.
+  paymentId String?  @unique
   createdAt DateTime @default(now())
 
   @@index([userId])

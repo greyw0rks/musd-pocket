@@ -14,6 +14,16 @@ import { NextResponse, type NextRequest } from "next/server";
 /** The only API endpoint the landing page needs. */
 const PUBLIC_API_ROUTES = new Set(["/api/waitlist"]);
 
+/**
+ * Machine endpoints — not for browsers, and not unauthenticated. They are let
+ * through the seal because the caller is a scheduler, not a session, so the
+ * checks below (and the app's own auth) cannot apply to them. Each one
+ * authenticates itself: the cron routes require `Authorization: Bearer
+ * $CRON_SECRET` and answer 401 otherwise. Without an entry here they would 404
+ * before reaching their own handler, and the scheduler would fail silently.
+ */
+const MACHINE_API_ROUTES = new Set(["/api/cron/reconcile"]);
+
 /** App screens that are not ready to be seen. */
 const HIDDEN_SCREENS = [
   "/home",
@@ -33,7 +43,9 @@ export function proxy(request: NextRequest) {
 
   // App APIs 404 rather than redirect: a redirect would hand HTML to a fetch().
   if (pathname.startsWith("/api/")) {
-    if (PUBLIC_API_ROUTES.has(pathname)) return NextResponse.next();
+    if (PUBLIC_API_ROUTES.has(pathname) || MACHINE_API_ROUTES.has(pathname)) {
+      return NextResponse.next();
+    }
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
