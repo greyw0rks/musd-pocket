@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "test:amount": "node --experimental-strip-types features/payments/amount.test.ts",
+    "test:reconcile": "node --experimental-strip-types lib/settlement/reconcile.decision.test.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

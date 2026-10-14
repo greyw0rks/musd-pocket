@@ -4,7 +4,8 @@ import { Prisma } from "@prisma/client";
 import { requireIdentity, errorResponse, AuthError, HttpError } from "@/lib/auth/request";
 import { getUserByWallet, getUserByUsername } from "@/lib/users/service";
 import { MUSD_ADDRESS } from "@/lib/mezo/config";
-import { normalizeAddress } from "@/lib/mezo/musd";
+import { normalizeAddress, parseMusd } from "@/lib/mezo/musd";
+import { hasVault, readVaultLiquidity } from "@/lib/mezo/vault";
 import {
   freezeForSend,
   releaseFrozen,
@@ -134,6 +135,32 @@ export async function POST(req: NextRequest) {
       ? paymentIdFromKey(idempotencyKey, "payment")
       : newPaymentId();
     const token = MUSD_ADDRESS.toLowerCase();
+
+    // Pre-flight: can the vault actually cover this payout? The vault pays the
+    // recipient from its own MUSD balance, so a send it can't cover reverts
+    // on-chain *after* the sender's funds are already frozen — leaving them to
+    // the refund path and the reconciler to bring back. Reading liquidity first
+    // turns that into a plain, actionable error before any money moves.
+    //
+    // An unreadable liquidity read is deliberately NOT treated as a shortfall:
+    // this is an optimisation over behaviour that is already correct, so an RPC
+    // blip must never be able to take sending down.
+    if (hasVault()) {
+      let liquidity: bigint | null = null;
+      try {
+        liquidity = await readVaultLiquidity();
+      } catch (err) {
+        console.warn("[payments] liquidity pre-check unreadable", {
+          error: String(err),
+        });
+      }
+      if (liquidity !== null && liquidity < parseMusd(amount)) {
+        throw new HttpError(
+          "Pocket can't cover this payout right now — try a smaller amount.",
+          503,
+        );
+      }
+    }
 
     // 1. Commit the funds: freeze (guarded) + record the pending payment atomically.
     //    A retried idempotency key collides on Payment.paymentId (@unique); the whole
