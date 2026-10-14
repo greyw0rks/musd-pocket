@@ -1,0 +1,89 @@
+# External scheduler for /api/cron/reconcile.
+#
+# Why not Vercel Cron: this project is on the Hobby plan, which allows a
+# scheduled function at most once per day. A send or withdrawal that stalled
+# would then stay frozen for up to 24 hours before anything swept it, which
+# defeats the point of having a reconciler. GitHub Actions is free for this
+# public repository and can run every 15 minutes, so the sweep actually keeps
+# pace with the 15-minute grace window in `lib/settlement/reconcile.decision.ts`.
+#
+# Idempotency is what makes an external scheduler safe here. Every ledger
+# mutation underneath the route is gated on a status transition that only
+# succeeds once, so an early, late, duplicated or overlapping invocation is
+# harmless — the runs that lose the race report `count === 0` and stop.
+#
+# TWO CAVEATS, stated plainly:
+#
+#   1. GitHub disables a `schedule:` trigger after 60 days without repository
+#      activity, and emails the owner when it does. Any commit re-enables it.
+#      A long-quiet repository therefore stops reconciling silently.
+#      `workflow_dispatch` keeps working regardless, and
+#      `gh workflow enable reconcile-scheduler` re-enables the schedule.
+#   2. GitHub's scheduler is best-effort, not punctual. Runs often start a few
+#      minutes late under load and are occasionally skipped. Treat the cadence
+#      as "roughly every 15 minutes", not as a guarantee — the grace window is
+#      what keeps the behaviour correct, not the precision of the clock.
+
+name: reconcile-scheduler
+
+on:
+  schedule:
+    # Every 15 minutes, deliberately offset from :00/:30 rather than `*/15`.
+    - cron: "7,22,37,52 * * * *"
+  workflow_dispatch:
+
+# One sweep at a time. A run that is still in flight when the next one fires
+# should not have a second sweep started behind it — the ledger is safe either
+# way, but serialising keeps the logs readable and avoids pointless RPC load.
+concurrency:
+  group: reconcile-scheduler
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call the reconciliation endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::CRON_SECRET is not set as a repository secret."
+            exit 1
+          fi
+
+          url="https://musd-pocket.vercel.app/api/cron/reconcile"
+
+          # `-f` makes curl exit non-zero on 4xx/5xx, so a 401 (secret rotated or
+          # missing), a 503 (vault unconfigured) or a 500 fails this job loudly
+          # instead of passing as a silent no-op. The secret travels only in the
+          # request header and is never echoed.
+          body=$(curl -sS -f --max-time 55 \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${url}")
+
+          # The repository is public, so its Actions logs are public. Print the
+          # counts — never the raw `actions` array, which carries payment IDs and
+          # transaction hashes. Those are logged server-side on Vercel instead,
+          # where the logs are private.
+          echo "${body}" | node -e '
+            let s = "";
+            process.stdin.on("data", (d) => (s += d)).on("end", () => {
+              const r = JSON.parse(s);
+              if (r.ok !== true) {
+                console.log("reconcile did not report ok:", JSON.stringify(r));
+                process.exit(1);
+              }
+              console.log(
+                `scanned=${r.scanned} finalized=${r.finalized} ` +
+                  `refunded=${r.refunded} held=${r.held} failed=${r.failed} ` +
+                  `durationMs=${r.durationMs} graceMs=${r.graceMs}`
+              );
+            });
+          '
