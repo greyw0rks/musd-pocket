@@ -8,8 +8,11 @@
  * allowed before testnet, a claim that a funded on-chain wallet exists is not.
  *
  * So the words live here and both screens read them. `none` is the state the
- * demo is permanently in, and it is written as a fact rather than as a gap to
- * fill in — there is no address to show, and no button that would produce one.
+ * fixtures are permanently in, and it is written as a fact rather than as a gap
+ * to fill in — there is no address to show, and no button that would produce
+ * one. `ready` is the state `/home` is in, and it may not say anything the app
+ * contradicts: the address *is* shown, on the receive screen, because that is
+ * what receiving money requires.
  */
 
 import type { WalletStatus } from "@/features/session/session.types";
@@ -30,7 +33,7 @@ export const WALLET_COPY: Record<
   },
   ready: {
     title: "Embedded wallet",
-    detail: "Ready. The address stays inside the app and is never displayed.",
+    detail: "Ready. Your MUSD is held here, and payments are signed in the app.",
     badge: "Ready",
   },
 };

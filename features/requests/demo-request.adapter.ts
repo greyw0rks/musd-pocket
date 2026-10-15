@@ -194,5 +194,10 @@ export function createDemoRequestService(
       replace(settled);
       return settled;
     },
+
+    // Both of these exist in the fixtures, so both are declared available —
+    // see `RequestCapabilities` for why that is a statement rather than an
+    // implementation detail.
+    capabilities: { decline: true, withdraw: true },
   };
 }

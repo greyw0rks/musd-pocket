@@ -1,45 +1,58 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
+import { requireIdentity, errorResponse } from "@/lib/auth/request";
 import { createContactSchema } from "@/lib/requests/schema";
 import { toStorageAddress } from "@/lib/utils";
 
-export async function GET(request: NextRequest) {
-  const owner = request.nextUrl.searchParams.get("owner");
-  if (!owner) {
-    return NextResponse.json({ error: "Missing owner" }, { status: 400 });
+/**
+ * The caller's own contacts.
+ *
+ * The owner is the verified wallet behind the bearer token. This route used to
+ * take `?owner=<address>` and trust it, which meant anyone who knew an address
+ * could read — and write — that person's contact list. The parameter is gone;
+ * a spoofed one would now simply be ignored, because nothing reads it.
+ */
+
+export async function GET(req: NextRequest) {
+  try {
+    const identity = await requireIdentity(req);
+    const rows = await prisma.contact.findMany({
+      where: { ownerAddress: toStorageAddress(identity.walletAddress) },
+      orderBy: { label: "asc" },
+    });
+    return Response.json(rows);
+  } catch (e) {
+    return errorResponse(e);
   }
-  const rows = await prisma.contact.findMany({
-    where: { ownerAddress: toStorageAddress(owner) },
-    orderBy: { label: "asc" },
-  });
-  return NextResponse.json(rows);
 }
 
-export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => null);
-  const parsed = createContactSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Invalid contact", issues: parsed.error.flatten() },
-      { status: 400 },
-    );
-  }
-  const { ownerAddress, contactAddress, label } = parsed.data;
+export async function POST(req: NextRequest) {
+  try {
+    const identity = await requireIdentity(req);
+    const body = await req.json().catch(() => null);
+    const parsed = createContactSchema.safeParse(body);
+    if (!parsed.success) {
+      return Response.json({ error: "Invalid contact" }, { status: 400 });
+    }
 
-  // One label per (owner, contact) — upsert keeps it idempotent.
-  const contact = await prisma.contact.upsert({
-    where: {
-      ownerAddress_contactAddress: {
-        ownerAddress: toStorageAddress(ownerAddress),
-        contactAddress: toStorageAddress(contactAddress),
-      },
-    },
-    update: { label },
-    create: {
-      ownerAddress: toStorageAddress(ownerAddress),
-      contactAddress: toStorageAddress(contactAddress),
-      label,
-    },
-  });
-  return NextResponse.json(contact, { status: 201 });
+    const ownerAddress = toStorageAddress(identity.walletAddress);
+    const contactAddress = toStorageAddress(parsed.data.contactAddress);
+
+    if (ownerAddress === contactAddress) {
+      return Response.json(
+        { error: "You cannot add yourself as a contact." },
+        { status: 400 },
+      );
+    }
+
+    // One label per (owner, contact) — upsert keeps it idempotent.
+    const contact = await prisma.contact.upsert({
+      where: { ownerAddress_contactAddress: { ownerAddress, contactAddress } },
+      update: { label: parsed.data.label },
+      create: { ownerAddress, contactAddress, label: parsed.data.label },
+    });
+    return Response.json(contact, { status: 201 });
+  } catch (e) {
+    return errorResponse(e);
+  }
 }

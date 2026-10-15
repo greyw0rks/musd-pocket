@@ -21,7 +21,20 @@ export class ApiError extends Error {
   }
 }
 
-export function useApi() {
+/**
+ * The shape `useApi()` returns, named so plain modules can depend on it.
+ *
+ * Adapters live in `features/*` and are not React components, so they cannot
+ * call the hook themselves — they are handed the function. Without a name for
+ * it, each adapter would declare its own structurally-identical copy and the
+ * four of them could drift apart. This is that name.
+ */
+export type AuthedFetch = <T = unknown>(
+  path: string,
+  init?: RequestInit,
+) => Promise<T>;
+
+export function useApi(): AuthedFetch {
   const { getAccessToken } = usePrivy();
 
   return useCallback(

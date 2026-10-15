@@ -38,6 +38,7 @@ import { RequestScreen } from "@/components/pocket/request/RequestScreen";
 import { RequestsScreen } from "@/components/pocket/request/RequestsScreen";
 import { ScanScreen } from "@/components/pocket/scan/ScanScreen";
 import { PocketProvider, recentRecipients, usePocket } from "@/components/pocket/store";
+import type { PocketServices } from "@/components/pocket/store";
 import { SpendingScreen } from "@/components/pocket/spending/SpendingScreen";
 import { SuccessScreen } from "@/components/pocket/success/SuccessScreen";
 import { TransferScreen } from "@/components/pocket/transfer/TransferScreen";
@@ -57,11 +58,16 @@ import { MODAL_MOTION, PAGE_MOTION, RESULT_MOTION } from "@/components/pocket/th
  * component. Screen ids and that switch are the two places a new screen has to
  * be declared, and both are in the type checker's view, so a screen in the
  * union with no case is a compile error rather than a blank panel.
+ *
+ * `services` is how the same app runs against two different worlds. Omitted —
+ * as `/app` omits it — the provider builds the demo set and nothing here sends
+ * a request. Supplied, as `/home` supplies it, every read and write goes to the
+ * server and the demo data is never seeded.
  */
-export function PocketApp() {
+export function PocketApp({ services }: { services?: PocketServices }) {
   return (
     <MotionConfig reducedMotion="user">
-      <PocketProvider>
+      <PocketProvider services={services}>
         <PocketHost />
       </PocketProvider>
     </MotionConfig>
@@ -69,11 +75,11 @@ export function PocketApp() {
 }
 
 function PocketHost() {
-  const { ready, current, session, back, replace } = usePocket();
+  const { ready, demoMode, current, session, back, replace } = usePocket();
 
   const accountType = session?.user.accountType ?? "personal";
-  const dock = dockForScreen(current.id, accountType);
-  const activeTab = tabForScreen(current.id, accountType);
+  const dock = dockForScreen(current.id, accountType, demoMode);
+  const activeTab = tabForScreen(current.id, accountType, demoMode);
 
   const variants = useMemo(() => {
     switch (current.id) {
@@ -92,7 +98,7 @@ function PocketHost() {
   return (
     <AppShell screen={current.id}>
       {!ready ? (
-        <Splash />
+        <Splash demoMode={demoMode} />
       ) : (
         <div className="relative flex flex-1 flex-col overflow-hidden">
           {/*
@@ -125,6 +131,7 @@ function PocketHost() {
                 key={dock}
                 active={activeTab}
                 accountType={accountType}
+                demoMode={demoMode}
                 onChange={(tab) => replace(screenForTab(tab, accountType))}
               />
             ) : null}
@@ -139,6 +146,7 @@ function PocketHost() {
 function Screen({ id, onBack }: { id: ScreenId; onBack: () => void }) {
   const {
     session,
+    demoMode,
     balance,
     transactions,
     contacts,
@@ -147,6 +155,7 @@ function Screen({ id, onBack }: { id: ScreenId; onBack: () => void }) {
     unreadCount,
     requests,
     requestsLoading,
+    requestCapabilities,
     createRequest,
     payRequest,
     declineRequest,
@@ -203,12 +212,21 @@ function Screen({ id, onBack }: { id: ScreenId; onBack: () => void }) {
           onSend={startSend}
           onRequest={() => push("request")}
           onReceive={() => push("receive")}
-          // Both the Borrow tile and the Repay notch on the balance card land
-          // here. Repaying and borrowing are one screen because a repayment is
-          // a payment against the same trove the borrow would open — and with
-          // no trove on either side, splitting them would be two screens
-          // saying the same nothing.
-          onBorrow={() => push("borrow")}
+          /*
+            Both the Borrow tile and the Repay notch on the balance card land
+            here. Repaying and borrowing are one screen because a repayment is
+            a payment against the same trove the borrow would open — and with
+            no trove on either side, splitting them would be two screens
+            saying the same nothing.
+
+            It is demo-only. The borrow screen prices a trove out of invented
+            collateral and an invented rate, so in the real app it would be a
+            page of numbers about the user's actual wallet that nothing on
+            chain backs. Handing `onBorrow` in as absent is the whole switch:
+            the tile and the notch both go, and the balance card stops
+            presenting its total as borrowed-plus-received. See `BalanceCards`.
+          */
+          onBorrow={demoMode ? () => push("borrow") : undefined}
           onOpenNotifications={() => push("notifications")}
           onOpenAccount={() => push("account-overview")}
           onOpenLedger={() => push("transactions")}
@@ -270,6 +288,9 @@ function Screen({ id, onBack }: { id: ScreenId; onBack: () => void }) {
             accountType,
           }}
           balance={balance}
+          // From the session, not a constant: `/home` has a real wallet and
+          // `/app` has a status the fixtures set.
+          wallet={session?.wallet ?? { status: "none" }}
           onBack={onBack}
           onEditProfile={() => push("profile")}
           onOpenSettings={() => push("settings")}
@@ -431,6 +452,13 @@ function Screen({ id, onBack }: { id: ScreenId; onBack: () => void }) {
           onPaid={(transactionId) => push("success", { transactionId })}
           onDecline={() => declineRequest(request.id)}
           onCancel={() => cancelRequest(request.id)}
+          /*
+            Whether the two controls above are drawn at all. The service knows
+            which of them it can do; the screen would otherwise offer a button
+            that can only fail.
+          */
+          canDecline={requestCapabilities.decline}
+          canWithdraw={requestCapabilities.withdraw}
           onOpenTransaction={(transactionId) =>
             push("transaction", { transactionId })
           }
@@ -555,13 +583,19 @@ function MissingScreen({ onBack }: { onBack: () => void }) {
 }
 
 /**
- * Shown for the few hundred milliseconds the demo service takes to answer.
+ * Shown while the app is loading its first state.
+ *
+ * The two worlds do not take the same amount of time to answer, and the label
+ * says which one is being waited on: `/app` reads a fixture module, `/home`
+ * waits on `/api/users/me` and a Privy wallet. "Loading demo data" over a real
+ * sign-in is the first thing the user would read in the real app and the one
+ * sentence that must not be wrong there.
  *
  * The brand mark is the purple the rest of the app is built around, not the
  * green the old dark theme used — the splash is the first frame of Pocket
  * anyone sees and it should not advertise a colour the app no longer has.
  */
-function Splash() {
+function Splash({ demoMode }: { demoMode: boolean }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-5">
       <div className="flex items-center gap-2.5">
@@ -578,7 +612,7 @@ function Splash() {
         transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
         className="text-[11px] font-medium tracking-wide text-[var(--m)] uppercase"
       >
-        Loading demo data
+        {demoMode ? "Loading demo data" : "Loading your wallet"}
       </motion.span>
     </div>
   );

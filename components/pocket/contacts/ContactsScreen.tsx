@@ -46,7 +46,8 @@ export function ContactsScreen({
   recent: Recipient[];
   user: { name: string; handle: string; avatarUrl?: string };
   onSelect: (recipient: Recipient) => void;
-  onAdd: (name: string, handle: string) => void;
+  /** Resolves the handle to an address and saves the contact, or explains why not. */
+  onAdd: (name: string, handle: string) => Promise<{ ok: boolean; error?: string }>;
   onScan: () => void;
   onBack: () => void;
 }) {
@@ -54,6 +55,8 @@ export function ContactsScreen({
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
   const [handle, setHandle] = useState("");
+  const [problem, setProblem] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -65,13 +68,31 @@ export function ContactsScreen({
     );
   }, [recipients, query]);
 
-  function submit(event: React.FormEvent) {
+  async function submit(event: React.FormEvent) {
     event.preventDefault();
     const cleanName = name.trim();
-    if (!cleanName) return;
+    if (!cleanName || saving) return;
+
     const typed = handle.trim();
-    const cleanHandle = typed.startsWith("@") ? typed : `@${typed}`;
-    onAdd(cleanName, cleanHandle || "@unnamed");
+    setSaving(true);
+    setProblem(null);
+
+    /*
+      The form stays open until the answer comes back.
+
+      Adding a contact is a lookup now, and a lookup can fail — a username
+      nobody holds has no address, so there is nothing to save. Closing the
+      form on submit would have discarded what the user typed at the exact
+      moment they need it to try a different handle.
+    */
+    const result = await onAdd(cleanName, typed ? `@${typed.replace(/^@+/, "")}` : "");
+    setSaving(false);
+
+    if (!result.ok) {
+      setProblem(result.error ?? "Could not add that contact.");
+      return;
+    }
+
     setName("");
     setHandle("");
     setAdding(false);
@@ -170,12 +191,17 @@ export function ContactsScreen({
                 className="text-[11px] leading-relaxed"
                 style={{ color: "color-mix(in srgb, var(--y) 42%, var(--t))" }}
               >
-                Nothing in this demo resolves a handle to a payment address, so
-                this person will be marked unverified.
+                {problem ??
+                  "Pocket looks the username up and saves the address it resolves to. A name nobody holds cannot be saved, because there would be nothing to pay."}
               </p>
 
-              <Button type="submit" full icon={<PlusIcon size={15} />}>
-                Add without verifying
+              <Button
+                type="submit"
+                full
+                icon={<PlusIcon size={15} />}
+                disabled={saving}
+              >
+                {saving ? "Looking up…" : "Add contact"}
               </Button>
             </div>
           </motion.form>

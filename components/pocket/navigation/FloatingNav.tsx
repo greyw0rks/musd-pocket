@@ -11,7 +11,10 @@ import {
 } from "@/components/pocket/icons";
 import type { IconProps } from "@/components/pocket/icons";
 import { DOCK_MOTION } from "@/components/pocket/theme";
-import type { PocketTab } from "@/components/pocket/navigation/screens";
+import {
+  dockTabs,
+  type PocketTab,
+} from "@/components/pocket/navigation/screens";
 import type { AccountType } from "@/features/session/session.types";
 
 /**
@@ -35,6 +38,11 @@ import type { AccountType } from "@/features/session/session.types";
  *
  * A merchant gets a different three, because a merchant's world is money
  * arriving rather than money set aside.
+ *
+ * Those three are the *icons and labels* for each tab. Which tabs exist at all
+ * is `dockTabs`'s call, not this file's — this one has the glyphs, that one has
+ * the rule — so the list below is filtered through it rather than trusted. In
+ * the real app that filter is what makes the dock empty and unrenderable.
  */
 interface DockTab {
   id: PocketTab;
@@ -54,20 +62,27 @@ const MERCHANT_TABS = [
   { id: "business", label: "Business", Icon: UserIcon },
 ] as const satisfies readonly DockTab[];
 
-export function dockTabsFor(accountType: AccountType): readonly DockTab[] {
-  return accountType === "merchant" ? MERCHANT_TABS : PERSONAL_TABS;
+export function dockTabsFor(
+  accountType: AccountType,
+  demoMode: boolean,
+): readonly DockTab[] {
+  const allowed = dockTabs(accountType, demoMode);
+  const table = accountType === "merchant" ? MERCHANT_TABS : PERSONAL_TABS;
+  return table.filter((tab) => allowed.includes(tab.id));
 }
 
 export function FloatingNav({
   active,
   onChange,
   accountType = "personal",
+  demoMode = true,
 }: {
   active: PocketTab;
   onChange: (tab: PocketTab) => void;
   accountType?: AccountType;
+  demoMode?: boolean;
 }) {
-  const tabs = dockTabsFor(accountType);
+  const tabs = dockTabsFor(accountType, demoMode);
 
   return (
     <motion.nav

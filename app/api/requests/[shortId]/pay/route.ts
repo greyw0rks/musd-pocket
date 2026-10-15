@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import type { Hash } from "viem";
+import { requireIdentity, errorResponse } from "@/lib/auth/request";
 import { payRequestSchema } from "@/lib/requests/schema";
 import {
   getByShortId,
@@ -10,52 +10,62 @@ import { serializeRequest } from "@/lib/requests/serialize";
 import { verifyMusdPayment } from "@/lib/mezo/verify";
 
 /**
- * Payer-submitted proof of payment. The frontend sends only a tx hash;
- * the SERVER independently reads the chain and decides PAID — never the client.
+ * Payer-submitted proof of payment. The frontend sends only a tx hash; the
+ * SERVER independently reads the chain and decides PAID — never the client.
+ *
+ * Signed-in callers only, for the same reason as the read route beside it: the
+ * payer is a Pocket user today, and there is no external-wallet payer flow yet.
+ * Identity is *not* used to authorise the payment itself — the chain is. A
+ * caller cannot mark somebody else's request paid by claiming to be them; they
+ * can only submit a hash that `verifyMusdPayment` confirms really moved the
+ * right amount to the right address.
  */
 export async function POST(
-  request: Request,
+  req: Request,
   { params }: { params: Promise<{ shortId: string }> },
 ) {
-  const { shortId } = await params;
-  const body = await request.json().catch(() => null);
-  const parsed = payRequestSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Invalid transaction hash" },
-      { status: 400 },
-    );
-  }
+  try {
+    await requireIdentity(req);
+    const { shortId } = await params;
 
-  const req = await getByShortId(shortId);
-  if (!req) {
-    return NextResponse.json({ error: "Request not found" }, { status: 404 });
-  }
-  if (req.status === "PAID") {
-    return NextResponse.json(serializeRequest(req)); // idempotent
-  }
-
-  const result = await verifyMusdPayment({
-    txHash: parsed.data.txHash as Hash,
-    recipient: req.recipientAddress,
-    amount: req.amount.toString(),
-  });
-
-  if (!result.valid) {
-    if (result.pending) {
-      // Tx not mined yet — record it and tell the client to keep polling.
-      const updated = await markProcessing(req.shortId, parsed.data.txHash);
-      return NextResponse.json(
-        { ...serializeRequest(updated), pending: true },
-        { status: 202 },
-      );
+    const body = await req.json().catch(() => null);
+    const parsed = payRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return Response.json({ error: "Invalid transaction hash" }, { status: 400 });
     }
-    return NextResponse.json({ error: result.reason }, { status: 400 });
-  }
 
-  const paid = await confirmPaid(req.shortId, {
-    txHash: parsed.data.txHash,
-    payerAddress: result.from,
-  });
-  return NextResponse.json(serializeRequest(paid));
+    const request = await getByShortId(shortId);
+    if (!request) {
+      return Response.json({ error: "Request not found" }, { status: 404 });
+    }
+    if (request.status === "PAID") {
+      return Response.json(serializeRequest(request)); // idempotent
+    }
+
+    const result = await verifyMusdPayment({
+      txHash: parsed.data.txHash as Hash,
+      recipient: request.recipientAddress,
+      amount: request.amount.toString(),
+    });
+
+    if (!result.valid) {
+      if (result.pending) {
+        // Tx not mined yet — record it and tell the client to keep polling.
+        const updated = await markProcessing(request.shortId, parsed.data.txHash);
+        return Response.json(
+          { ...serializeRequest(updated), pending: true },
+          { status: 202 },
+        );
+      }
+      return Response.json({ error: result.reason }, { status: 400 });
+    }
+
+    const paid = await confirmPaid(request.shortId, {
+      txHash: parsed.data.txHash,
+      payerAddress: result.from,
+    });
+    return Response.json(serializeRequest(paid));
+  } catch (e) {
+    return errorResponse(e);
+  }
 }

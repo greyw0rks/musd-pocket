@@ -25,23 +25,18 @@ import type {
   SessionService,
   SignInRequest,
 } from "@/features/session/session.types";
+import { normaliseHandle, validateHandleFormat } from "@/features/session/handle";
 
 const STORAGE_KEY = "pocket.session.v1";
 const LATENCY_MS = 550;
 
-/** Handles that would be confusing or misleading if a user claimed one. */
-const RESERVED_HANDLES = new Set([
-  "pocket",
-  "musd",
-  "mezo",
-  "admin",
-  "support",
-  "help",
-  "official",
-  "alex",
-]);
-
-/** Handles already taken by the seeded recipients. */
+/**
+ * Handles already taken by the seeded recipients.
+ *
+ * The format and reserved-name rules now live in `handle.ts`, shared with the
+ * server. Only the collision list is a *demo* concern — in the real app, a
+ * handle is taken if the database says so, which is the lookup the server does.
+ */
 const TAKEN_HANDLES = new Set([
   "sarah",
   "designwithpavlo",
@@ -54,12 +49,6 @@ const TAKEN_HANDLES = new Set([
   "nadia",
 ]);
 
-const HANDLE_PATTERN = /^[a-z0-9_]{3,20}$/;
-
-export function normaliseHandle(raw: string): string {
-  return raw.trim().replace(/^@+/, "").toLowerCase();
-}
-
 /**
  * Validate a handle without touching storage.
  *
@@ -67,15 +56,11 @@ export function normaliseHandle(raw: string): string {
  * types, while `checkHandle` below remains the async, authoritative answer.
  */
 export function validateHandle(raw: string): HandleProblem {
-  const handle = normaliseHandle(raw);
+  const problem = validateHandleFormat(raw);
+  if (problem) return problem;
 
-  if (handle.length === 0) return "Pick a username.";
-  if (handle.length < 3) return "Usernames are at least 3 characters.";
-  if (handle.length > 20) return "Usernames are at most 20 characters.";
-  if (!HANDLE_PATTERN.test(handle))
-    return "Use lowercase letters, numbers and underscores only.";
-  if (RESERVED_HANDLES.has(handle)) return "That username is reserved.";
-  if (TAKEN_HANDLES.has(handle)) return "That username is already taken.";
+  if (TAKEN_HANDLES.has(normaliseHandle(raw)))
+    return "That username is already taken.";
 
   return null;
 }

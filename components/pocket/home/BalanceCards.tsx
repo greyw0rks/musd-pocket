@@ -43,6 +43,13 @@ import { cn } from "@/lib/utils";
  * corner of the purple card, and a button inside a button is invalid — the
  * overlay keeps the two as siblings, so neither tap has to be filtered out of
  * the other's event.
+ *
+ * `onRepay` doubles as the borrow switch, because a repayment control only
+ * exists where there is something to repay. Without it the purple card stops
+ * composing a sum: showing `$0.00 + $165.00` labelled "borrowed + received"
+ * tells a real user their wallet has a borrowing side, which is a claim about
+ * a feature that is not wired — and the nearest thing to a trove they could go
+ * looking for is a demo screen. So one figure, and the word that describes it.
  */
 
 /** One asset's line in the total. */
@@ -75,10 +82,13 @@ export function BalanceCards({
   repaymentUnits?: bigint;
   /** BTC the wallet holds, when a chain source exists to read it from. */
   btc?: { amount: string; valueUnits: bigint } | null;
-  onRepay: () => void;
+  /** Absent when borrowing is not available — see the note above. */
+  onRepay?: () => void;
 }) {
   const [flipped, setFlipped] = useState(false);
   const flip = () => setFlipped((v) => !v);
+
+  const borrow = Boolean(onRepay);
 
   const btcValue = btc?.valueUnits ?? 0n;
   const totalUnits = receivedUnits + btcValue;
@@ -158,18 +168,28 @@ export function BalanceCards({
           className="pk-big"
           style={{ fontSize: 30, whiteSpace: "nowrap", letterSpacing: "-1px" }}
         >
-          {formatMoney(borrowedUnits)}
-          <span style={{ opacity: 0.7 }}> + </span>
-          {formatMoney(receivedUnits)}
+          {borrow ? (
+            <>
+              {formatMoney(borrowedUnits)}
+              <span style={{ opacity: 0.7 }}> + </span>
+              {formatMoney(receivedUnits)}
+            </>
+          ) : (
+            formatMoney(receivedUnits)
+          )}
         </div>
-        <div style={{ opacity: 0.7, fontSize: 11 }}>borrowed + received</div>
+        <div style={{ opacity: 0.7, fontSize: 11 }}>
+          {borrow ? "borrowed + received" : "received"}
+        </div>
 
-        <div style={{ position: "absolute", left: 20, bottom: 18 }}>
-          <div style={{ opacity: 0.8, fontSize: 12 }}>Repayment balance</div>
-          <div style={{ fontSize: 20, fontWeight: 600 }}>
-            {formatMoney(repaymentUnits)}
+        {borrow ? (
+          <div style={{ position: "absolute", left: 20, bottom: 18 }}>
+            <div style={{ opacity: 0.8, fontSize: 12 }}>Repayment balance</div>
+            <div style={{ fontSize: 20, fontWeight: 600 }}>
+              {formatMoney(repaymentUnits)}
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <button
           type="button"
@@ -185,16 +205,18 @@ export function BalanceCards({
           welded on rather than dropped. Last in the DOM and opaque, so it sits
           above the overlay and takes its own taps.
         */}
-        <span className="pk-notch">
-          <motion.button
-            type="button"
-            whileTap={{ scale: 0.95 }}
-            onClick={onRepay}
-            className="pk-rep"
-          >
-            Repay
-          </motion.button>
-        </span>
+        {onRepay ? (
+          <span className="pk-notch">
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.95 }}
+              onClick={onRepay}
+              className="pk-rep"
+            >
+              Repay
+            </motion.button>
+          </span>
+        ) : null}
       </div>
     </div>
   );

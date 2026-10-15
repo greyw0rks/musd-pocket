@@ -8,8 +8,9 @@ import { SCREEN } from "@/components/pocket/theme";
 import { Button } from "@/components/pocket/ui/Button";
 import { ListGroup, ListRow } from "@/components/pocket/ui/ListRow";
 import { ScreenHeader } from "@/components/pocket/ui/ScreenHeader";
-import type { AccountType } from "@/features/session/session.types";
+import type { AccountType, WalletLink } from "@/features/session/session.types";
 import { formatMoney } from "@/lib/formatters";
+import { shortenAddress } from "@/lib/utils";
 
 /**
  * Account overview.
@@ -24,12 +25,19 @@ import { formatMoney } from "@/lib/formatters";
  * state this build can be in, because there is no provider to verify against,
  * so the row says what is actually the case.
  *
- * `Account type` and `Wallet` are as the reference has them — those two are
- * genuinely known and genuinely stable.
+ * `Account type` is as the reference has it — genuinely known and genuinely
+ * stable.
+ *
+ * The Wallet row is not. It used to be a hardcoded "not connected", which was
+ * true of the fixtures and is false of `/home`, where the row sits directly
+ * above a real balance drawn from a wallet that is very much connected. It
+ * reads the session's wallet link now, so the row and the number below it
+ * cannot disagree about whether there is a wallet.
  */
 export function AccountOverviewScreen({
   user,
   balance,
+  wallet,
   onBack,
   onEditProfile,
   onOpenSettings,
@@ -41,6 +49,8 @@ export function AccountOverviewScreen({
     accountType: AccountType;
   };
   balance: bigint;
+  /** The embedded wallet, as a status — see `WalletLink`. */
+  wallet: WalletLink;
   onBack: () => void;
   onEditProfile: () => void;
   onOpenSettings: () => void;
@@ -99,7 +109,18 @@ export function AccountOverviewScreen({
           trailing={
             <span className="pk-row" style={{ gap: 6 }}>
               <b className="text-[13px]">MUSD</b>
-              <span className="pk-m">not connected</span>
+              {/*
+                The address rather than the word "connected": the two are the
+                same claim and only one of them can be checked by the person
+                reading it.
+              */}
+              <span className="pk-m">
+                {wallet.status === "ready" && wallet.address
+                  ? shortenAddress(wallet.address)
+                  : wallet.status === "provisioning"
+                    ? "preparing"
+                    : "not connected"}
+              </span>
             </span>
           }
         />
