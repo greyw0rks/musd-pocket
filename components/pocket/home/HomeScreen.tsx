@@ -32,8 +32,8 @@ import type { ReactElement } from "react";
  *
  * The four tiles are the same four the reference draws. Three of them lead
  * somewhere; Borrow leads to the screen that explains what borrowing would
- * cost and that it is not switched on yet, which is the honest version of a
- * tile whose feature does not exist.
+ * cost and that it is not switched on yet. That screen is demo-only, so a real
+ * wallet does not get the tile at all — see `onBorrow`.
  */
 export function HomeScreen({
   user,
@@ -61,7 +61,13 @@ export function HomeScreen({
   onSend: () => void;
   onRequest: () => void;
   onReceive: () => void;
-  onBorrow: () => void;
+  /**
+   * Absent when borrowing is not available, which is what draws the Borrow
+   * tile and the balance card's Repay notch out of the screen. It is not a
+   * disabled control: a tile that leads to a page of invented numbers about a
+   * real wallet is worse than one that was never there.
+   */
+  onBorrow?: () => void;
   onOpenNotifications: () => void;
   onOpenAccount: () => void;
   onOpenLedger: () => void;
@@ -81,12 +87,18 @@ export function HomeScreen({
   const firstName = user.name.trim().split(/\s+/)[0] || "there";
   const recent = transactions.slice(0, 4);
 
-  const tiles = [
+  /*
+    Three or four, depending. Written as a spread into a list rather than as a
+    list with a hole in it, so the row has no gap where Borrow would have been.
+  */
+  const tiles: { label: string; Icon: (props: IconProps) => ReactElement; onPress: () => void }[] = [
     { label: "Send", Icon: SendIcon, onPress: onSend },
     { label: "Request", Icon: RequestIcon, onPress: onRequest },
     { label: "Receive", Icon: ReceiveIcon, onPress: onReceive },
-    { label: "Borrow", Icon: BorrowIcon, onPress: onBorrow },
-  ] as const;
+    ...(onBorrow
+      ? [{ label: "Borrow", Icon: BorrowIcon, onPress: onBorrow }]
+      : []),
+  ];
 
   return (
     <div className={`${SCREEN} pt-[max(env(safe-area-inset-top),16px)]`}>
@@ -148,7 +160,15 @@ export function HomeScreen({
 
       <BalanceCards receivedUnits={balance} onRepay={onBorrow} />
 
-      <div className="pk-card pk-tiles">
+      {/*
+        `.pk-tiles` is a fixed four-column grid, so three tiles would leave a
+        ragged empty fourth. The count is set inline, which outranks the
+        unlayered class in `pocket.css` without needing a second rule or a `!`.
+      */}
+      <div
+        className="pk-card pk-tiles"
+        style={{ gridTemplateColumns: `repeat(${tiles.length}, 1fr)` }}
+      >
         {tiles.map(({ label, Icon, onPress }) => (
           <motion.button
             key={label}

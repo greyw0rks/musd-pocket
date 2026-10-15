@@ -62,6 +62,16 @@ export interface Transaction {
 export interface SendRequest {
   recipient: Recipient;
   amountUnits: bigint;
+  /**
+   * Reuse-across-retries key for the server's replay guard.
+   *
+   * Optional because the interface predates it and a service is free to ignore
+   * it; a service that *can* honour it must. The caller owns the lifecycle:
+   * reuse it while the outcome is unknown (a timeout, a dropped connection),
+   * rotate it once the server has given a definite answer, so a genuine second
+   * payment is not silently swallowed as a replay of the first.
+   */
+  idempotencyKey?: string;
 }
 
 export type SendResult =

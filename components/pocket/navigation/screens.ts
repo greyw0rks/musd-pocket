@@ -10,6 +10,14 @@
  * The merchant dock keeps its own three, because a merchant's world is money
  * arriving rather than money set aside, and the two sets genuinely differ.
  *
+ * Neither dock is drawn in the real app. This is the app that `/app` and
+ * `/home` share, and Vault and Spending are fixtures — borrow has no server at
+ * all, and spending is a summary of payments that do not exist outside the
+ * demo. Home is the only wired top-level destination, so there is nothing to
+ * switch between and the dock would be a bar with one button on it. `demoMode`
+ * is how a caller says which app it is, and it is the same flag the money
+ * screens use; see `DemoBadge`.
+ *
  * Kept out of the store so that navigation rules can be reasoned about — and
  * unit-tested — without mounting React.
  */
@@ -25,11 +33,33 @@ export type PocketTab =
   | "business";
 export type DockRole = "personal" | "merchant";
 
+/**
+ * The tabs a dock would show, empty when there is no dock.
+ *
+ * Note the merchant case: a merchant dock exists in the fixtures too, so it
+ * goes the same way as the personal one. `accountType` is hardcoded to
+ * `personal` by the real session adapter anyway, so this branch is belt and
+ * braces — but a merchant dock built from invented payments is exactly the kind
+ * of thing that should not become reachable if that ever changes.
+ */
+export function dockTabs(
+  accountType: AccountType,
+  demoMode: boolean,
+): readonly PocketTab[] {
+  if (!demoMode) return [];
+  return accountType === "merchant"
+    ? ["home", "payments", "business"]
+    : ["home", "vault", "spending"];
+}
+
 /** Which dock, if any, this screen shows. */
 export function dockForScreen(
   id: ScreenId,
   accountType: AccountType,
+  demoMode: boolean,
 ): DockRole | null {
+  if (!demoMode) return null;
+
   if (accountType === "merchant") {
     if (id === "merchant-home") return "merchant";
     if (id === "merchant-payments") return "merchant";
@@ -45,7 +75,10 @@ export function dockForScreen(
 export function tabForScreen(
   id: ScreenId,
   accountType: AccountType,
+  demoMode: boolean,
 ): PocketTab | null {
+  if (!demoMode) return null;
+
   if (accountType === "merchant") {
     if (id === "merchant-home") return "home";
     if (id === "merchant-payments") return "payments";

@@ -7,7 +7,7 @@ import { usePocket } from "@/components/pocket/store";
 import { SCREEN_PLAIN } from "@/components/pocket/theme";
 import { Button, IconButton } from "@/components/pocket/ui/Button";
 import { TextField, type FieldStatus } from "@/components/pocket/ui/TextField";
-import { normaliseHandle } from "@/features/session/demo-session.adapter";
+import { normaliseHandle } from "@/features/session/handle";
 
 /** How long to wait after the last keystroke before checking a username. */
 const CHECK_DEBOUNCE_MS = 450;

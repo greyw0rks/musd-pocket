@@ -1,93 +1,71 @@
 "use client";
 
-import Link from "next/link";
+import { useRef, useState } from "react";
+import { PocketApp } from "@/components/pocket/PocketApp";
+import type { PocketServices } from "@/components/pocket/store";
+import { createApiContactService } from "@/features/contacts/api-contact.adapter";
+import { createApiPaymentService } from "@/features/payments/api-payment.adapter";
+import { createApiRequestService } from "@/features/requests/api-request.adapter";
 import {
-  ArrowUpRight,
-  ArrowDownLeft,
-  Plus,
-  Receipt,
-  Lock,
-} from "lucide-react";
+  createApiSessionService,
+  sessionFromUser,
+} from "@/features/session/api-session.adapter";
+import { useApi } from "@/lib/auth/client";
 import { useSession } from "@/lib/auth/session";
-import { Card, CardBody } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
-import { formatAmount } from "@/lib/utils";
-import { MUSD_SYMBOL } from "@/lib/mezo/config";
 
+/**
+ * Pocket, for real.
+ *
+ * The whole difference between this and `/app` is the `services` prop: the
+ * same screens, the same shell, the same store — reading and writing the live
+ * backend instead of fixtures. Nothing below this page knows which it is,
+ * which is the point of the adapter boundary and also the risk, so the
+ * dishonest option is called out rather than left implicit:
+ *
+ *   - `notifications` is an **empty array**, not the demo fixture. There is no
+ *     notification backend, so the screen shows its empty state. Seeding
+ *     invented notices into the real app would be a fabricated record of things
+ *     that did not happen.
+ *   - `initialSession` is built from the user the shell has already synced, so
+ *     the first paint shows the real profile. Without it, a dropped request
+ *     during boot would strand a signed-in user on the sign-in screen.
+ *
+ * The page is only reachable behind `AuthGate`, which renders nothing until
+ * `/api/users/me` has answered — so in practice `user` is non-null by the time
+ * this renders, and `initialSession` is therefore always the real profile.
+ */
 export default function HomePage() {
-  const { user } = useSession();
-  const available = formatAmount(user?.availableBalance ?? "0");
-  const frozen = Number(user?.frozenBalance ?? "0");
+  const fetchAuthed = useApi();
+  const { user, walletAddress, login, logout } = useSession();
 
-  return (
-    <div className="mx-auto w-full max-w-xl space-y-6">
-      {/* Dominant balance — no chain, no gas, just a number. */}
-      <section className="pt-2 text-center md:pt-6">
-        <p className="text-sm font-medium text-muted">Available balance</p>
-        <p className="tabular mt-2 text-6xl font-semibold tracking-tight text-foreground">
-          {available}
-        </p>
-        <p className="mt-1 text-sm text-muted">{MUSD_SYMBOL}</p>
-        {frozen > 0 && (
-          <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-3 py-1 text-[13px] text-muted">
-            <Lock className="size-3.5" />
-            <span className="tabular">{formatAmount(frozen)}</span> held in
-            flight
-          </p>
-        )}
-      </section>
+  /*
+    The services are built once, for the lifetime of the mount, so anything
+    they close over is frozen at that moment. The wallet address is not — Privy
+    can mint it after this page mounts — so it is read through a ref that every
+    render refreshes. Reading the variable directly would pin the first
+    render's value, which is `null` for a user whose wallet has not landed yet.
+  */
+  const walletRef = useRef<string | null>(walletAddress);
+  walletRef.current = walletAddress;
 
-      {/* Primary actions */}
-      <section className="grid grid-cols-3 gap-3">
-        <ActionTile href="/pay" icon={ArrowUpRight} label="Send" primary />
-        <ActionTile href="/receive" icon={ArrowDownLeft} label="Receive" />
-        <ActionTile href="/deposit" icon={Plus} label="Add money" />
-      </section>
+  const [services] = useState<PocketServices>(() => {
+    const payments = createApiPaymentService({ fetchAuthed });
+    return {
+      payments,
+      sessions: createApiSessionService({
+        fetchAuthed,
+        login,
+        logout,
+        getWalletAddress: () => walletRef.current,
+      }),
+      requests: createApiRequestService({ fetchAuthed, payments }),
+      contacts: createApiContactService(fetchAuthed),
+      notifications: [],
+      // `user` is guaranteed by AuthGate; the fallback exists so a race during
+      // the gate's own transition cannot throw inside a component.
+      initialSession: user ? sessionFromUser(user, walletAddress) : null,
+    };
+  });
 
-      {/* Recent activity */}
-      <section>
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-foreground">Recent</h2>
-          <Link href="/activity" className="text-[13px] text-primary">
-            See all
-          </Link>
-        </div>
-        <Card>
-          <CardBody className="py-10">
-            <EmptyState
-              icon={Receipt}
-              title="No activity yet"
-              description="Add money to your Pocket, then send MUSD to anyone — Pocket picks the chain."
-            />
-          </CardBody>
-        </Card>
-      </section>
-    </div>
-  );
-}
-
-function ActionTile({
-  href,
-  icon: Icon,
-  label,
-  primary = false,
-}: {
-  href: string;
-  icon: typeof ArrowUpRight;
-  label: string;
-  primary?: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      className={
-        primary
-          ? "flex flex-col items-center gap-2 rounded-xl bg-primary px-3 py-4 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary-dark"
-          : "flex flex-col items-center gap-2 rounded-xl border border-border bg-surface px-3 py-4 text-sm font-semibold text-foreground hover:bg-surface-2"
-      }
-    >
-      <Icon className="size-5" />
-      {label}
-    </Link>
-  );
+  return <PocketApp services={services} />;
 }

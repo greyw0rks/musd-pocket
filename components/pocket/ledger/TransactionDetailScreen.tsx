@@ -102,10 +102,21 @@ export function TransactionDetailScreen({
         </h2>
 
         <div className="mt-3">
+          {/*
+            A real row states its *status*, not its chain.
+
+            This used to read a flat "On-chain" for anything that was not a
+            fixture, which is a claim the data does not support: a row can be
+            `pending` (submitted, not settled) or `failed`. `PaymentStatusPill`
+            already makes that distinction for the row below, so the header uses
+            the same one rather than contradicting it — and it keeps the
+            existing decision that confirmed is neutral, since green in this app
+            means money arrived, which a settled outgoing payment is not.
+          */}
           {isDemo ? (
             <DemoBadge label="Simulated — no funds moved" />
           ) : (
-            <span className="pk-pill pk-pill--ok">On-chain</span>
+            <PaymentStatusPill status={transaction.status} />
           )}
         </div>
       </div>

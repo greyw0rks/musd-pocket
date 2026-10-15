@@ -25,13 +25,15 @@ import {
   type Op,
 } from "@/features/payments/amount";
 import { createPaymentService } from "@/features/payments/payment.service";
-import type { Recipient, Transaction } from "@/features/payments/payment.types";
+import type { PaymentService, Recipient, Transaction } from "@/features/payments/payment.types";
 import type { PocketNotification } from "@/features/notifications/notification.types";
 import { createRequestService } from "@/features/requests/request.service";
 import type {
   CreateRequestInput,
   CreateRequestResult,
   PaymentRequest,
+  RequestCapabilities,
+  RequestService,
   SettleRequestResult,
 } from "@/features/requests/request.types";
 import { createSessionService } from "@/features/session/session.service";
@@ -40,7 +42,13 @@ import type {
   ProfileUpdate,
   ReceiptsLink,
   Session,
+  SessionService,
 } from "@/features/session/session.types";
+import type {
+  AddContactResult,
+  ContactService,
+} from "@/features/contacts/api-contact.adapter";
+import { ApiError } from "@/lib/auth/client";
 import type {
   ScreenId,
   ScreenParams,
@@ -56,6 +64,19 @@ export type TransferPhase = "idle" | "sending";
 interface PocketStore {
   /** False until the session and the ledger have both been read once. */
   ready: boolean;
+
+  /**
+   * Whether this app is running on invented data.
+   *
+   * The same screens serve `/app` (fixtures) and `/home` (the live backend),
+   * and a few of them have to know which, because they make claims about the
+   * money. "Simulated — no funds moved" is true on one and a lie on the other,
+   * and no amount of screen-level cleverness can tell without being told.
+   *
+   * It is derived from the injected services — a single fact, not a second
+   * opinion — so the two cannot disagree.
+   */
+  demoMode: boolean;
 
   session: Session | null;
   balance: bigint;
@@ -78,6 +99,14 @@ interface PocketStore {
   payRequest: (id: string) => Promise<SettleRequestResult>;
   declineRequest: (id: string) => Promise<void>;
   cancelRequest: (id: string) => Promise<void>;
+  /**
+   * Which request actions the injected service can perform.
+   *
+   * Passed straight through from the adapter, because the screens ask before
+   * they draw a control — a "Withdraw request" button that always errors is a
+   * worse answer than no button. See `RequestCapabilities`.
+   */
+  requestCapabilities: RequestCapabilities;
   requestById: (id: string | undefined) => PaymentRequest | null;
 
   /* Navigation */
@@ -113,7 +142,15 @@ interface PocketStore {
   confirmSend: () => Promise<void>;
 
   /* People */
-  addContact: (name: string, handle: string) => void;
+  /**
+   * Add somebody to the contact book.
+   *
+   * Async and fallible, because in the real app this is a network round-trip
+   * that can refuse: a handle nobody holds has no address to save. The demo
+   * never fails, so the result is `{ok:true}` there — the shape is the same
+   * either way, which is what lets one screen serve both.
+   */
+  addContact: (name: string, handle: string) => Promise<AddContactResult>;
   recipientById: (id: string | undefined) => Recipient | null;
 }
 
@@ -153,7 +190,46 @@ function recentRecipients(
   return out;
 }
 
-export function PocketProvider({ children }: { children: ReactNode }) {
+/**
+ * What the app talks to.
+ *
+ * Every field is a service or a seed, and every one of them has a default: the
+ * demo implementations below. The real app at `/home` injects the network
+ * versions and a `null` contact service (there is no local contact book when
+ * the server holds the list), and nothing else about the app changes.
+ */
+export interface PocketServices {
+  payments: PaymentService;
+  sessions: SessionService;
+  requests: RequestService;
+  /**
+   * Absent means "keep contacts in memory".
+   *
+   * The demo has no server, so adding a person is a local array push. The real
+   * app has `/api/contacts`, so `addContact` is a request that can fail — and
+   * the screen shows that failure rather than a contact it did not save.
+   */
+  contacts?: ContactService;
+  /** Seeded notices. Absent means an empty list — never invented ones. */
+  notifications?: PocketNotification[];
+  /**
+   * The session the shell already resolved, used as the starting value.
+   *
+   * `SessionProvider` has authenticated and read `/api/users/me` before this
+   * app mounts, so the identity is known. Starting from `null` would mean a
+   * failed re-read drops a signed-in user onto the sign-in screen, which is
+   * both wrong and unrecoverable, since that screen cannot sign anyone in.
+   */
+  initialSession?: Session | null;
+}
+
+export function PocketProvider({
+  children,
+  services,
+}: {
+  children: ReactNode;
+  services?: PocketServices;
+}) {
   /**
    * The contact list as the request service sees it.
    *
@@ -162,29 +238,47 @@ export function PocketProvider({ children }: { children: ReactNode }) {
    * make every contact added after the first render invisible to requests —
    * so it reads through a ref and always sees the current list.
    */
-  const contactsRef = useRef<Recipient[]>(DEMO_RECIPIENTS);
+  const contactsRef = useRef<Recipient[]>(services ? [] : DEMO_RECIPIENTS);
 
-  // One instance each, for the lifetime of the app — the same pattern the
-  // original demo used for the payment service, extended to the session.
-  const [payments] = useState(createPaymentService);
-  const [sessions] = useState(createSessionService);
-  // Takes the payment service rather than building one: paying a request has
-  // to move money through the same send path as everything else.
-  const [requestService] = useState(() =>
-    createRequestService(
+  /**
+   * The services, resolved once.
+   *
+   * Injected services win; otherwise this builds the demo set, which is what
+   * `/app` has always run on. `demoMode` is derived from the same fact rather
+   * than passed separately, so there is one answer to "are we real?" and it
+   * cannot disagree with itself.
+   */
+  const demoMode = !services;
+  const [resolved] = useState<PocketServices>(() => {
+    if (services) return services;
+    // Takes the payment service rather than building one: paying a request has
+    // to move money through the same send path as everything else.
+    const payments = createPaymentService();
+    return {
       payments,
-      (id) => contactsRef.current.find((person) => person.id === id) ?? null,
-    ),
-  );
+      sessions: createSessionService(),
+      requests: createRequestService(
+        payments,
+        (id) => contactsRef.current.find((person) => person.id === id) ?? null,
+      ),
+      notifications: DEMO_NOTIFICATIONS,
+    };
+  });
+  const { payments, sessions, requests: requestService } = resolved;
 
   const [ready, setReady] = useState(false);
-  const [session, setSession] = useState<Session | null>(null);
-  const [balance, setBalance] = useState(0n);
+  const [session, setSession] = useState<Session | null>(
+    resolved.initialSession ?? null,
+  );
+  const [balance, setBalance] = useState(demoMode ? DEMO_BALANCE_UNITS : 0n);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [contacts, setContacts] = useState<Recipient[]>(DEMO_RECIPIENTS);
+  const [contacts, setContacts] = useState<Recipient[]>(
+    demoMode ? DEMO_RECIPIENTS : [],
+  );
   const [highlightId, setHighlightId] = useState<string | null>(null);
-  const [notificationLog, setNotificationLog] =
-    useState<PocketNotification[]>(DEMO_NOTIFICATIONS);
+  const [notificationLog, setNotificationLog] = useState<PocketNotification[]>(
+    resolved.notifications ?? [],
+  );
 
   const [requestLog, setRequestLog] = useState<PaymentRequest[]>([]);
   const [requestsLoading, setRequestsLoading] = useState(true);
@@ -210,20 +304,50 @@ export function PocketProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
 
+    /*
+      Every read is individually fallible, and a failure must not be fatal.
+
+      The demo read from memory and could not fail; these read over a network
+      that can. A `Promise.all` would make one dropped request — the contact
+      list, say — leave `ready` false forever, which is a splash screen that
+      never resolves. Each read therefore falls back to the last known value
+      and reports itself, and the app opens either way.
+
+      The fallbacks are the *previous* state rather than empty values, so a
+      transient failure does not blank a balance the user just saw.
+    */
+    const failed: string[] = [];
+    const read = <T,>(label: string, work: Promise<T>, fallback: T): Promise<T> =>
+      work.catch((e) => {
+        failed.push(`${label}: ${e instanceof Error ? e.message : "failed"}`);
+        return fallback;
+      });
+
     void (async () => {
-      const [existing, nextBalance, nextTransactions, nextRequests] =
+      const [existing, nextBalance, nextTransactions, nextRequests, nextContacts] =
         await Promise.all([
-          sessions.getSession(),
-          payments.getBalance(),
-          payments.listTransactions(),
-          requestService.list(),
+          read("session", sessions.getSession(), session),
+          read("balance", payments.getBalance(), balance),
+          read("transactions", payments.listTransactions(), transactions),
+          read("requests", requestService.list(), requestLog),
+          resolved.contacts
+            ? read("contacts", resolved.contacts.list(), contacts)
+            : Promise.resolve(contacts),
         ]);
       if (cancelled) return;
+
+      if (failed.length > 0) {
+        // Reported, not swallowed. The screens still render whatever they
+        // have, so a partial boot is visible as a gap rather than as an error
+        // page — but it is never silent.
+        console.error("[pocket] boot read failed", failed);
+      }
 
       setSession(existing);
       setBalance(nextBalance);
       setTransactions(nextTransactions);
       setRequestLog(nextRequests);
+      setContacts(nextContacts);
       setRequestsLoading(false);
 
       /*
@@ -231,6 +355,10 @@ export function PocketProvider({ children }: { children: ReactNode }) {
         with a username finished onboarding; one without it was interrupted
         between the account-type and profile screens, and dropping them on Home
         would leave them with a half-built profile.
+
+        In the real app the first branch cannot be reached: the shell signs the
+        user in before this app is mounted, and the adapter only returns null
+        when the token itself was rejected.
       */
       if (!existing) {
         setStack([entry("welcome")]);
@@ -246,7 +374,11 @@ export function PocketProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [payments, requestService, sessions]);
+    // Deliberately boot-only: this reads the world once when the app opens.
+    // Re-running it on every state change would re-fetch the ledger on each
+    // keystroke anywhere in the app.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessions, payments, requestService, resolved.contacts]);
 
   // Keeps the request service's view of people current without rebuilding it.
   useEffect(() => {
@@ -310,20 +442,32 @@ export function PocketProvider({ children }: { children: ReactNode }) {
    * reach the user unprompted, and leaving it on a frozen fixture would hide
    * whether the unread count works at all.
    */
-  const announce = useCallback((transaction: Transaction) => {
-    setNotificationLog((current) => [
-      {
-        id: `ntf_local_${transaction.id}`,
-        kind: "payment_sent",
-        title: `You sent ${transaction.recipientName} $${transaction.amountDisplay}`,
-        body: "Sent from your MUSD balance. Nothing left this device.",
-        createdAt: transaction.createdAt,
-        read: false,
-        transactionId: transaction.id,
-      },
-      ...current,
-    ]);
-  }, []);
+  const announce = useCallback(
+    (transaction: Transaction) => {
+      setNotificationLog((current) => [
+        {
+          id: `ntf_local_${transaction.id}`,
+          kind: "payment_sent",
+          title: `You sent ${transaction.recipientName} $${transaction.amountDisplay}`,
+          /*
+            The title is true either way — this notice is written by the app
+            after a send it performed. The body is not: "nothing left this
+            device" is the demo's reassurance, and in the real app money did
+            leave the device. Same event, and the mode decides which claim can
+            be made about it.
+          */
+          body: demoMode
+            ? "Sent from your MUSD balance. Nothing left this device."
+            : "Sent from your MUSD balance.",
+          createdAt: transaction.createdAt,
+          read: false,
+          transactionId: transaction.id,
+        },
+        ...current,
+      ]);
+    },
+    [demoMode],
+  );
 
   const recipientById = useCallback(
     (id: string | undefined) =>
@@ -482,7 +626,15 @@ export function PocketProvider({ children }: { children: ReactNode }) {
         const next = await sessions.updateProfile(update);
         setSession(next);
         return null;
-      } catch {
+      } catch (e) {
+        /*
+          A server refusal carries the reason the user needs — most often
+          "That username is already taken.", which is the entire point of the
+          round-trip. Replacing it with a generic sentence would hide the one
+          thing that tells them what to type instead. A network fault carries
+          nothing worth showing, so it gets the generic copy.
+        */
+        if (e instanceof ApiError) return e.message;
         return "Could not save your profile. Try again.";
       }
     },
@@ -506,15 +658,17 @@ export function PocketProvider({ children }: { children: ReactNode }) {
     await sessions.signOut();
     setSession(null);
     // Everything scoped to the person goes with them.
-    setContacts(DEMO_RECIPIENTS);
-    setNotificationLog(DEMO_NOTIFICATIONS);
+    setContacts(demoMode ? DEMO_RECIPIENTS : []);
+    setNotificationLog(demoMode ? DEMO_NOTIFICATIONS : []);
     setKeypad(clearKeypad());
     setPhase("idle");
     setError(null);
     setHighlightId(null);
-    setBalance(DEMO_BALANCE_UNITS);
+    setBalance(demoMode ? DEMO_BALANCE_UNITS : 0n);
+    setTransactions([]);
+    setRequestLog([]);
     reset("welcome");
-  }, [sessions, reset]);
+  }, [sessions, reset, demoMode]);
 
   /* ------------------------------------------------------- notifications */
 
@@ -552,19 +706,42 @@ export function PocketProvider({ children }: { children: ReactNode }) {
 
   /* -------------------------------------------------------------- people */
 
-  const addContact = useCallback((name: string, handle: string) => {
-    setContacts((current) => [
-      ...current,
-      {
-        id: `rcp_local_${current.length + 1}`,
+  const addContact = useCallback(
+    async (name: string, handle: string): Promise<AddContactResult> => {
+      /*
+        With a real contact service, the server decides. It resolves the handle
+        to an address and either stores the row or refuses — a handle that
+        belongs to nobody has nothing to store, and telling the user that is
+        better than filing an entry that can never be paid.
+
+        Without one (the demo), this is the local push it has always been: an
+        unverified entry with no address, which the contact grid marks as
+        "Not verified" rather than showing a tick it did not earn.
+      */
+      if (resolved.contacts) {
+        const result = await resolved.contacts.add(name, handle);
+        if (result.ok) {
+          setContacts((current) => [
+            ...current.filter((person) => person.id !== result.recipient.id),
+            result.recipient,
+          ]);
+        }
+        return result;
+      }
+
+      const local: Recipient = {
+        id: `rcp_local_${Date.now()}`,
         name,
         handle,
         // No address, because nothing resolved one. The UI has to be able to
         // tell the difference, so it is modelled rather than faked.
         verified: false,
-      },
-    ]);
-  }, []);
+      };
+      setContacts((current) => [...current, local]);
+      return { ok: true, recipient: local };
+    },
+    [resolved.contacts],
+  );
 
   const amountUnits = useMemo(() => currentValue(keypad), [keypad]);
 
@@ -591,6 +768,7 @@ export function PocketProvider({ children }: { children: ReactNode }) {
 
   const value: PocketStore = {
     ready,
+    demoMode,
     session,
     balance,
     transactions,
@@ -609,6 +787,7 @@ export function PocketProvider({ children }: { children: ReactNode }) {
     payRequest,
     declineRequest,
     cancelRequest,
+    requestCapabilities: requestService.capabilities,
     requestById,
 
     stack,

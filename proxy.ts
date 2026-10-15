@@ -1,53 +1,33 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * TEMPORARY — delete this file when the app ships.
+ * The seal, reduced to what still needs sealing.
  *
- * Only the marketing surface is finished, so everything else is sealed off
- * before a request ever reaches a route. Without this, the half-built app
- * screens and their APIs are publicly reachable on the production domain.
+ * This file used to hide the entire app (`/home`, `/pay`, the eight desktop
+ * screens) and every API route behind it, because only the marketing surface
+ * was finished and the rest was half-built but publicly reachable. The app has
+ * since shipped, so the parts that were sealed for being *unfinished* are now
+ * public on purpose.
  *
- * Public: `/`, `/waitlist`, `POST /api/waitlist`, and the generated
- * `opengraph-image` / `icon` routes (matcher excludes static assets).
+ * What remains is the one route sealed for a different reason. `/spike` is a
+ * Phase-0 relayer proof: a page that spends the BTC-funded hot wallet to
+ * demonstrate gasless receive. It is not a product surface and must not be
+ * reachable on the production domain — so it redirects to the landing page,
+ * ahead of routing.
+ *
+ * The API routes are not listed here anymore, and that is safe rather than
+ * merely convenient: each one authenticates itself. The app routes call
+ * `requireIdentity` and derive the owner or creator from the token — never from
+ * a query parameter — and `/api/cron/reconcile` checks `CRON_SECRET` itself.
+ * They had to be let through for the app to work at all: a `fetch()` from the
+ * browser cannot follow a redirect to the marketing page.
  */
 
-/** The only API endpoint the landing page needs. */
-const PUBLIC_API_ROUTES = new Set(["/api/waitlist"]);
-
-/**
- * Machine endpoints — not for browsers, and not unauthenticated. They are let
- * through the seal because the caller is a scheduler, not a session, so the
- * checks below (and the app's own auth) cannot apply to them. Each one
- * authenticates itself: the cron routes require `Authorization: Bearer
- * $CRON_SECRET` and answer 401 otherwise. Without an entry here they would 404
- * before reaching their own handler, and the scheduler would fail silently.
- */
-const MACHINE_API_ROUTES = new Set(["/api/cron/reconcile"]);
-
-/** App screens that are not ready to be seen. */
-const HIDDEN_SCREENS = [
-  "/home",
-  "/pay",
-  "/wallet",
-  "/activity",
-  "/deposit",
-  "/withdraw",
-  "/receive",
-  "/send",
-  "/settings",
-  "/spike",
-];
+/** Not a product surface: a device-only proof that spends a real hot wallet. */
+const HIDDEN_SCREENS = ["/spike"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  // App APIs 404 rather than redirect: a redirect would hand HTML to a fetch().
-  if (pathname.startsWith("/api/")) {
-    if (PUBLIC_API_ROUTES.has(pathname) || MACHINE_API_ROUTES.has(pathname)) {
-      return NextResponse.next();
-    }
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
 
   const isHidden = HIDDEN_SCREENS.some(
     (screen) => pathname === screen || pathname.startsWith(`${screen}/`),
