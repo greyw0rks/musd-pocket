@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { MoreVertical, Share } from "lucide-react";
+import { PocketMark } from "@/components/brand/pocket-mark";
 
 /**
  * The written fallback for installing Pocket.
@@ -18,7 +19,7 @@ export function installSteps(ios: boolean): { icon: ReactNode; text: string }[] 
           text: "Tap the Share button in Safari's toolbar.",
         },
         { icon: <span aria-hidden>＋</span>, text: 'Choose "Add to Home Screen".' },
-        { icon: <span aria-hidden>p</span>, text: 'Tap "Add" — Pocket appears with your apps.' },
+        { icon: <PocketMark size={20} />, text: 'Tap "Add" — Pocket appears with your apps.' },
       ]
     : [
         {
@@ -26,6 +27,6 @@ export function installSteps(ios: boolean): { icon: ReactNode; text: string }[] 
           text: "Open the browser menu (⋮ or ⋯).",
         },
         { icon: <span aria-hidden>↓</span>, text: 'Tap "Install app" or "Add to Home screen".' },
-        { icon: <span aria-hidden>p</span>, text: "Confirm — Pocket opens full screen." },
+        { icon: <PocketMark size={20} />, text: "Confirm — Pocket opens full screen." },
       ];
 }

@@ -273,6 +273,24 @@ export const wordmark = {
   rule: "One dot. No tagline lockup, no gradient.",
 } as const;
 
+/**
+ * The mark's palette.
+ *
+ * The mark is two stacked money cards rising out of a pocket — the same pair the
+ * home screen opens on. It takes its colours from the product roles (`p`, `s`,
+ * `y`) but deliberately fixes them: an icon on a home screen is an object, not a
+ * screen, so it does not invert with the app's theme. A dark-mode version of the
+ * icon would be a second logo.
+ */
+export const mark = {
+  /** The tile: the brand accent, the same in both themes. */
+  ground: palette.light.p,
+  /** The pocket and the card in front of it. */
+  ink: palette.light.s,
+  /** The card behind — the `y` highlight, which is where money sits. */
+  highlight: palette.light.y,
+} as const;
+
 /** Everything a new screen needs, in one import. */
 export const brand = {
   name: "Pocket",
@@ -283,4 +301,5 @@ export const brand = {
   motion,
   partners,
   wordmark,
+  mark,
 } as const;

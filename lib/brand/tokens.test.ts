@@ -251,6 +251,17 @@ check("the bundle exposes every part under one name", () => {
   assert.equal(brand.motion, motion);
 });
 
+check("the mark draws only from product roles", () => {
+  const roles = new Set(
+    themes.flatMap((theme) => ROLE_KEYS.map((key) => String(palette[theme][key]))),
+  );
+  for (const value of Object.values(brand.mark)) {
+    assert.ok(roles.has(value), `${value} is not a product role`);
+  }
+  assert.equal(brand.mark.ground, palette.light.p);
+  assert.equal(brand.mark.highlight, palette.light.y);
+});
+
 check("the wordmark is lowercase with one dot", () => {
   assert.equal(brand.wordmark.text, brand.wordmark.text.toLowerCase());
   assert.ok(brand.wordmark.dot);
