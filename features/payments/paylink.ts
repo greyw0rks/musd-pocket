@@ -7,8 +7,10 @@
  * owning it.
  *
  * The scheme is deliberately *not* a registered one. `pocket:` resolves to
- * nothing on any device today — that is the honest state before testnet, and
- * the receive screen says so rather than implying a wallet would understand it.
+ * nothing on any device today. That is why the receive screen shows the wallet
+ * address rather than a link this module could build: a code nothing can pay is
+ * worse than an address everything can read. What survives here is the reading
+ * side — the scan screen still accepts a handle pasted in any of these shapes.
  */
 
 import { parseDecimalToUnits, unitsToDecimal } from "@/features/payments/amount";

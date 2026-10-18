@@ -89,7 +89,24 @@ export function ListRow({
       </span>
 
       {trailing ? (
-        <span className="flex shrink-0 items-center gap-2">{trailing}</span>
+        /*
+          `min-w-0 shrink` rather than `shrink-0`, which is what it was.
+
+          `shrink-0` is right for the usual trailing — a pill, an amount — and
+          that is why it was there: a short value should never be squeezed to
+          make room for a long title. It is wrong for the one trailing that can
+          arrive too wide for the row on its own: a transaction hash, which is
+          sixty-six unbroken characters in a monospace face, so the row demands
+          more width than the card has and the text runs over the border.
+
+          Allowing it to shrink costs the short case nothing — an item that fits
+          is never shrunk — and gives the wide case somewhere to go. The title
+          beside it already yields gracefully (`.pk-f` is `min-width: 0` with a
+          truncating label), so both sides now degrade instead of one side
+          overflowing. A long trailing still has to wrap rather than clip; that
+          is the call site's job, since only it knows what the text is.
+        */
+        <span className="flex min-w-0 shrink items-center gap-2">{trailing}</span>
       ) : null}
     </>
   );

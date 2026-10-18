@@ -14,8 +14,15 @@ const amountSchema = z
     message: `Max ${MUSD_DECIMALS} decimals`,
   });
 
+/**
+ * Request creation, minus the creator.
+ *
+ * The creator is the authenticated caller — `POST /api/requests` reads it from
+ * the verified token, never from the body. An earlier revision took
+ * `creatorAddress` as a field, which let anyone create a request *as* somebody
+ * else; the field is gone on purpose, not overlooked.
+ */
 export const createRequestSchema = z.object({
-  creatorAddress: addressSchema,
   recipientAddress: addressSchema,
   amount: amountSchema,
   description: z.string().trim().max(120).optional().nullable(),
@@ -38,8 +45,14 @@ export const payRequestSchema = z.object({
     }),
 });
 
+/**
+ * Contact creation, minus the owner.
+ *
+ * As with requests, the owner is the authenticated caller. The absence of
+ * `ownerAddress` here is the fix for a real hole: the old shape let a caller
+ * name any address as the owner and write contacts into someone else's list.
+ */
 export const createContactSchema = z.object({
-  ownerAddress: addressSchema,
   contactAddress: addressSchema,
   label: z.string().trim().min(1).max(40),
 });

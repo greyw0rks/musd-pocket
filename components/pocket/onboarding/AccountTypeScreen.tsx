@@ -20,34 +20,31 @@ const OPTIONS = [
     id: "personal",
     Icon: UserIcon,
     title: "Personal",
-    body: "Send and receive with the people you know. Contacts, requests and one balance.",
-    note: "Contacts · Home · Profile",
+    body: "Send and receive with the people you know.",
   },
   {
     id: "merchant",
     Icon: BriefcaseIcon,
     title: "Business",
-    body: "Take payments at a counter, raise requests, and see what came in today.",
-    note: "Home · Payments · Business",
+    body: "Send and receive under a business name.",
   },
 ] as const satisfies readonly {
   id: AccountType;
   Icon: ComponentType<{ size?: number }>;
   title: string;
   body: string;
-  note: string;
 }[];
 
 /**
  * Screen 03 — Account type.
  *
- * This is the one choice in onboarding that changes the app rather than the
- * profile, because it decides the dock. So the cards name the navigation they
- * produce: the difference between the two options is otherwise invisible until
- * after the fact, which would make it feel like a coin flip.
+ * The choice is stored on the account and printed wherever the account is
+ * described — the overview, the profile. It used to decide the dock as well,
+ * and the cards named the navigation each option produced; there is no dock
+ * now, so the cards no longer promise one. What is left is what is true: the
+ * label.
  *
- * Nothing is spent by choosing — the profile screen that follows can change
- * it, and so can settings later.
+ * Nothing is spent by choosing — the profile screen that follows can change it.
  *
  * Selection is carried by the disc and a ring rather than by a lighter glass
  * fill. The old selected state was a `bg-white/[0.09]` wash over a dark page,
@@ -83,7 +80,7 @@ export function AccountTypeScreen() {
       <div className="pt-5">
         <h1 className="pk-h1">How will you use Pocket?</h1>
         <p className="pk-m mt-2 max-w-[34ch] text-[13px] leading-relaxed">
-          This picks your navigation. You can switch later.
+          This labels your account. You can change it later.
         </p>
       </div>
 
@@ -92,7 +89,7 @@ export function AccountTypeScreen() {
         role="radiogroup"
         aria-label="Account type"
       >
-        {OPTIONS.map(({ id, Icon, title, body, note }, index) => {
+        {OPTIONS.map(({ id, Icon, title, body }, index) => {
           const isSelected = selected === id;
           return (
             <motion.button
@@ -145,10 +142,6 @@ export function AccountTypeScreen() {
                   </span>
 
                   <span className="pk-m mt-1 block leading-relaxed">{body}</span>
-
-                  <span className="pk-m mt-2.5 block text-[10px] font-semibold tracking-wide uppercase">
-                    {note}
-                  </span>
                 </span>
               </div>
             </motion.button>

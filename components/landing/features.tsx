@@ -90,7 +90,7 @@ function FeatureCard({
   return (
     <Reveal delay={delay}>
       <div className="flex h-full flex-col rounded-2xl border border-border bg-surface p-6">
-        <span className="inline-flex size-10 items-center justify-center rounded-xl bg-mezo/10 text-mezo">
+        <span className="inline-flex size-10 items-center justify-center rounded-xl bg-brand/10 text-brand">
           <Icon className="size-5" />
         </span>
         <h3 className="mt-4 text-lg font-semibold">{title}</h3>
@@ -139,7 +139,7 @@ function AmountRow({
         {amount}{" "}
         <span className="text-sm font-medium text-muted">{TICKER}</span>
       </Amount>
-      <span className="rounded-md bg-mezo/15 px-2.5 py-1 text-xs font-semibold text-mezo">
+      <span className="rounded-md bg-brand/15 px-2.5 py-1 text-xs font-semibold text-brand">
         {action}
       </span>
     </div>

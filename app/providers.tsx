@@ -13,6 +13,7 @@ import {
   getPrivyWagmiConfig,
 } from "@/lib/wallet/privy";
 import { SessionProvider, NoAuthSessionProvider } from "@/lib/auth/session";
+import { MfaGate } from "@/lib/wallet/mfa-gate";
 
 function useQueryClient() {
   const [queryClient] = useState(
@@ -33,6 +34,15 @@ function PrivyProviders({ children }: { children: ReactNode }) {
 
   return (
     <PrivyProvider appId={PRIVY_APP_ID} config={privyConfig}>
+      {/*
+        The passkey listener, and the reason it lives here rather than on a
+        screen: `privyConfig` runs with `showWalletUIs: false`, so an MFA
+        challenge can arrive from anywhere in the app — a send, a repay, an
+        approval. It has to be answered from a component that is always
+        mounted, and this is the only place inside `PrivyProvider` that is.
+        It renders nothing; see lib/wallet/mfa-gate.tsx.
+      */}
+      <MfaGate />
       <QueryClientProvider client={queryClient}>
         <PrivyWagmiProvider config={wagmiConfig}>
           <SessionProvider>{children}</SessionProvider>

@@ -10,8 +10,6 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
-import { DEMO_BALANCE_UNITS, DEMO_RECIPIENTS } from "@/data/demo-data";
-import { DEMO_NOTIFICATIONS } from "@/data/demo-notifications";
 import {
   clearKeypad,
   currentValue,
@@ -24,29 +22,36 @@ import {
   type KeypadState,
   type Op,
 } from "@/features/payments/amount";
-import { createPaymentService } from "@/features/payments/payment.service";
-import type { Recipient, Transaction } from "@/features/payments/payment.types";
+import type { PaymentService, Recipient, Transaction } from "@/features/payments/payment.types";
 import type { PocketNotification } from "@/features/notifications/notification.types";
-import { createRequestService } from "@/features/requests/request.service";
 import type {
   CreateRequestInput,
   CreateRequestResult,
   PaymentRequest,
+  RequestCapabilities,
+  RequestService,
   SettleRequestResult,
 } from "@/features/requests/request.types";
-import { createSessionService } from "@/features/session/session.service";
 import type {
   AuthProvider,
   ProfileUpdate,
   ReceiptsLink,
   Session,
+  SessionService,
 } from "@/features/session/session.types";
+import type {
+  AddContactResult,
+  ContactService,
+  ResolveHandleResult,
+} from "@/features/contacts/api-contact.adapter";
+import type { AddressRecipientResult } from "@/features/payments/address-recipient";
+import { addressRecipient } from "@/features/payments/address-recipient";
+import { ApiError } from "@/lib/auth/client";
 import type {
   ScreenId,
   ScreenParams,
   StackEntry,
 } from "@/components/pocket/navigation/ids";
-import { homeScreenFor } from "@/components/pocket/navigation/screens";
 
 export type { ScreenId, ScreenParams, StackEntry };
 
@@ -58,7 +63,15 @@ interface PocketStore {
   ready: boolean;
 
   session: Session | null;
-  balance: bigint;
+  /**
+   * The wallet's mUSD, in minor units — the app's one balance.
+   *
+   * `null` means "not read yet", not zero. The distinction is the whole reason
+   * this is nullable: the figure comes from a chain read that takes a moment,
+   * and a `0n` seed would paint `$0.00` over money the user actually holds.
+   * Screens withhold the number instead of printing one.
+   */
+  balance: bigint | null;
   transactions: Transaction[];
   contacts: Recipient[];
   highlightId: string | null;
@@ -78,6 +91,14 @@ interface PocketStore {
   payRequest: (id: string) => Promise<SettleRequestResult>;
   declineRequest: (id: string) => Promise<void>;
   cancelRequest: (id: string) => Promise<void>;
+  /**
+   * Which request actions the injected service can perform.
+   *
+   * Passed straight through from the adapter, because the screens ask before
+   * they draw a control — a "Withdraw request" button that always errors is a
+   * worse answer than no button. See `RequestCapabilities`.
+   */
+  requestCapabilities: RequestCapabilities;
   requestById: (id: string | undefined) => PaymentRequest | null;
 
   /* Navigation */
@@ -113,7 +134,35 @@ interface PocketStore {
   confirmSend: () => Promise<void>;
 
   /* People */
-  addContact: (name: string, handle: string) => void;
+  /**
+   * Add somebody to the contact book.
+   *
+   * Async and fallible, because it is a network round-trip that can refuse: a
+   * handle nobody holds has no address to save, and saying so is better than
+   * filing an entry that can never be paid.
+   */
+  addContact: (name: string, handle: string) => Promise<AddContactResult>;
+  /**
+   * Turn a handle into somebody payable, without saving anybody.
+   *
+   * The scan screen's whole job, and a different one from `addContact`: it
+   * resolves a destination for a single payment rather than keeping a person.
+   * What it finds is held for the send (see `directory`) so the transfer screen
+   * can look them up by id, but the contact book does not grow by it.
+   */
+  resolveHandle: (handle: string) => Promise<ResolveHandleResult>;
+  /**
+   * Send to an address the user typed, rather than to a person.
+   *
+   * The third way into the transfer screen, after a saved contact and a scanned
+   * handle — and the only one where no server is asked anything, because an
+   * address needs no resolution. It is synchronous for that reason.
+   *
+   * Like a scanned handle and unlike a saved contact, this registers nobody:
+   * the address is held for the one payment (`directory`) and the contact book
+   * does not grow by it.
+   */
+  payAddress: (address: string) => AddressRecipientResult;
   recipientById: (id: string | undefined) => Recipient | null;
 }
 
@@ -153,7 +202,39 @@ function recentRecipients(
   return out;
 }
 
-export function PocketProvider({ children }: { children: ReactNode }) {
+/**
+ * What the app talks to.
+ *
+ * Every field is required. There is no fallback set of implementations behind
+ * this interface and no in-memory substitute for any of them: the app either
+ * has a real service to call or it does not run. That is deliberate — a build
+ * that could quietly substitute fixtures for the money paths was a second app
+ * living inside this one, and the two drifted.
+ */
+export interface PocketServices {
+  payments: PaymentService;
+  sessions: SessionService;
+  requests: RequestService;
+  /** `/api/contacts` — there is no local contact book to fall back on. */
+  contacts: ContactService;
+  /**
+   * The session the shell already resolved, used as the starting value.
+   *
+   * `SessionProvider` has authenticated and read `/api/users/me` before this
+   * app mounts, so the identity is known. Starting from `null` would mean a
+   * failed re-read drops a signed-in user onto the sign-in screen, which is
+   * both wrong and unrecoverable, since that screen cannot sign anyone in.
+   */
+  initialSession?: Session | null;
+}
+
+export function PocketProvider({
+  children,
+  services,
+}: {
+  children: ReactNode;
+  services: PocketServices;
+}) {
   /**
    * The contact list as the request service sees it.
    *
@@ -162,29 +243,52 @@ export function PocketProvider({ children }: { children: ReactNode }) {
    * make every contact added after the first render invisible to requests —
    * so it reads through a ref and always sees the current list.
    */
-  const contactsRef = useRef<Recipient[]>(DEMO_RECIPIENTS);
+  const contactsRef = useRef<Recipient[]>([]);
 
-  // One instance each, for the lifetime of the app — the same pattern the
-  // original demo used for the payment service, extended to the session.
-  const [payments] = useState(createPaymentService);
-  const [sessions] = useState(createSessionService);
-  // Takes the payment service rather than building one: paying a request has
-  // to move money through the same send path as everything else.
-  const [requestService] = useState(() =>
-    createRequestService(
-      payments,
-      (id) => contactsRef.current.find((person) => person.id === id) ?? null,
-    ),
-  );
+  /*
+    Held in a ref for the lifetime of the mount.
+
+    The provider is handed a freshly-built service set once, and every hook
+    below closes over it. Reading it through state would let a re-render swap
+    the services underneath a `useCallback` that had already captured them.
+  */
+  const resolved = useRef<PocketServices>(services).current;
+  const { payments, sessions, requests: requestService } = resolved;
 
   const [ready, setReady] = useState(false);
-  const [session, setSession] = useState<Session | null>(null);
-  const [balance, setBalance] = useState(0n);
+  const [session, setSession] = useState<Session | null>(
+    resolved.initialSession ?? null,
+  );
+  /*
+    Nothing until the chain answers.
+
+    `null` is "not read yet", and it is the starting state rather than a `0n`
+    seed: a zero painted here would be a number the app invented about money
+    the user actually holds. The boot read below fills it in.
+  */
+  const [balance, setBalance] = useState<bigint | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [contacts, setContacts] = useState<Recipient[]>(DEMO_RECIPIENTS);
+  const [contacts, setContacts] = useState<Recipient[]>([]);
+  /*
+    People resolved during this session but never saved.
+
+    A scanned handle and a saved contact are different things: one is a lookup
+    against the directory, the other a row the user chose to keep. Holding the
+    resolved person here — rather than pushing them into `contacts` — keeps the
+    contact grid honest about what was actually saved, while still letting the
+    transfer screen find them by id.
+  */
+  const [directory, setDirectory] = useState<Recipient[]>([]);
   const [highlightId, setHighlightId] = useState<string | null>(null);
-  const [notificationLog, setNotificationLog] =
-    useState<PocketNotification[]>(DEMO_NOTIFICATIONS);
+  /*
+    Starts empty, and stays empty until a send puts something in it.
+
+    There is no notification backend, so nothing can arrive from elsewhere — a
+    seeded list would be the app inventing events. See `announce`.
+  */
+  const [notificationLog, setNotificationLog] = useState<PocketNotification[]>(
+    [],
+  );
 
   const [requestLog, setRequestLog] = useState<PaymentRequest[]>([]);
   const [requestsLoading, setRequestsLoading] = useState(true);
@@ -200,8 +304,8 @@ export function PocketProvider({ children }: { children: ReactNode }) {
    * The authoritative duplicate-send guard.
    *
    * A ref, not state: two taps landing in the same tick would both read a
-   * stale `phase` and both send. This is the one place in the demo where being
-   * wrong costs money, so it is the one place that does not wait for a render.
+   * stale `phase` and both send. Sending moves real money, so this is the one
+   * place that does not wait for a render.
    */
   const inFlight = useRef(false);
 
@@ -210,20 +314,48 @@ export function PocketProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
 
+    /*
+      Every read is individually fallible, and a failure must not be fatal.
+
+      Every read here goes over a network, and any of them can fail. A
+      `Promise.all` would make one dropped request — the contact list, say —
+      leave `ready` false forever, which is a splash screen that never
+      resolves. Each read therefore falls back to the last known value and
+      reports itself, and the app opens either way.
+
+      The fallbacks are the *previous* state rather than empty values, so a
+      transient failure does not blank a balance the user just saw.
+    */
+    const failed: string[] = [];
+    const read = <T,>(label: string, work: Promise<T>, fallback: T): Promise<T> =>
+      work.catch((e) => {
+        failed.push(`${label}: ${e instanceof Error ? e.message : "failed"}`);
+        return fallback;
+      });
+
     void (async () => {
-      const [existing, nextBalance, nextTransactions, nextRequests] =
+      const [existing, nextBalance, nextTransactions, nextRequests, nextContacts] =
         await Promise.all([
-          sessions.getSession(),
-          payments.getBalance(),
-          payments.listTransactions(),
-          requestService.list(),
+          read("session", sessions.getSession(), session),
+          read("balance", payments.getBalance(), balance),
+          read("transactions", payments.listTransactions(), transactions),
+          read("requests", requestService.list(), requestLog),
+          read("contacts", resolved.contacts.list(), contacts),
         ]);
       if (cancelled) return;
+
+      if (failed.length > 0) {
+        // Reported, not swallowed. The screens still render whatever they
+        // have, so a partial boot is visible as a gap rather than as an error
+        // page — but it is never silent.
+        console.error("[pocket] boot read failed", failed);
+      }
 
       setSession(existing);
       setBalance(nextBalance);
       setTransactions(nextTransactions);
       setRequestLog(nextRequests);
+      setContacts(nextContacts);
       setRequestsLoading(false);
 
       /*
@@ -231,13 +363,17 @@ export function PocketProvider({ children }: { children: ReactNode }) {
         with a username finished onboarding; one without it was interrupted
         between the account-type and profile screens, and dropping them on Home
         would leave them with a half-built profile.
+
+        The first branch is unreachable in practice: the shell signs the user in
+        before this app is mounted, and the adapter only returns null when the
+        token itself was rejected.
       */
       if (!existing) {
         setStack([entry("welcome")]);
       } else if (!existing.user.handle) {
         setStack([entry("account-type")]);
       } else {
-        setStack([entry(homeScreenFor(existing.user.accountType))]);
+        setStack([entry("home")]);
       }
 
       setReady(true);
@@ -246,7 +382,11 @@ export function PocketProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [payments, requestService, sessions]);
+    // Deliberately boot-only: this reads the world once when the app opens.
+    // Re-running it on every state change would re-fetch the ledger on each
+    // keystroke anywhere in the app.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessions, payments, requestService, resolved.contacts]);
 
   // Keeps the request service's view of people current without rebuilding it.
   useEffect(() => {
@@ -285,8 +425,8 @@ export function PocketProvider({ children }: { children: ReactNode }) {
   /**
    * Re-read the balance and ledger from the service.
    *
-   * The UI is never allowed to be the source of truth about money, even in a
-   * demo — that habit is what produces the bugs this plan exists to avoid.
+   * The UI is never allowed to be the source of truth about money — that habit
+   * is what produces the bugs this plan exists to avoid.
    */
   const refresh = useCallback(async () => {
     const [nextBalance, nextTransactions] = await Promise.all([
@@ -297,6 +437,48 @@ export function PocketProvider({ children }: { children: ReactNode }) {
     setTransactions(nextTransactions);
   }, [payments]);
 
+  /**
+   * Keep the balance live while the app is open.
+   *
+   * `refresh()` otherwise runs only at boot and after a send, so money arriving
+   * from anywhere else — another device, a counterparty paying this address —
+   * would not appear until a reload. Fifteen seconds is the cadence the phase-1
+   * wallet read used, so the app's freshness is unchanged by moving where the
+   * number comes from.
+   *
+   * A failed poll is swallowed for the same reason a failed boot read is — a
+   * dropped refresh must not replace a good balance with an error.
+   */
+  useEffect(() => {
+    const timer = setInterval(() => {
+      void refresh().catch(() => {});
+    }, 15_000);
+    return () => clearInterval(timer);
+  }, [refresh]);
+
+  /*
+    The first balance read races the wallet.
+
+    At boot there is often no address yet — Privy mints the embedded wallet
+    after this store mounts — so `getBalance` fails and the balance stays `null`.
+    That is the honest state, but on its own it would last until the next poll,
+    leaving a dash on Home for up to fifteen seconds over a wallet that was
+    ready after one. Watching the session's wallet means the figure appears as
+    soon as there is an address to read.
+
+    The ref is what keeps this from re-reading the same address twice: whatever
+    the session carried at mount was already read by the boot effect, so only a
+    later arrival is news.
+  */
+  const walletAddress = session?.wallet.address ?? null;
+  const bootAddress = useRef<string | null>(walletAddress);
+  useEffect(() => {
+    if (!walletAddress) return;
+    if (walletAddress === bootAddress.current) return;
+    bootAddress.current = walletAddress;
+    void refresh().catch(() => {});
+  }, [walletAddress, refresh]);
+
   const refreshRequests = useCallback(async () => {
     setRequestLog(await requestService.list());
   }, [requestService]);
@@ -305,18 +487,25 @@ export function PocketProvider({ children }: { children: ReactNode }) {
    * Say out loud that money moved.
    *
    * Both routes out of the balance — a direct send and paying a request — end
-   * here, so the two can never announce the same event in different words. The
-   * demo has no push service, but the bell is the one place a real app would
-   * reach the user unprompted, and leaving it on a frozen fixture would hide
-   * whether the unread count works at all.
+   * here, so the two can never announce the same event in different words.
+   *
+   * These notices are local: there is no push service behind this list, so the
+   * only events in it are ones this app performed and wrote down itself. The
+   * bell exists because a send that moves real money and then says nothing
+   * anywhere is worse than one that repeats itself.
    */
   const announce = useCallback((transaction: Transaction) => {
     setNotificationLog((current) => [
       {
         id: `ntf_local_${transaction.id}`,
         kind: "payment_sent",
-        title: `You sent ${transaction.recipientName} $${transaction.amountDisplay}`,
-        body: "Sent from your MUSD balance. Nothing left this device.",
+        /*
+          No `$` here. `amountDisplay` is the row's own token rendered with its
+          own symbol, so a prefix would double it — and, before it carried one,
+          would have printed a BTC transfer as a dollar figure.
+        */
+        title: `You sent ${transaction.recipientName} ${transaction.amountDisplay}`,
+        body: "Sent from your MUSD balance.",
         createdAt: transaction.createdAt,
         read: false,
         transactionId: transaction.id,
@@ -327,8 +516,14 @@ export function PocketProvider({ children }: { children: ReactNode }) {
 
   const recipientById = useCallback(
     (id: string | undefined) =>
-      id ? (contacts.find((person) => person.id === id) ?? null) : null,
-    [contacts],
+      id
+        ? (contacts.find((person) => person.id === id) ??
+          // Saved first, so a contact the user has kept always wins over a
+          // one-off resolution of the same person.
+          directory.find((person) => person.id === id) ??
+          null)
+        : null,
+    [contacts, directory],
   );
 
   const startSend = useCallback(() => {
@@ -369,18 +564,31 @@ export function PocketProvider({ children }: { children: ReactNode }) {
     const amountUnits = currentValue(keypad);
     if (amountUnits === null || amountUnits <= 0n) return;
 
-    // A contact added in this session has a handle but no resolved address.
-    // Saying so is the only honest option: nothing in this build can turn
-    // "@someone" into somewhere to send.
+    /*
+      A destination with no address behind it.
+
+      Both routes into this list — a saved contact and a scanned handle —
+      resolve the address before they will accept anybody, so this should not
+      be reachable. It stays because the alternative to a refusal here is a
+      signature prompt for a transfer to `undefined`, and "should not happen"
+      is not a reason to hand a wallet that.
+    */
     if (!recipient.verified || !recipient.address) {
       setError(
-        `${recipient.name}'s handle has not been resolved to a payment address.`,
+        `${recipient.name} has no payment address on file, so there is nowhere to send.`,
       );
       setResetSignal((n) => n + 1);
       return;
     }
 
-    if (amountUnits > balance) {
+    /*
+      A known balance that is too small is refused here, before the wallet
+      prompts. An *unknown* one is not: `balance === null` means the read has
+      not answered, and blocking a send on a number nobody has read would be
+      inventing a limit. The chain is the authority in that case, and it will
+      refuse an overdraw on its own.
+    */
+    if (balance !== null && amountUnits > balance) {
       setError("That is more than your available balance.");
       setResetSignal((n) => n + 1);
       return;
@@ -482,7 +690,15 @@ export function PocketProvider({ children }: { children: ReactNode }) {
         const next = await sessions.updateProfile(update);
         setSession(next);
         return null;
-      } catch {
+      } catch (e) {
+        /*
+          A server refusal carries the reason the user needs — most often
+          "That username is already taken.", which is the entire point of the
+          round-trip. Replacing it with a generic sentence would hide the one
+          thing that tells them what to type instead. A network fault carries
+          nothing worth showing, so it gets the generic copy.
+        */
+        if (e instanceof ApiError) return e.message;
         return "Could not save your profile. Try again.";
       }
     },
@@ -506,13 +722,16 @@ export function PocketProvider({ children }: { children: ReactNode }) {
     await sessions.signOut();
     setSession(null);
     // Everything scoped to the person goes with them.
-    setContacts(DEMO_RECIPIENTS);
-    setNotificationLog(DEMO_NOTIFICATIONS);
+    setContacts([]);
+    setDirectory([]);
+    setNotificationLog([]);
     setKeypad(clearKeypad());
     setPhase("idle");
     setError(null);
     setHighlightId(null);
-    setBalance(DEMO_BALANCE_UNITS);
+    setBalance(null);
+    setTransactions([]);
+    setRequestLog([]);
     reset("welcome");
   }, [sessions, reset]);
 
@@ -543,8 +762,7 @@ export function PocketProvider({ children }: { children: ReactNode }) {
    * action from "Mark all" to "Clear all" rather than offering both. That is
    * the safeguard: clearing cannot lose a notice the user has not seen,
    * because the control does not exist while one is waiting. A confirmation
-   * sheet would guard the same thing, at the cost of a tap and a state, for a
-   * list the demo regenerates on sign-out.
+   * sheet would guard the same thing, at the cost of a tap and a state.
    */
   const clearNotifications = useCallback(() => {
     setNotificationLog([]);
@@ -552,29 +770,102 @@ export function PocketProvider({ children }: { children: ReactNode }) {
 
   /* -------------------------------------------------------------- people */
 
-  const addContact = useCallback((name: string, handle: string) => {
-    setContacts((current) => [
-      ...current,
-      {
-        id: `rcp_local_${current.length + 1}`,
-        name,
-        handle,
-        // No address, because nothing resolved one. The UI has to be able to
-        // tell the difference, so it is modelled rather than faked.
-        verified: false,
-      },
-    ]);
-  }, []);
+  const addContact = useCallback(
+    async (name: string, handle: string): Promise<AddContactResult> => {
+      /*
+        The server decides. It resolves the handle to an address and either
+        stores the row or refuses — a handle that belongs to nobody has nothing
+        to store, and telling the user that is better than filing an entry that
+        can never be paid.
+      */
+      const result = await resolved.contacts.add(name, handle);
+      if (result.ok) {
+        setContacts((current) => [
+          ...current.filter((person) => person.id !== result.recipient.id),
+          result.recipient,
+        ]);
+      }
+      return result;
+    },
+    [resolved.contacts],
+  );
+
+  const resolveHandle = useCallback(
+    async (handle: string): Promise<ResolveHandleResult> => {
+      /*
+        The directory answers, and it is the only thing that can: the app has no
+        way to turn a username into an address on its own. Nothing is stored,
+        because a scan is a destination for one payment and not an entry in the
+        user's address book.
+
+        The resolved person is held for the send so the transfer screen can look
+        them up by id — the same path a saved contact takes, so everything
+        downstream of the picker is unchanged.
+      */
+      const result = await resolved.contacts.lookup(handle);
+      if (result.ok) {
+        setDirectory((current) => [
+          ...current.filter((person) => person.id !== result.recipient.id),
+          result.recipient,
+        ]);
+      }
+      return result;
+    },
+    [resolved.contacts],
+  );
+
+  const payAddress = useCallback(
+    (address: string): AddressRecipientResult => {
+      const result = addressRecipient(address);
+      if (!result.ok) return result;
+
+      /*
+        Paying yourself is refused, and this is the same refusal the legacy
+        payment route already makes ("You can't send to yourself"). The app
+        has one wallet and it is the only one holding money, so a transfer from
+        it to itself cannot accomplish anything — the balance comes back
+        unchanged and the gas does not. There is no version of this the user
+        wants, which is what separates it from a limit this codebase would
+        otherwise have no business inventing.
+      */
+      const own = session?.wallet.address;
+      if (own && own.toLowerCase() === result.recipient.address?.toLowerCase()) {
+        return {
+          ok: false,
+          error:
+            "That is this wallet's own address. Sending to it would only cost the gas.",
+        };
+      }
+
+      /*
+        Held for the send under `directory`, not pushed into `contacts`: an
+        address is a destination for one payment, not a person the user chose
+        to keep. Then straight to the transfer screen by id, exactly as a
+        scanned handle goes — so everything downstream of the picker is
+        unchanged and does not need to know which of the three ways in was
+        taken.
+      */
+      setDirectory((current) => [
+        ...current.filter((person) => person.id !== result.recipient.id),
+        result.recipient,
+      ]);
+      chooseRecipient(result.recipient.id);
+
+      return result;
+    },
+    [chooseRecipient, session],
+  );
 
   const amountUnits = useMemo(() => currentValue(keypad), [keypad]);
 
   /**
    * Newest first.
    *
-   * The fixture is written in the order the notices were thought of, not the
-   * order they arrived, and a feed reading "Yesterday" above "Today" makes the
-   * reader do the sorting themselves. Sorted once here rather than in the
-   * screen, so nothing that reads this list can disagree about its order.
+   * Notices are appended as they happen, so the list is already in order — but
+   * a feed reading "Yesterday" above "Today" makes the reader do the sorting
+   * themselves, so the order is guaranteed here rather than left to however the
+   * entries got in. Sorted once, so nothing that reads this list can disagree
+   * about its order.
    */
   const notifications = useMemo(
     () =>
@@ -609,6 +900,7 @@ export function PocketProvider({ children }: { children: ReactNode }) {
     payRequest,
     declineRequest,
     cancelRequest,
+    requestCapabilities: requestService.capabilities,
     requestById,
 
     stack,
@@ -639,6 +931,8 @@ export function PocketProvider({ children }: { children: ReactNode }) {
     confirmSend,
 
     addContact,
+    resolveHandle,
+    payAddress,
     recipientById,
   };
 

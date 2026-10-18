@@ -2,7 +2,6 @@
 
 import { motion } from "motion/react";
 import { CheckIcon, ChevronRightIcon } from "@/components/pocket/icons";
-import { homeScreenFor } from "@/components/pocket/navigation/screens";
 import { usePocket } from "@/components/pocket/store";
 import { SCREEN_PLAIN } from "@/components/pocket/theme";
 import { Button } from "@/components/pocket/ui/Button";
@@ -11,15 +10,15 @@ import { formatMoney } from "@/lib/formatters";
 /**
  * Screen 05 — Onboarding complete.
  *
- * The payoff screen, and the last honest thing onboarding has to say. Section
- * 10 is explicit that before testnet nothing may claim to be on-chain, so the
- * card here names exactly what is seeded and what does not exist yet, on the
- * one screen where a user is most likely to assume otherwise.
+ * The payoff screen, and the last honest thing onboarding has to say. This is
+ * the one screen where a user is most likely to assume something about what
+ * they are about to use, so it names the terms plainly before handing them the
+ * app: which chain, whose money, and what it is worth.
  *
- * This is also the "demo-mode indicator" the Phase 1 brief asks for: rather
- * than a permanent badge in the chrome, the app states its own limits once,
- * plainly, and then gets out of the way. The balance keeps a small "Demo"
- * marker everywhere it appears.
+ * It runs on Mezo's testnet, and says so. That is not a caveat bolted on — it
+ * is the fact that makes the balance below readable. A figure with no chain
+ * named is a figure the user will price against their own currency, and on
+ * testnet that is wrong by the whole amount.
  *
  * The full-bleed green fill is gone. It was the second of the app's two
  * un-invertible surfaces — a screen that could only ever be green is a screen
@@ -75,9 +74,11 @@ export function OnboardingDoneScreen() {
           className="mt-2 flex flex-col items-center"
         >
           <span className="pk-m text-[10px] font-semibold tracking-wide uppercase">
-            Demo balance
+            In your wallet
           </span>
-          <span className="pk-big tabular-nums">{formatMoney(balance)}</span>
+          <span className="pk-big tabular-nums">
+            {balance === null ? "—" : formatMoney(balance)}
+          </span>
         </motion.div>
 
         {/*
@@ -92,9 +93,9 @@ export function OnboardingDoneScreen() {
           className="pk-card mt-4 w-full space-y-2 px-4 py-3.5 text-left text-[11px] leading-relaxed text-[var(--m)]"
         >
           {[
-            "This balance is seeded demo data, not money you own.",
-            "Nothing is on a blockchain. No wallet has been created.",
-            "Transfers are recorded inside this app and nowhere else.",
+            "This is Mezo's testnet. The balance above is real on that chain and worth nothing off it.",
+            "A send moves mUSD straight from your wallet to theirs. Nothing is held in between.",
+            "Gas is paid in testnet BTC, so a wallet with no BTC cannot send.",
           ].map((line) => (
             <li key={line} className="flex gap-2">
               <span
@@ -112,13 +113,7 @@ export function OnboardingDoneScreen() {
           transition={{ delay: 0.5 }}
           className="mt-4 grid w-full"
         >
-          <Button
-            full
-            icon={<ChevronRightIcon size={16} />}
-            onClick={() =>
-              reset(homeScreenFor(session?.user.accountType ?? "personal"))
-            }
-          >
+          <Button full icon={<ChevronRightIcon size={16} />} onClick={() => reset("home")}>
             Go to Pocket
           </Button>
         </motion.div>

@@ -229,7 +229,7 @@ export function RequestScreen({
         />
 
         {error ? (
-          <p className="mt-1 px-1 text-[11px] font-semibold text-[var(--r)]">
+          <p className="mt-1 px-1 text-[11px] font-semibold text-[var(--r-ink)]">
             {error}
           </p>
         ) : null}

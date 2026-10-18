@@ -1,9 +1,16 @@
 import { ImageResponse } from "next/og";
+import { palette } from "@/lib/brand/tokens";
 
 export const size = { width: 64, height: 64 };
 export const contentType = "image/png";
 
-/** Browser tab icon: the Mezo-orange "pocket." mark. */
+/**
+ * Browser tab icon: the brand-purple "pocket." mark.
+ *
+ * The ground is the brand accent, not Mezo orange. The icon is the product's
+ * face on a tab or a home screen; painting it in the partner's colour made the
+ * chain look like the product.
+ */
 export default function Icon() {
   return new ImageResponse(
     (
@@ -14,7 +21,7 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#FF5A36",
+          background: palette.light.p,
           borderRadius: 14,
           color: "#FFFFFF",
           fontSize: 42,

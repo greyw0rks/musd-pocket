@@ -2,9 +2,15 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 /**
- * The primary conversion action. Mezo orange in both themes — on the marketing
- * surface the orange *is* the brand thread (brief §6), so it deliberately does
- * not follow the app's themed `primary`.
+ * The primary conversion action.
+ *
+ * This is the app's `.pk-btn`: a full-radius pill in the inverse pair — black
+ * on the light theme, white on the dark one. It was Mezo orange, which made the
+ * marketing page and the product disagree about what a primary action looks
+ * like; adopting the brand kit means the biggest button on the site is the same
+ * button the wallet uses.
+ *
+ * Purple stays an accent (see `Eyebrow`, icon chips, data), never the action.
  */
 export function CtaLink({
   href,
@@ -21,9 +27,9 @@ export function CtaLink({
     <Link
       href={href}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-lg bg-mezo font-semibold text-white shadow-sm transition-colors",
-        "hover:bg-mezo-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mezo/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-        size === "lg" ? "px-7 py-4 text-base" : "px-5 py-3 text-[15px]",
+        "inline-flex items-center justify-center gap-2 rounded-full bg-foreground font-semibold text-background transition-opacity",
+        "hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        size === "lg" ? "px-7 py-3.5 text-base" : "px-6 py-3 text-[15px]",
         className,
       )}
     >

@@ -14,7 +14,12 @@ const NAV = [
   {
     heading: "Get started",
     links: [
-      { href: "/waitlist", label: "Early access" },
+      /*
+        "Early access" was here, pointing at `/waitlist`. The app is open now,
+        so the only honest action is the one that opens it. The old route still
+        exists for links that were already shared, but it redirects to `/home`
+        rather than collecting an address nobody needs to leave.
+      */
       { href: "/home", label: "Open Pocket" },
     ],
   },
@@ -25,7 +30,7 @@ export function Footer() {
     <footer className="border-t border-border">
       <div className="mx-auto grid w-full max-w-6xl gap-10 px-6 py-14 sm:grid-cols-2 lg:grid-cols-4">
         <div className="lg:col-span-2">
-          <Wordmark className="text-lg" showMusd />
+          <Wordmark className="text-lg" />
           <p className="mt-4 max-w-xs text-sm text-muted text-pretty">
             Spend your Bitcoin without selling it. {TICKER} payments on{" "}
             {NETWORK}.
@@ -42,7 +47,7 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-foreground transition-colors hover:text-mezo focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mezo/50 focus-visible:rounded"
+                    className="text-sm text-foreground transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:rounded"
                   >
                     {link.label}
                   </Link>

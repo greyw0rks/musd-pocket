@@ -4,71 +4,51 @@ import type { ReactElement } from "react";
 import { motion } from "motion/react";
 import {
   HomeIcon,
-  ReceiveIcon,
   SpendIcon,
-  UserIcon,
   VaultIcon,
 } from "@/components/pocket/icons";
 import type { IconProps } from "@/components/pocket/icons";
+import {
+  DOCK_TABS,
+  TAB_LABELS,
+  type PocketTab,
+} from "@/components/pocket/navigation/screens";
 import { DOCK_MOTION } from "@/components/pocket/theme";
-import type { PocketTab } from "@/components/pocket/navigation/screens";
-import type { AccountType } from "@/features/session/session.types";
 
 /**
  * The floating dock.
  *
- * One dark pill, always dark in both themes. It floats over content that
- * scrolls beneath it, so it has to stay legible whatever passes under — and in
- * the light theme it is the only dark object on screen, which is what makes it
- * read as chrome rather than as another card.
+ * Three tabs in a pill, and the only navigation control in the app that is
+ * always in the same place. The current tab grows a white pill that reveals its
+ * label — so the dock tells you where you are, not just where you can go, and
+ * it does that without the label taking up room on the two tabs you can read
+ * from their icons alone.
  *
- * The active tab grows a white pill and reveals its label. That reveal is
- * doing real work: two of the three labels are not guessable from the icon
- * ("Vault" and "Spending" are close cousins as pictures), so the tab you are
- * on names itself and the other two stay quiet. The reference did exactly this,
- * and it is the reason three icons read as navigation rather than as buttons.
+ * **Switching tabs is a reset, not a push.** `onChange` hands the tab up and
+ * the host resets the stack to `screenForTab(tab)`, so the dock never builds a
+ * back stack behind itself. That is what makes these three tops rather than
+ * three more things in a queue, and it is why this component takes no history
+ * and knows nothing about the stack.
  *
- * The white pill is a CSS state keyed off `aria-current`, not a travelling
- * element: the pill changes *size* when the label appears, and a shared-layout
- * transition would animate the wrong geometry. The 0.35s `all` transition in
- * `.pk-nav > button` covers the growth on its own.
+ * The animation is `DOCK_MOTION`, the same spring the sheets use — the dock is
+ * a surface with area, not a page, and the heavier spring is what keeps it from
+ * feeling flicked. It is rendered inside an `AnimatePresence` in the host so
+ * that it enters and leaves with the screens that own it rather than blinking
+ * out when a send sheet covers it.
  *
- * A merchant gets a different three, because a merchant's world is money
- * arriving rather than money set aside.
+ * The active tab is marked with `aria-current="page"` and *that* is what the
+ * stylesheet keys the white pill off, so the visual state and the state a
+ * screen reader announces come from one attribute rather than two that can
+ * drift apart.
  */
-interface DockTab {
-  id: PocketTab;
-  label: string;
-  Icon: (props: IconProps) => ReactElement;
-}
-
-const PERSONAL_TABS = [
-  { id: "home", label: "Home", Icon: HomeIcon },
-  { id: "vault", label: "Vault", Icon: VaultIcon },
-  { id: "spending", label: "Spending", Icon: SpendIcon },
-] as const satisfies readonly DockTab[];
-
-const MERCHANT_TABS = [
-  { id: "home", label: "Home", Icon: HomeIcon },
-  { id: "payments", label: "Payments", Icon: ReceiveIcon },
-  { id: "business", label: "Business", Icon: UserIcon },
-] as const satisfies readonly DockTab[];
-
-export function dockTabsFor(accountType: AccountType): readonly DockTab[] {
-  return accountType === "merchant" ? MERCHANT_TABS : PERSONAL_TABS;
-}
-
 export function FloatingNav({
   active,
   onChange,
-  accountType = "personal",
 }: {
-  active: PocketTab;
+  /** Which tab is current. `null` on a screen no tab owns. */
+  active: PocketTab | null;
   onChange: (tab: PocketTab) => void;
-  accountType?: AccountType;
 }) {
-  const tabs = dockTabsFor(accountType);
-
   return (
     <motion.nav
       aria-label="Primary"
@@ -77,15 +57,18 @@ export function FloatingNav({
       animate="animate"
       exit="exit"
       className="pk-nav"
+      data-tour="nav"
     >
-      {tabs.map(({ id, label, Icon }) => {
-        const isActive = active === id;
+      {DOCK_TABS.map((tab) => {
+        const label = TAB_LABELS[tab];
+        const Icon = ICONS[tab];
+        const isActive = active === tab;
         return (
           <motion.button
-            key={id}
+            key={tab}
             type="button"
             whileTap={{ scale: 0.9 }}
-            onClick={() => onChange(id)}
+            onClick={() => onChange(tab)}
             aria-label={label}
             title={label}
             aria-current={isActive ? "page" : undefined}
@@ -98,3 +81,10 @@ export function FloatingNav({
     </motion.nav>
   );
 }
+
+/** One icon per tab, kept here so the dock's tabs and their glyphs cannot drift. */
+const ICONS: Record<PocketTab, (props: IconProps) => ReactElement> = {
+  home: HomeIcon,
+  vault: VaultIcon,
+  spending: SpendIcon,
+};

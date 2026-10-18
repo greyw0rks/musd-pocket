@@ -29,11 +29,10 @@
   --s: #ffffff;
   --s2: #f1f1f4;
   --t: #0b0b0d;
-  --m: #8a8a93;
+  --m: #6b6b75;
   --p: #a63fd9;
   --y: #ffc83d;
-  --g: #22c55e;
-  --r: #ef4444;
+  --g: #16a34a;
   /*
     Green is two colours, not one.
 
@@ -50,6 +49,15 @@
     this one is used in prose.
   */
   --g-ink: #15803d;
+  /*
+    Red gets the same treatment, for the same reason, and it is used as ink far
+    more often than as a fill: every inline validation message in the app is
+    11–12px `--r-ink`. No single red satisfies both jobs — white-on-red needs a
+    dark red, red-on-black needs a light one — so the fill stays the fill and
+    the ink is the readable one.
+  */
+  --r: #dc2626;
+  --r-ink: #b91c1c;
   --ph: #dcdce2;
   --inv: #0b0b0d;
   --invt: #ffffff;
@@ -81,6 +89,7 @@
     --inv: #ffffff;
     --invt: #000000;
     --g-ink: var(--g);
+    --r-ink: #f87171;
     --line: color-mix(in srgb, var(--t) 14%, transparent);
     color-scheme: dark;
   }
@@ -96,6 +105,7 @@
   --inv: #ffffff;
   --invt: #000000;
   --g-ink: var(--g);
+  --r-ink: #f87171;
   --line: color-mix(in srgb, var(--t) 14%, transparent);
   color-scheme: dark;
 }
@@ -383,8 +393,22 @@
   border-color: var(--p);
 }
 
+/*
+  A row of chips that scrolls sideways when it runs out of width — and must not
+  shrink when the column it sits in runs out of height.
+
+  `overflow-x: auto` makes this a scroll container, and a scroll container's
+  automatic minimum size resolves to zero. Inside the Vault's flex column that
+  means the row is the first thing the layout squeezes once a deposit has added
+  the position and interest lines, and it does not squeeze gracefully: the chips
+  are clipped to a sliver, so "Save / Take out" reads as two buttons showing
+  half of themselves. `flex: none` takes the row out of the shrinking entirely —
+  it keeps its natural height, and the column scrolls instead, which is what
+  `.pk-scr` is there for.
+*/
 .pk-chips {
   display: flex;
+  flex: none;
   gap: 8px;
   margin: 10px 0;
   overflow-x: auto;
@@ -437,6 +461,18 @@
   color: var(--p);
 }
 
+/*
+  Danger. The fourth of these, and the only one that means "this is already
+  going wrong" rather than "this needs attention" — so it is the one colour
+  that is never used for anything else on a screen. The `--g-ink` pair above
+  does not repeat here: red is legible on both themes without help, which is
+  not true of green.
+*/
+.pk-pill--rd {
+  background: color-mix(in srgb, var(--r) 18%, transparent);
+  color: var(--r-ink);
+}
+
 /* Toggle switch — settings rows. */
 .pk-tg {
   width: 50px;
@@ -471,6 +507,42 @@
 }
 
 /* ------------------------------------------------------------------ cards */
+
+/*
+  A panel keeps its natural height inside the scrolling screen column.
+
+  `.pk-scr` is a flex column, so a panel is a flex item and defaults to
+  `flex-shrink: 1`: once the column is taller than the screen, the layout's first
+  instinct is to squash the cards rather than let them scroll, and their content
+  is clipped rather than reflowed. The column is the thing that scrolls, so the
+  fix is to take the panels out of the shrinking — nothing here is ever meant to
+  compress to fit.
+
+  Scoped to direct children of `.pk-scr` rather than the class alone: a `.pk-card`
+  nested in some other flex parent has not been audited for this, and
+  `flex: none` would beat an explicit `flex-1` utility if it applied there (this
+  stylesheet is unlayered, so it outranks Tailwind).
+*/
+.pk-scr > .pk-card {
+  flex: none;
+}
+
+/*
+  The animated form wrapper has the same problem, one level up.
+
+  A card that expands inside an `AnimatePresence` form does not get the rule
+  above, because the form sits between it and `.pk-scr`. That form carries
+  Tailwind's `overflow-hidden` — needed so the height animation clips its own
+  contents — and `overflow: hidden` is still a scroll container, so the flex
+  `min-height: auto` that would otherwise protect the card resolves to 0 and
+  the form is squashed to nothing. The symptom is a field clipped in half.
+
+  Matched on the element rather than a class: the wrapper's `overflow-hidden`
+  is the cause, and every expanding form on a screen column has it.
+*/
+.pk-scr > form {
+  flex: none;
+}
 
 .pk-card {
   background: var(--s);
@@ -688,6 +760,27 @@
 
 .pk-rep:active {
   transform: scale(0.95);
+}
+
+/*
+  A Repay button with no loan behind it — nothing drawn against the user's
+  Bitcoin, so there is nothing for the press to settle.
+
+  Dimmed and inert rather than removed, because the button is also how a user
+  discovers that borrowing is repayable at all; but it must not look pressable,
+  so it loses the inset ring that gives it its edge and takes a flat surface.
+  The colour is a lightened black rather than an opacity on the whole control,
+  which would fade the label into the card and read as a rendering fault.
+*/
+.pk-rep:disabled {
+  background: #3a3a40;
+  color: #ffffff8c;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.pk-rep:disabled:active {
+  transform: none;
 }
 
 /* ----------------------------------------------------------- action tiles */

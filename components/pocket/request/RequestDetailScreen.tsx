@@ -3,7 +3,6 @@
 import { motion } from "motion/react";
 import { useState } from "react";
 import { Avatar } from "@/components/pocket/Avatar";
-import { DemoBadge } from "@/components/pocket/DemoBadge";
 import {
   BanIcon,
   CheckIcon,
@@ -36,7 +35,10 @@ import { cn, relativeTime, untilTime } from "@/lib/utils";
  *
  * Paying is the only action on this screen that can move money, and it goes
  * through the store, which routes it through the payment service. Declining and
- * cancelling are local status changes with nothing behind them.
+ * cancelling are not implemented server-side, so `canDecline` / `canWithdraw`
+ * are how the caller says so. Where the answer is no, the control is not drawn:
+ * an app that offers to withdraw a request and then cannot has told the user
+ * something false about what they just did.
  */
 export function RequestDetailScreen({
   request,
@@ -46,6 +48,8 @@ export function RequestDetailScreen({
   onPaid,
   onDecline,
   onCancel,
+  canDecline,
+  canWithdraw,
   onOpenTransaction,
 }: {
   request: PaymentRequest;
@@ -56,6 +60,9 @@ export function RequestDetailScreen({
   onPaid: (transactionId: string) => void;
   onDecline: () => Promise<void>;
   onCancel: () => Promise<void>;
+  /** Whether this request can be turned down, and whether it can be withdrawn. */
+  canDecline: boolean;
+  canWithdraw: boolean;
   onOpenTransaction: (transactionId: string) => void;
 }) {
   const mounted = useMounted();
@@ -85,16 +92,25 @@ export function RequestDetailScreen({
     else setError(result.error);
   }
 
-  async function decline() {
+  /*
+    Declining and withdrawing can be refused by the service, and a refusal that
+    arrives as a rejection would leave the button reading "Withdrawing" for as
+    long as the screen is open — the spinner is cleared in `finally` rather than
+    after the await, so a control can never get stuck in a state that claims to
+    be in progress. The message is shown rather than swallowed, because "we
+    could not do that" and "that is done" must not look the same.
+  */
+  async function settle(action: () => Promise<void>) {
+    if (settling) return;
     setSettling(true);
-    await onDecline();
-    setSettling(false);
-  }
-
-  async function cancel() {
-    setSettling(true);
-    await onCancel();
-    setSettling(false);
+    setError(null);
+    try {
+      await action();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "That did not go through.");
+    } finally {
+      setSettling(false);
+    }
   }
 
   return (
@@ -133,7 +149,6 @@ export function RequestDetailScreen({
 
           <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
             <StatusPill status={request.status} />
-            <DemoBadge label="Demo — no funds move" />
           </div>
         </motion.div>
 
@@ -165,7 +180,7 @@ export function RequestDetailScreen({
           <motion.p
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-4 px-1 text-center text-[12px] font-semibold text-[var(--r)]"
+            className="mt-4 px-1 text-center text-[12px] font-semibold text-[var(--r-ink)]"
           >
             {error}
           </motion.p>
@@ -220,27 +235,29 @@ export function RequestDetailScreen({
               >
                 {busy ? "Paying" : `Pay ${formatMoney(request.amountUnits)}`}
               </Button>
-              <Button
-                full
-                size="lg"
-                variant="ghost"
-                icon={<XIcon size={16} />}
-                disabled={busy || settling}
-                onClick={() => void decline()}
-              >
-                {settling ? "Declining" : "Decline"}
-              </Button>
+              {canDecline ? (
+                <Button
+                  full
+                  size="lg"
+                  variant="ghost"
+                  icon={<XIcon size={16} />}
+                  disabled={busy || settling}
+                  onClick={() => void settle(onDecline)}
+                >
+                  {settling ? "Declining" : "Decline"}
+                </Button>
+              ) : null}
             </motion.div>
           ) : null}
 
-          {open && !incoming ? (
+          {open && !incoming && canWithdraw ? (
             <Button
               full
               size="lg"
               variant="ghost"
               icon={<UndoIcon size={16} />}
               disabled={settling}
-              onClick={() => void cancel()}
+              onClick={() => void settle(onCancel)}
             >
               {settling ? "Withdrawing" : "Withdraw request"}
             </Button>

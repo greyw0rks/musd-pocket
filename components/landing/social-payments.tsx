@@ -23,8 +23,8 @@ export function SocialPayments() {
           <ul className="mt-8 flex flex-col gap-3">
             {PROMISES.map((promise) => (
               <li key={promise} className="flex items-center gap-3">
-                <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-mezo/15">
-                  <Check className="size-3.5 text-mezo" />
+                <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-brand/15">
+                  <Check className="size-3.5 text-brand" />
                 </span>
                 <span className="font-medium">{promise}</span>
               </li>
@@ -35,7 +35,7 @@ export function SocialPayments() {
         <Reveal delay={0.1} className="flex justify-center">
           <div className="w-full max-w-sm rounded-2xl border border-border bg-surface p-6 text-center shadow-sm">
             <span className="mx-auto inline-flex size-12 items-center justify-center rounded-full bg-surface-2">
-              <AtSign className="size-5 text-mezo" />
+              <AtSign className="size-5 text-brand" />
             </span>
             <p className="mt-4 text-lg font-semibold">@alex</p>
             <p className="mt-1 text-sm text-muted">You owe Alex</p>
@@ -47,7 +47,7 @@ export function SocialPayments() {
               <span className="text-base font-medium text-muted">{TICKER}</span>
             </p>
 
-            <CtaLink href="/waitlist" size="lg" className="mt-6 w-full">
+            <CtaLink href="/home" size="lg" className="mt-6 w-full">
               Send 20 {TICKER}
             </CtaLink>
           </div>

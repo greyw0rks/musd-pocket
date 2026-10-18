@@ -6,6 +6,8 @@ export type PocketUser = {
   username: string;
   walletAddress: string;
   xHandle: string | null;
+  /** X profile picture, hot-linked; absent for Telegram/email accounts. */
+  avatarUrl: string | null;
   telegramHandle: string | null;
   preferredChain: ChainKey;
   availableBalance: string;

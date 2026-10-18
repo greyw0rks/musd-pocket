@@ -3,7 +3,6 @@
 import { motion } from "motion/react";
 import { useEffect } from "react";
 import { Avatar } from "@/components/pocket/Avatar";
-import { DemoBadge } from "@/components/pocket/DemoBadge";
 import { SCREEN_PLAIN } from "@/components/pocket/theme";
 import { NumberPad } from "@/components/pocket/transfer/NumberPad";
 import { SwipeConfirm } from "@/components/pocket/transfer/SwipeConfirm";
@@ -59,7 +58,12 @@ export function TransferScreen({
 }: {
   recipient: Recipient;
   keypad: KeypadState;
-  balance: bigint;
+  /**
+   * The wallet's mUSD, in minor units. `null` until the chain read resolves —
+   * which is not a zero, so it neither prints a figure nor rules an amount out:
+   * an unread balance cannot say a send is too large.
+   */
+  balance: bigint | null;
   phase: TransferPhase;
   error: string | null;
   resetSignal: number;
@@ -77,7 +81,8 @@ export function TransferScreen({
   const total = currentValue(keypad);
   const hasOperator = keypad.pending.some((token) => token.kind === "op");
 
-  const overBalance = total !== null && total > balance;
+  const overBalance =
+    balance !== null && total !== null && total > balance;
   const hasAmount = total !== null && total > 0n;
   const canConfirm = isConfirmable(keypad) && !overBalance && phase === "idle";
 
@@ -194,17 +199,17 @@ export function TransferScreen({
         )}
 
         <p className="pk-m text-center tabular-nums">
-          Available {formatMoney(balance)}
+          Available {balance === null ? "—" : formatMoney(balance)}
         </p>
 
         {overBalance && (
-          <p className="mt-3 text-center text-[12px] font-semibold text-[var(--r)]">
+          <p className="mt-3 text-center text-[12px] font-semibold text-[var(--r-ink)]">
             That is more than your available balance.
           </p>
         )}
 
         {error && (
-          <p className="mx-auto mt-3 max-w-[16rem] text-center text-[12px] font-semibold text-[var(--r)]">
+          <p className="mx-auto mt-3 max-w-[16rem] text-center text-[12px] font-semibold text-[var(--r-ink)]">
             {error}
           </p>
         )}
@@ -232,9 +237,6 @@ export function TransferScreen({
               busy={phase === "sending"}
               resetSignal={resetSignal}
             />
-            <div className="mt-2 mb-3 flex justify-center">
-              <DemoBadge label="Demo — no real funds" />
-            </div>
           </motion.div>
 
           <NumberPad

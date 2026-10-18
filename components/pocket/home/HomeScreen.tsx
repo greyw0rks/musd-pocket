@@ -15,29 +15,30 @@ import {
 import { TransactionRow } from "@/components/pocket/ledger/TransactionRow";
 import { EmptyState } from "@/components/pocket/ui/States";
 import { SCREEN } from "@/components/pocket/theme";
-import type { IconProps } from "@/components/pocket/icons";
 import type { Recipient, Transaction } from "@/features/payments/payment.types";
-import type { ReactElement } from "react";
 
 /**
  * Home.
  *
  * The reference's layout, top to bottom: a bar of two corners, the greeting,
- * the two stacked balance cards, a row of four verbs, and the last few
+ * the two stacked balance cards, a row of three verbs, and the last few
  * payments under a "View All" that leads to the rest.
  *
  * The order is the point. Money first, the things you do to it second, the
  * record of having done it last — which is also the order the questions get
  * asked in.
  *
- * The four tiles are the same four the reference draws. Three of them lead
- * somewhere; Borrow leads to the screen that explains what borrowing would
- * cost and that it is not switched on yet, which is the honest version of a
- * tile whose feature does not exist.
+ * The tiles are Send, Request, Receive and Borrow: the four things this build
+ * can actually do. Borrow was removed once, because the screen behind it priced
+ * a trove out of invented collateral and an invented rate; it is back, and what
+ * is behind it now reads the real position off Mezo and shows nothing it could
+ * not read.
  */
 export function HomeScreen({
   user,
   balance,
+  borrowedUnits = null,
+  btc,
   transactions,
   recipients,
   highlightId,
@@ -46,13 +47,39 @@ export function HomeScreen({
   onRequest,
   onReceive,
   onBorrow,
+  onRepay,
   onOpenNotifications,
   onOpenAccount,
   onOpenLedger,
   onOpenTransaction,
 }: {
   user: { name: string; avatarUrl?: string };
-  balance: bigint;
+  /**
+   * The wallet's mUSD, in minor units — the one balance. `null` until the chain
+   * read resolves: the card withholds the figure rather than printing a
+   * `$0.00` that is a claim and not a reading.
+   */
+  balance: bigint | null;
+  /**
+   * What the wallet owes on its Trove, in minor units, when one is open.
+   *
+   * The borrowed MUSD is *in* `balance` above — Mezo mints it straight to the
+   * wallet — so this is not a second balance to add. It is the part of the one
+   * balance that is on loan, and the card uses it to decompose the figure and
+   * to say what a repayment would settle.
+   *
+   * `null` is the ordinary case: no Trove is open. The card still divides the
+   * figure, with the borrowed half at zero, so the decomposition is on the card
+   * from the first load; `0n` is normalised to `null` by the card.
+   */
+  borrowedUnits?: bigint | null;
+  /**
+   * The wallet's native BTC, when a chain source has answered — absent during
+   * the moment before the read resolves. `valueUnits` carries what it is worth
+   * once a price has been read, and is `null` until then. Passed straight
+   * through; the card decides how to say what is not known about it.
+   */
+  btc?: { amount: string; valueUnits: bigint | null } | null;
   transactions: Transaction[];
   recipients: Recipient[];
   /** The payment the user just made, drawn lit until they look away. */
@@ -62,6 +89,11 @@ export function HomeScreen({
   onRequest: () => void;
   onReceive: () => void;
   onBorrow: () => void;
+  /**
+   * Opens the repay screen. Always given: the button is always drawn, disabled
+   * when there is nothing to repay.
+   */
+  onRepay?: () => void;
   onOpenNotifications: () => void;
   onOpenAccount: () => void;
   onOpenLedger: () => void;
@@ -86,7 +118,7 @@ export function HomeScreen({
     { label: "Request", Icon: RequestIcon, onPress: onRequest },
     { label: "Receive", Icon: ReceiveIcon, onPress: onReceive },
     { label: "Borrow", Icon: BorrowIcon, onPress: onBorrow },
-  ] as const;
+  ];
 
   return (
     <div className={`${SCREEN} pt-[max(env(safe-area-inset-top),16px)]`}>
@@ -135,6 +167,7 @@ export function HomeScreen({
             aria-label="Account"
             title="Account"
             className="pk-av"
+            data-tour="account"
           >
             <Avatar name={user.name} src={user.avatarUrl} size={44} />
           </button>
@@ -146,9 +179,32 @@ export function HomeScreen({
         Let&apos;s save your money.
       </p>
 
-      <BalanceCards receivedUnits={balance} onRepay={onBorrow} />
+      {/*
+        `data-tour` hooks are the walkthrough's targets. They sit on the real
+        elements rather than on wrappers invented for the tour, so a step points
+        at what the user will actually press — and if a screen is rearranged the
+        overlay finds the attribute wherever it moved, or skips the step.
+      */}
+      <div data-tour="balance">
+        <BalanceCards
+          walletUnits={balance}
+          borrowedUnits={borrowedUnits}
+          btc={btc}
+          onRepay={onRepay}
+        />
+      </div>
 
-      <div className="pk-card pk-tiles">
+      {/*
+        `.pk-tiles` is a fixed four-column grid, which four tiles now fill
+        exactly. The count is still set inline rather than left to the class: it
+        costs nothing, and it means the grid follows the list if a tile is ever
+        added or removed, instead of silently wrapping.
+      */}
+      <div
+        className="pk-card pk-tiles"
+        data-tour="actions"
+        style={{ gridTemplateColumns: `repeat(${tiles.length}, 1fr)` }}
+      >
         {tiles.map(({ label, Icon, onPress }) => (
           <motion.button
             key={label}
@@ -165,36 +221,38 @@ export function HomeScreen({
         ))}
       </div>
 
-      <div className="pk-row pk-sp" style={{ margin: "20px 0 4px" }}>
-        <h2 className="pk-h2">Manage Expenses</h2>
-        <button
-          type="button"
-          onClick={onOpenLedger}
-          className="pk-m font-semibold outline-none"
-        >
-          View All
-        </button>
-      </div>
-
-      {recent.length > 0 ? (
-        <div className="pk-card" style={{ padding: "4px 16px" }}>
-          {recent.map((tx) => (
-            <TransactionRow
-              key={tx.id}
-              tx={tx}
-              portrait={portraitById.get(tx.recipientId)}
-              highlighted={tx.id === highlightId}
-              onPress={() => onOpenTransaction(tx.id)}
-            />
-          ))}
+      <div data-tour="activity">
+        <div className="pk-row pk-sp" style={{ margin: "20px 0 4px" }}>
+          <h2 className="pk-h2">Manage Expenses</h2>
+          <button
+            type="button"
+            onClick={onOpenLedger}
+            className="pk-m font-semibold outline-none"
+          >
+            View All
+          </button>
         </div>
-      ) : (
-        <EmptyState
-          icon={<SendIcon size={22} />}
-          title="No payments yet"
-          description="Send your first payment and it will show up here."
-        />
-      )}
+
+        {recent.length > 0 ? (
+          <div className="pk-card" style={{ padding: "4px 16px" }}>
+            {recent.map((tx) => (
+              <TransactionRow
+                key={tx.id}
+                tx={tx}
+                portrait={portraitById.get(tx.recipientId)}
+                highlighted={tx.id === highlightId}
+                onPress={() => onOpenTransaction(tx.id)}
+              />
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            icon={<SendIcon size={22} />}
+            title="No payments yet"
+            description="Send your first payment and it will show up here."
+          />
+        )}
+      </div>
     </div>
   );
 }

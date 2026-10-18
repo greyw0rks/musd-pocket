@@ -22,6 +22,17 @@ enum ChainKey {
   ETHEREUM
 }
 
+/// Which token a row moved.
+///
+/// Rows are filed per asset and are never summed across: `amount` is denominated
+/// in the row's own token, so a total that added a BTC row to a MUSD one would
+/// be a figure with no meaning. The column exists so a reader can tell which
+/// token it is holding without knowing where the row came from.
+enum AssetKey {
+  MUSD
+  BTC
+}
+
 enum TxType {
   DEPOSIT
   SEND
@@ -84,6 +95,11 @@ model User {
   telegramId       String?  @unique
   telegramHandle   String?
   walletAddress    String   @unique // lowercase embedded-wallet EOA
+  /// The X profile picture, copied from Privy at every login. Hot-linked and
+  /// therefore allowed to rot: the UI falls back to initials, so this is a
+  /// convenience and never something a screen depends on. Null for accounts
+  /// that signed in with Telegram or email, or whose X profile has no picture.
+  avatarUrl        String?  @db.Text
   preferredChain   ChainKey    @default(MEZO)
   role             AccountRole @default(PERSONAL)
   availableBalance Decimal     @default(0) @db.Decimal(38, 18)
@@ -139,19 +155,48 @@ model Deposit {
   @@map("deposits")
 }
 
-/// Outbound: vault pays MUSD to an external address on the chosen chain.
+/// Outbound: money leaves a wallet to an external address on the chosen chain.
+///
+/// Two different outbounds share this table, and `asset` is what tells them
+/// apart:
+///
+///  - **MUSD** — the older one, and still the only one the settlement engine
+///    runs: the vault releases MUSD and the relayer pays the gas. It is debited
+///    against the Pocket ledger up front and carries a `paymentId` so the
+///    reconciler can ask the vault's `processed` mapping whether the release
+///    happened.
+///  - **BTC** — the user's own wallet signing a native transfer. There is no
+///    vault call, so no `paymentId`; and no ledger debit, because the money was
+///    never in the Pocket ledger. **The reconciler must never see one** — it
+///    reverses what it cannot account for, which for a BTC row would credit a
+///    user for money that really did leave. See the `asset` filter in
+///    `lib/settlement/reconcile.ts`, which is what keeps that from happening.
 model Withdrawal {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   chain     ChainKey
+  /// Which token left. Defaults to MUSD because every row filed before this
+  /// column existed was a vault release of MUSD — the only outbound the app
+  /// had. A nullable column would have to be guessed at read time, and a wrong
+  /// guess here is the difference between a dollar figure and a bitcoin one.
+  asset     AssetKey @default(MUSD)
   toAddress String // lowercase
+  /// Amount in the row's own token, at display precision: MUSD to 2 decimals,
+  /// BTC to 8. The activity reader parses it back with the parser that matches
+  /// `asset`, so a value stored at the wrong scale reads back as zero.
   amount    Decimal  @db.Decimal(38, 18)
   status    TxStatus @default(PENDING)
   txHash    String?
   /// The bytes32 tag the on-chain `withdraw` was called with. Needed to ask the
   /// vault's `processed` mapping whether the release happened — without it a
   /// withdrawal whose outcome is unknown cannot be reconciled safely.
+  ///
+  /// A BTC row carries its own transaction hash here instead, for the same
+  /// reason `Payment` does: it is already a bytes32, already unique, and already
+  /// known to both sides — which is what makes a retry the same row rather than
+  /// a second one. Nothing tags a BTC row with a vault handle, so the field has
+  /// nothing else to hold.
   paymentId String?  @unique
   createdAt DateTime @default(now())
 

@@ -47,7 +47,7 @@ function Node({
 }) {
   return (
     <div className="flex w-40 flex-col items-center text-center">
-      <span className="inline-flex size-14 items-center justify-center rounded-2xl border border-border bg-surface text-mezo shadow-sm">
+      <span className="inline-flex size-14 items-center justify-center rounded-2xl border border-border bg-surface text-brand shadow-sm">
         <Icon className="size-6" />
       </span>
       <p className="mt-4 font-semibold">{label}</p>
@@ -68,7 +68,7 @@ function Connector({ delay }: { delay: number }) {
       >
         <span
           style={style}
-          className="absolute size-1.5 rounded-full bg-mezo animate-[flow-y_2s_linear_infinite]"
+          className="absolute size-1.5 rounded-full bg-brand animate-[flow-y_2s_linear_infinite]"
         />
       </div>
       <div
@@ -77,7 +77,7 @@ function Connector({ delay }: { delay: number }) {
       >
         <span
           style={style}
-          className="absolute size-1.5 rounded-full bg-mezo animate-[flow-x_2s_linear_infinite]"
+          className="absolute size-1.5 rounded-full bg-brand animate-[flow-x_2s_linear_infinite]"
         />
       </div>
     </>

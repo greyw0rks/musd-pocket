@@ -38,7 +38,7 @@ export async function verifyPrivyToken(token: string): Promise<AuthTokenClaims> 
 }
 
 export async function getPrivyUser(userId: string): Promise<PrivyUser> {
-  // getUser(userId) is rate-limited at scale; fine for Pocket's demo volume.
+  // getUser(userId) is rate-limited at scale; fine for Pocket's volume.
   return getPrivyClient().getUser(userId);
 }
 
@@ -57,6 +57,13 @@ export type PrivyIdentity = {
   walletAddress: string; // lowercase
   xId: string | null;
   xHandle: string | null;
+  /**
+   * The X profile picture, if this account signed in with X and has one.
+   *
+   * Only X supplies one through Privy's identity payload — Telegram and email
+   * do not — so this is null for those logins and the UI shows initials.
+   */
+  avatarUrl: string | null;
   telegramId: string | null;
   telegramHandle: string | null;
 };
@@ -74,6 +81,7 @@ export function extractIdentity(user: PrivyUser): PrivyIdentity {
     walletAddress: address.toLowerCase(),
     xId: user.twitter?.subject ?? null,
     xHandle: user.twitter?.username ?? null,
+    avatarUrl: user.twitter?.profilePictureUrl ?? null,
     telegramId: user.telegram?.telegramUserId ?? null,
     telegramHandle: user.telegram?.username ?? null,
   };

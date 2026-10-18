@@ -1,5 +1,5 @@
 /**
- * Display formatting for the Pocket demo.
+ * Display formatting for Pocket.
  *
  * Pure functions only — no state, no imports from the payment layer beyond
  * the money helpers in `features/payments/amount`, which keep amounts as
@@ -9,7 +9,6 @@
 import { formatUnits } from "@/features/payments/amount";
 import type {
   PaymentDirection,
-  PaymentKind,
   PaymentStatus,
 } from "@/features/payments/payment.types";
 
@@ -25,6 +24,28 @@ export function formatSignedMoney(
 ): string {
   return `${direction === "received" ? "+" : "−"}${formatMoney(units)}`;
 }
+
+/**
+ * An amount in its own token: "$1,234.56", or "0.005 BTC".
+ *
+ * Defined in `features/payments/asset-amount.ts` and re-exported here, because
+ * the same choice that picks the formatter also picks the parser, and the two
+ * are wrong in the same way if they ever disagree. Keeping them in one module is
+ * what stops that; this line is only so the usual place to look for a display
+ * helper still finds one.
+ *
+ * The asset is a parameter rather than an assumption because `amountUnits` means
+ * different things per asset — hundredths of MUSD, wei of BTC — and the two only
+ * look alike. A BTC figure sent through `formatMoney` is wrong by a factor of
+ * 10¹⁶ and still prints as a plausible dollar amount, which is the kind of wrong
+ * that gets believed; naming the asset at every call site is what makes choosing
+ * the formatter a decision instead of an oversight.
+ *
+ * BTC carries its symbol and MUSD carries its `$` so that a figure always says
+ * which token it is. Neither is optional, and that is the point: the number
+ * alone does not identify itself.
+ */
+export { formatAssetAmount, formatSignedAssetAmount } from "@/features/payments/asset-amount";
 
 /** Up to two initials, for avatar fallbacks. */
 export function initials(name: string): string {
@@ -58,12 +79,6 @@ export function avatarTone(seed: string): string {
   }
   return AVATAR_TONES[Math.abs(hash) % AVATAR_TONES.length];
 }
-
-/** How a payment's provenance should be described to the user. */
-export const PAYMENT_KIND_LABEL: Record<PaymentKind, string> = {
-  demo: "Demo",
-  onchain: "On-chain",
-};
 
 export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
   pending: "Pending",

@@ -51,7 +51,11 @@ export interface PaymentRequest {
   /** What the request is for. Free text, and often the reason it gets paid. */
   note?: string;
   status: RequestStatus;
-  /** Never anything but `demo` until a real adapter exists. */
+  /**
+   * Always `onchain`: a request only ever comes from the server, and
+   * `onchain` is the value meaning "this is a real record" — not a claim that
+   * a chain was involved in raising it.
+   */
   kind: PaymentKind;
   createdAt: Date;
   /** After this the request is treated as expired rather than open. */
@@ -76,6 +80,25 @@ export type SettleRequestResult =
   | { ok: true; request: PaymentRequest; transaction: Transaction }
   | { ok: false; error: string };
 
+/**
+ * What an implementation of `RequestService` can actually do.
+ *
+ * Not every adapter implements the whole interface, and the ones that do not
+ * are not pretending otherwise — they say so here. `list` and `create` are
+ * absent because every adapter does those; these two are the actions that
+ * depend on a server state which does not exist yet.
+ *
+ * This is declared rather than discovered, because the alternative is a screen
+ * that offers a control, takes the tap, and then refuses — which reads as a
+ * broken app rather than an unfinished feature. The UI asks before it draws.
+ */
+export interface RequestCapabilities {
+  /** Turning down a request somebody addressed to the user. */
+  decline: boolean;
+  /** Withdrawing a request the user made. */
+  withdraw: boolean;
+}
+
 export interface RequestService {
   /** Every request, newest first, expired ones already resolved. */
   list(): Promise<PaymentRequest[]>;
@@ -87,10 +110,19 @@ export interface RequestService {
    * show a receipt and must not have to look up what it just created.
    */
   pay(id: string): Promise<SettleRequestResult>;
-  /** Turn down an incoming request. The only honest alternative to paying. */
+  /**
+   * Turn down an incoming request. The only honest alternative to paying.
+   *
+   * Implementations that declare `capabilities.decline === false` still throw
+   * here rather than resolving quietly, so a caller that draws the control
+   * anyway finds out immediately instead of recording a decline that never
+   * happened.
+   */
   decline(id: string): Promise<PaymentRequest>;
-  /** Withdraw a request the user made. */
+  /** Withdraw a request the user made. Same rule as `decline` for a refused call. */
   cancel(id: string): Promise<PaymentRequest>;
+  /** Checked by the UI before drawing the controls above. */
+  capabilities: RequestCapabilities;
 }
 
 /** The longest note the composer accepts. */

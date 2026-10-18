@@ -18,6 +18,86 @@ export const DISPLAY_DECIMALS = 2;
 /** One whole MUSD, in minor units. */
 export const ONE = 10n ** BigInt(DISPLAY_DECIMALS);
 
+/**
+ * Decimal places mUSD actually carries on-chain.
+ *
+ * Duplicated from `MUSD_DECIMALS` in `lib/mezo/config` rather than imported,
+ * because this module must stay free of imports to remain testable under plain
+ * `node --experimental-strip-types` (see `amount.test.ts`). The two are held
+ * together by a test that reads the config value and fails if they disagree —
+ * a duplicated constant with a guard, rather than a silent one.
+ */
+export const CHAIN_DECIMALS = 18;
+
+/** Multiply by this to go from minor units up to chain units. */
+export const UNIT_SHIFT = 10n ** BigInt(CHAIN_DECIMALS - DISPLAY_DECIMALS);
+
+/**
+ * Chain units (18 decimals) → the UI's minor units, truncated.
+ *
+ * Integer division, not a string round-trip: `formatMusd` would give the full
+ * 18-decimal string and `parseDecimalToUnits` rejects anything past two
+ * decimals, so the obvious bridge returns `null` for any balance carrying dust.
+ * Truncating also means a balance is never overstated by rounding up.
+ */
+export function toDisplayUnits(raw: bigint): bigint {
+  return raw / UNIT_SHIFT;
+}
+
+/**
+ * The UI's minor units → chain units (18 decimals), exact.
+ *
+ * The inverse of `toDisplayUnits`, and lossless in this direction: every
+ * amount the keypad can produce is a whole number of hundredths, so scaling it
+ * up loses nothing. This is the one place an amount the user typed becomes an
+ * amount the token contract is asked to move.
+ */
+export function toChainUnits(units: bigint): bigint {
+  return units * UNIT_SHIFT;
+}
+
+/* -------------------------------------------------------------------------- */
+/* BTC valuation                                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The scale a USD price arrives on: a millionth of a dollar, as an integer.
+ *
+ * A price is money, so it gets the same treatment as money — no float. Six
+ * decimals is what a spot price is quoted to, and it is enough that a whole
+ * BTC's worth of rounding lands well inside the last cent the card prints.
+ */
+export const PRICE_SCALE = 1_000_000n;
+
+/**
+ * `wei × price` carries 18 + 6 decimals; reducing that to hundredths drops 22.
+ *
+ * 18 (wei) + 6 (price) − 2 (minor units) = 22.
+ */
+const PRICE_SHIFT = 10n ** 22n;
+
+/**
+ * What a BTC amount is worth, in the UI's minor units, at a given price.
+ *
+ * `wei` is a native BTC balance in chain units — the gas token, 18 decimals —
+ * and `usdMicros` a price on `PRICE_SCALE`. The answer is in the same
+ * hundredths every other figure in this module speaks, so it can be summed
+ * with an mUSD balance and handed to `formatUnits` while staying exact:
+ *
+ *     wei × usdMicros / 1e22   ≈   (wei / 1e18) × (usdMicros / 1e6) × 100
+ *
+ * Truncating, like `toDisplayUnits` and for the same reason: a total is never
+ * overstated by the arithmetic that produced it. The other direction would be
+ * a balance that reads higher than the money behind it.
+ *
+ * mUSD is a dollar stablecoin, so a USD price is already a price in MUSD — the
+ * peg is assumed here rather than looked up, and if that assumption is ever
+ * wrong this is the line that decides by how much.
+ */
+export function btcValueUnits(wei: bigint, usdMicros: bigint): bigint {
+  return (wei * usdMicros) / PRICE_SHIFT;
+}
+
 export type Op = "+" | "-" | "×" | "÷";
 
 export type Token =

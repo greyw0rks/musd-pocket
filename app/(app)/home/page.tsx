@@ -1,93 +1,86 @@
 "use client";
 
-import Link from "next/link";
+import { useRef, useState } from "react";
+import { useWalletClient } from "wagmi";
+import type { WalletClient } from "viem";
+import { PocketApp } from "@/components/pocket/PocketApp";
+import type { PocketServices } from "@/components/pocket/store";
+import { createApiContactService } from "@/features/contacts/api-contact.adapter";
+import { createChainPaymentService } from "@/features/payments/chain-payment.adapter";
+import { createApiRequestService } from "@/features/requests/api-request.adapter";
 import {
-  ArrowUpRight,
-  ArrowDownLeft,
-  Plus,
-  Receipt,
-  Lock,
-} from "lucide-react";
+  createApiSessionService,
+  sessionFromUser,
+} from "@/features/session/api-session.adapter";
+import { useApi } from "@/lib/auth/client";
 import { useSession } from "@/lib/auth/session";
-import { Card, CardBody } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
-import { formatAmount } from "@/lib/utils";
-import { MUSD_SYMBOL } from "@/lib/mezo/config";
 
+/**
+ * Pocket.
+ *
+ * The page builds one object — the services — and hands it to the app. Nothing
+ * below this point knows where any of it comes from, which is the point of the
+ * adapter boundary and also the risk, so the load-bearing choices are named
+ * rather than left implicit:
+ *
+ *   - `payments` is the **chain** adapter, so a send is a transfer the user's
+ *     own wallet signs rather than a ledger entry the server moves. This is the
+ *     one line that decides where the money is, and it is here rather than
+ *     buried in the store so there is one place to look.
+ *   - Every service is required and every one of them is real. There is no
+ *     notification backend, so the app starts with an empty notice list and
+ *     shows its empty state — seeding invented notices would be a fabricated
+ *     record of things that did not happen.
+ *   - `initialSession` is built from the user the shell has already synced, so
+ *     the first paint shows the real profile. Without it, a dropped request
+ *     during boot would strand a signed-in user on the sign-in screen.
+ *
+ * The page is only reachable behind `AuthGate`, which renders nothing until
+ * `/api/users/me` has answered — so in practice `user` is non-null by the time
+ * this renders, and `initialSession` is therefore always the real profile.
+ */
 export default function HomePage() {
-  const { user } = useSession();
-  const available = formatAmount(user?.availableBalance ?? "0");
-  const frozen = Number(user?.frozenBalance ?? "0");
+  const fetchAuthed = useApi();
+  const { user, walletAddress, login, logout } = useSession();
+  const { data: walletClient } = useWalletClient();
 
-  return (
-    <div className="mx-auto w-full max-w-xl space-y-6">
-      {/* Dominant balance — no chain, no gas, just a number. */}
-      <section className="pt-2 text-center md:pt-6">
-        <p className="text-sm font-medium text-muted">Available balance</p>
-        <p className="tabular mt-2 text-6xl font-semibold tracking-tight text-foreground">
-          {available}
-        </p>
-        <p className="mt-1 text-sm text-muted">{MUSD_SYMBOL}</p>
-        {frozen > 0 && (
-          <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-3 py-1 text-[13px] text-muted">
-            <Lock className="size-3.5" />
-            <span className="tabular">{formatAmount(frozen)}</span> held in
-            flight
-          </p>
-        )}
-      </section>
+  /*
+    The services are built once, for the lifetime of the mount, so anything
+    they close over is frozen at that moment. Neither the wallet address nor the
+    wallet client is — Privy can mint the wallet after this page mounts, and the
+    client only appears once `EmbeddedWalletActivator` has made it the active
+    wallet. Both are read through refs that every render refreshes; reading the
+    variables directly would pin the first render's values, which are `null` for
+    a user whose wallet has not landed yet. A send signed with a frozen `null`
+    client could not happen at all.
+  */
+  const walletRef = useRef<string | null>(walletAddress);
+  walletRef.current = walletAddress;
 
-      {/* Primary actions */}
-      <section className="grid grid-cols-3 gap-3">
-        <ActionTile href="/pay" icon={ArrowUpRight} label="Send" primary />
-        <ActionTile href="/receive" icon={ArrowDownLeft} label="Receive" />
-        <ActionTile href="/deposit" icon={Plus} label="Add money" />
-      </section>
+  const walletClientRef = useRef<WalletClient | null>(null);
+  walletClientRef.current = (walletClient as WalletClient | undefined) ?? null;
 
-      {/* Recent activity */}
-      <section>
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-foreground">Recent</h2>
-          <Link href="/activity" className="text-[13px] text-primary">
-            See all
-          </Link>
-        </div>
-        <Card>
-          <CardBody className="py-10">
-            <EmptyState
-              icon={Receipt}
-              title="No activity yet"
-              description="Add money to your Pocket, then send MUSD to anyone — Pocket picks the chain."
-            />
-          </CardBody>
-        </Card>
-      </section>
-    </div>
-  );
-}
+  const [services] = useState<PocketServices>(() => {
+    const payments = createChainPaymentService({
+      fetchAuthed,
+      getWalletClient: () => walletClientRef.current,
+      getWalletAddress: () => walletRef.current,
+    });
+    return {
+      payments,
+      sessions: createApiSessionService({
+        fetchAuthed,
+        login,
+        logout,
+        getWalletAddress: () => walletRef.current,
+      }),
+      requests: createApiRequestService({ fetchAuthed, payments }),
+      contacts: createApiContactService(fetchAuthed),
+      // `user` is guaranteed by AuthGate; the fallback exists so a race during
+      // the gate's own transition cannot throw inside a component.
+      initialSession: user ? sessionFromUser(user, walletAddress) : null,
+    };
+  });
 
-function ActionTile({
-  href,
-  icon: Icon,
-  label,
-  primary = false,
-}: {
-  href: string;
-  icon: typeof ArrowUpRight;
-  label: string;
-  primary?: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      className={
-        primary
-          ? "flex flex-col items-center gap-2 rounded-xl bg-primary px-3 py-4 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary-dark"
-          : "flex flex-col items-center gap-2 rounded-xl border border-border bg-surface px-3 py-4 text-sm font-semibold text-foreground hover:bg-surface-2"
-      }
-    >
-      <Icon className="size-5" />
-      {label}
-    </Link>
-  );
+  return <PocketApp services={services} />;
 }

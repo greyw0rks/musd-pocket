@@ -23,13 +23,13 @@ export function Hero() {
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3">
-            <CtaLink href="/waitlist" size="lg">
-              Get early access
+            <CtaLink href="/home" size="lg">
+              Enter app
               <ArrowRight className="size-4" />
             </CtaLink>
             <a
               href="#how-it-works"
-              className="text-[15px] font-medium text-muted underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mezo/50 focus-visible:rounded"
+              className="text-[15px] font-medium text-muted underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:rounded"
             >
               Learn how it works
             </a>

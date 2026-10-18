@@ -11,6 +11,7 @@ export function serializeUser(user: User): PocketUser {
     username: user.username,
     walletAddress: user.walletAddress,
     xHandle: user.xHandle,
+    avatarUrl: user.avatarUrl,
     telegramHandle: user.telegramHandle,
     preferredChain: user.preferredChain,
     availableBalance: user.availableBalance.toString(),
@@ -69,6 +70,13 @@ export async function upsertUserFromIdentity(
       data: {
         xId: identity.xId ?? undefined,
         xHandle: identity.xHandle ?? undefined,
+        /*
+          Refreshed on every login, so a changed X picture is picked up, but a
+          login by a method that carries no picture (Telegram, email) does not
+          erase one already stored. Same rule as the handles above: `undefined`
+          means "nothing to say", not "set to null".
+        */
+        avatarUrl: identity.avatarUrl ?? undefined,
         telegramId: identity.telegramId ?? undefined,
         telegramHandle: identity.telegramHandle ?? undefined,
       },
@@ -82,6 +90,7 @@ export async function upsertUserFromIdentity(
       walletAddress: identity.walletAddress,
       xId: identity.xId,
       xHandle: identity.xHandle,
+      avatarUrl: identity.avatarUrl,
       telegramId: identity.telegramId,
       telegramHandle: identity.telegramHandle,
     },

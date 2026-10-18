@@ -113,9 +113,7 @@ export function ProfileScreen({
             </span>
           }
           title={isMerchant ? "Business account" : "Personal account"}
-          subtitle={
-            isMerchant ? "Home · Payments · Business" : "Contacts · Home · Profile"
-          }
+          subtitle="Set when you created your account."
         />
         <ListRow
           as="div"
@@ -141,7 +139,17 @@ export function ProfileScreen({
               ? `${RECEIPTS_CHANNEL_LABEL[user.receipts.channel]} connected.`
               : "Not connected. No copies are being sent."
           }
-          trailing={<span className="pk-m">{user?.receipts?.address ?? "Not set"}</span>}
+          trailing={
+            /* An address is one unbreakable token, so a long one is told where
+               it may break rather than being allowed to push the row past the
+               card's edge. */
+            <span
+              className="pk-m min-w-0 text-right"
+              style={{ overflowWrap: "anywhere" }}
+            >
+              {user?.receipts?.address ?? "Not set"}
+            </span>
+          }
         />
         {isMerchant && user?.businessName ? (
           <ListRow
@@ -179,8 +187,8 @@ export function ProfileScreen({
               <InfoIcon size={18} />
             </span>
           }
-          title="Demo mode"
-          subtitle="Seeded balances. Transfers stay inside this app."
+          title="Mezo testnet"
+          subtitle="Real balances on a test network. Worth nothing off it."
         />
       </ListGroup>
 
@@ -215,8 +223,8 @@ export function ProfileScreen({
         title="Sign out?"
       >
         <p className="pk-m text-center leading-relaxed">
-          Your session ends and the demo balance resets. Contacts you added and
-          anything you sent in this session are cleared.
+          Your session ends. Your wallet and anything in it stay with your
+          account — signing back in brings them straight back.
         </p>
 
         <div className="mt-5 space-y-2">

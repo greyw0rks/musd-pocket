@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "motion/react";
-import { DemoBadge } from "@/components/pocket/DemoBadge";
 import { CheckIcon } from "@/components/pocket/icons";
 import { SCREEN_PLAIN } from "@/components/pocket/theme";
 import { Button } from "@/components/pocket/ui/Button";
@@ -20,10 +19,10 @@ import type { Transaction } from "@/features/payments/payment.types";
  * would have looked like a different product in light mode. The disc carries
  * the same signal in a fraction of the area, and it does it in both themes.
  *
- * The demo marker is deliberately the quietest thing here: a small line under
- * the recipient. The reference just says "Sent to Sarah"; this says the same
- * and then, one line down and much smaller, the truth — that no funds moved,
- * and the reference number points at a fixture.
+ * What is left under the amount is the record's own reference, small and
+ * unremarked. The reference number is not decoration: it is how this receipt
+ * is tied back to the row in Activity, and how a payment is looked up when
+ * something about it needs checking.
  */
 export function SuccessScreen({
   transaction,
@@ -75,10 +74,20 @@ export function SuccessScreen({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
-          className="flex flex-col items-center gap-1"
+          className="flex w-full max-w-full flex-col items-center gap-1"
         >
-          <DemoBadge label="Simulated — no funds moved" />
-          <span className="pk-m font-mono text-[10px]">
+          {/*
+            `overflowWrap: anywhere` and a width cap, because this reference is
+            not always a short id. When the record call did not land, the
+            transfer's own hash takes its place — sixty-six characters with no
+            break opportunity in them — and at that length the string is wider
+            than the screen and runs over the edge of the receipt. The rule only
+            breaks a word that cannot fit, so "ref" and a short id are untouched.
+          */}
+          <span
+            className="pk-m max-w-full px-6 text-center font-mono text-[10px]"
+            style={{ overflowWrap: "anywhere" }}
+          >
             ref {transaction.id}
           </span>
         </motion.div>

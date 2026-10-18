@@ -7,8 +7,8 @@ import { CHAIN_ID, MUSD_ADDRESS, EXPLORER_URL } from "@/lib/mezo/config";
  *
  * Only MEZO is REAL (Mezo testnet — the one chain we transact on). BASE and
  * ETHEREUM are MODELED: their mainnet MUSD + Wormhole NTT addresses are real
- * reference data, but Pocket simulates their vault liquidity + NTT settlement
- * (no MUSD/NTT exists on Base/Eth testnets, so a free live demo can't use them).
+ * reference data, but nothing in the live app routes to them (no MUSD/NTT
+ * exists on Base/Eth testnets).
  */
 export type ChainInfo = {
   key: ChainKey;

@@ -3,29 +3,46 @@
 
 /*
   Pocket — Spend your Bitcoin without selling it.
-  Mezo infrastructure × consumer fintech
-  Supports light and dark mode via .dark class on html element
+
+  The marketing surface now runs on the *product's* palette rather than its own.
+  The values below are the light and dark sides of `lib/brand/tokens.ts`, the
+  same tokens `components/pocket/pocket.css` applies to the app, so the site and
+  the wallet cannot drift apart: same Poppins, same purple accent, same black
+  primary action, same flat surfaces.
+
+  Orange survives only as `--mezo`, the partner accent. It appears where Mezo
+  itself is being named, never as Pocket's own colour — which is the rule the
+  brand kit states and the reason the app never uses it.
 */
 :root {
-  /* Light mode colors */
-  --background: #f7f8f6;
+  /* Light mode — brand palette (see lib/brand/tokens.ts) */
+  --background: #f4f4f6;
   --surface: #ffffff;
-  --surface-2: #f1f3f0;
-  --foreground: #111312;
-  --muted: #6b716d;
-  --border: #e4e7e4;
-  --primary: #18a86b; /* MUSD green */
-  --primary-dark: #087a4b;
+  --surface-2: #f1f1f4;
+  --foreground: #0b0b0d;
+  --muted: #6b6b75;
+  --border: #e6e6ea;
+
+  /*
+    Purple is the accent, not the action. Buttons are the inverse pair
+    (black on light, white on dark) exactly as `.pk-btn` is in the app; purple
+    marks selection, data and small emphasis.
+  */
+  --brand: #a63fd9;
+  --brand-strong: #8a2fbb;
+
+  --primary: #a63fd9;
+  --primary-dark: #8a2fbb;
   --primary-foreground: #ffffff;
-  --primary-soft: #e4f4ec;
-  --success: #18a86b;
-  --success-soft: #e4f4ec;
-  --warning: #e7a83b;
-  --warning-soft: #fbf0dc;
-  --error: #d64545;
-  --error-soft: #fbe7e7;
-  --radius: 0.875rem;
-  /* Mezo colors for accent */
+  --primary-soft: #f4eafb;
+  --success: #16a34a;
+  --success-soft: #e7f6ed;
+  --warning: #ffc83d;
+  --warning-soft: #fff4d5;
+  --error: #dc2626;
+  --error-soft: #fdeaea;
+  --radius: 0.75rem;
+  /* Mezo colours, for attribution only */
   --mezo: #FF5A36;
   --mezo-soft: #FF7A5E;
   --mezo-dark: #C93F25;
@@ -52,18 +69,23 @@
 }
 
 .dark {
-  /* Dark mode colors */
-  --background: #0A0A0A;
-  --surface: #111111;
-  --surface-2: #171717;
-  --border: #292929;
-  --foreground: #F5F5F0;
-  --muted: #A3A3A0;
-  --primary: #FF5A36; /* Mezo orange as primary in dark */
-  --primary-dark: #E94E2F;
-  --primary-foreground: #FFFFFF;
-  --primary-soft: #FF7A5E20; /* 20% opacity */
-  --success: #72D49A;
+  /* Dark mode — the app's dark tokens, not a second palette */
+  --background: #000000;
+  --surface: #161618;
+  --surface-2: #222226;
+  --border: #2a2a2e;
+  --foreground: #ffffff;
+  --muted: #85858f;
+
+  --brand: #a63fd9;
+  --brand-strong: #b45fe4;
+
+  --primary: #a63fd9;
+  --primary-dark: #b45fe4;
+  --primary-foreground: #ffffff;
+  --primary-soft: rgb(166 63 217 / 0.18);
+  --success: #16a34a;
+  --success-soft: rgb(22 163 74 / 0.16);
   /* Note: we keep the same mezo colors */
 }
 
@@ -78,6 +100,8 @@
   --color-primary-dark: var(--primary-dark);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-soft: var(--primary-soft);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
@@ -103,7 +127,7 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 
   --radius-sm: calc(var(--radius) - 4px);

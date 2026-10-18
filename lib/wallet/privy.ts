@@ -25,6 +25,22 @@ export const privyConfig: PrivyClientConfig = {
   supportedChains: [MEZO.testnet.chain, MEZO.mainnet.chain],
   embeddedWallets: {
     ethereum: { createOnLogin: "users-without-wallets" },
+    /*
+      Privy's confirmation sheet is off by design.
+
+      It is a second gate in front of every signature, and it is not the one
+      Pocket wants: it reads in Privy's voice rather than the app's, and the
+      amount in it is not the amount the app drew. What goes in its place is
+      stronger — a passkey held by the device, unlocked with a face or a
+      fingerprint (`components/pocket/profile/PasskeyCard.tsx`), wired up by
+      `MfaGate` so the OS sheet is what the user actually sees.
+
+      The interlock is the whole reason this is safe: with the sheet off and no
+      passkey enrolled, a signature happens with nothing shown at all. MFA is
+      only enforced once a method is enrolled, so Settings states the posture in
+      plain words rather than leaving it implied — never silently.
+    */
+    showWalletUIs: false,
   },
 };
 

@@ -12,6 +12,7 @@ import { Button } from "@/components/pocket/ui/Button";
 import { Chip, ChipRow } from "@/components/pocket/ui/Chip";
 import { ScreenHeader } from "@/components/pocket/ui/ScreenHeader";
 import { SearchField } from "@/components/pocket/ui/SearchField";
+import { SpendChart } from "@/components/pocket/ledger/SpendChart";
 import { EmptyState, ListSkeleton } from "@/components/pocket/ui/States";
 import { useMounted } from "@/components/pocket/ui/useMounted";
 import { formatMoney } from "@/lib/formatters";
@@ -41,9 +42,9 @@ const FILTERS: { id: Filter; label: string }[] = [
  * "Sent $42.50" always describes exactly the rows underneath it. A summary
  * that disagrees with its own list is worse than no summary.
  *
- * Filtering happens in memory. The ledger is a fixture of five or six entries
- * and will be until this is wired to a real one; adding a service call now
- * would be a boundary drawn around nothing.
+ * Filtering happens in memory, over the rows the caller already has. The list
+ * arrives from one service call made at boot, so narrowing it is a redraw
+ * rather than a round trip.
  */
 export function AllTransactionsScreen({
   transactions,
@@ -83,6 +84,13 @@ export function AllTransactionsScreen({
     let sent = 0n;
     let received = 0n;
     for (const tx of visible) {
+      /*
+        MUSD only. `amountUnits` is denominated in the row's own asset, so a BTC
+        row folded in here would add wei to hundredths — a total that is not a
+        sum of anything. A BTC row is still listed below; it is the list that
+        carries it, and the strip names the token it counts.
+      */
+      if (tx.asset !== "MUSD") continue;
       if (tx.direction === "sent") sent += tx.amountUnits;
       else received += tx.amountUnits;
     }
@@ -134,15 +142,27 @@ export function AllTransactionsScreen({
       {/* The totals describe the rows below them, so they are the first thing
           to change when the filter does. Each one is drawn only when there is
           something to count: filtering to Sent and reading "Received $0.00"
-          would be a number pretending to be a fact. */}
+          would be a number pretending to be a fact.
+
+          The labels name MUSD because the figures are only MUSD — a BTC
+          transfer is in the list underneath and in neither of these. An
+          unqualified "Sent $12.00" beside a BTC row the user just made would
+          read as that transfer's total. */}
       {mounted && visible.length > 0 ? (
         <div className="flex items-center gap-6 pb-4">
-          {totals.sent > 0n ? <Total label="Sent" value={totals.sent} /> : null}
+          {totals.sent > 0n ? <Total label="MUSD sent" value={totals.sent} /> : null}
           {totals.received > 0n ? (
-            <Total label="Received" value={totals.received} received />
+            <Total label="MUSD received" value={totals.received} received />
           ) : null}
         </div>
       ) : null}
+
+      {/* The same rows, by month. Fed the filtered list rather than the whole
+          ledger for the same reason the totals are: it has to describe exactly
+          the rows underneath it. Draws itself only when money actually left in
+          the window — an all-empty chart is a screen's worth of height spent
+          saying what the list already says. */}
+      {mounted && visible.length > 0 ? <SpendChart rows={visible} /> : null}
 
       {!mounted ? (
         <ListSkeleton rows={4} />

@@ -17,7 +17,8 @@ import { RECEIPTS_CHANNEL_LABEL } from "@/features/session/session.types";
  * it revocable: an identity you cannot sign out of is a trap, and a delivery
  * address you cannot remove is the same trap wearing a smaller hat.
  *
- * Nothing is emailed while this is a demo, and the sheet says so rather than
+ * Nothing is emailed, and `setReceipts` stores nothing — there is no
+ * receipt-address column on the server — so the sheet says so rather than
  * letting a connected-looking row imply otherwise.
  *
  * It lives in its own module because both a personal Profile and a merchant's
@@ -138,9 +139,9 @@ export function ReceiptsSheet({
       </div>
 
       <p className="pk-m mt-5 leading-relaxed">
-        Nothing is emailed yet. When this is wired, the same address receives
-        receipts for payments, requests and refunds, and this panel keeps its
-        shape — what changes is that a connection becomes a real grant.
+        Receipt copies are not sent yet, and there is nowhere on the server to
+        keep this address — connecting it will not stay. The panel is here so
+        the shape is ready when delivery is.
       </p>
     </Sheet>
   );

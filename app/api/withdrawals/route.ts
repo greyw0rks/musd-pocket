@@ -39,6 +39,10 @@ export async function GET(req: NextRequest) {
       withdrawals: withdrawals.map((w) => ({
         id: w.id,
         amount: w.amount.toString(),
+        // Which token `amount` counts. The activity reader picks its parser from
+        // this, so omitting it would make a BTC row read as a MUSD one — the
+        // same field, at the wrong scale.
+        asset: w.asset,
         chain: w.chain,
         toAddress: w.toAddress,
         txHash: w.txHash,

@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import { ArrowDownLeft, ArrowUpRight, Plus } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  Bitcoin,
+  QrCode,
+} from "lucide-react";
 import {
   animate,
   motion,
@@ -9,7 +14,6 @@ import {
   useReducedMotion,
   useTransform,
 } from "motion/react";
-import { TICKER } from "@/components/landing/constants";
 import { cn } from "@/lib/utils";
 
 const ACTIVITY = [
@@ -20,10 +24,21 @@ const ACTIVITY = [
 
 const START_BALANCE = 250;
 
+const ACTIONS = [
+  { icon: ArrowUpRight, label: "Send" },
+  { icon: ArrowDownLeft, label: "Request" },
+  { icon: QrCode, label: "Receive" },
+  { icon: Bitcoin, label: "Borrow" },
+];
+
 /**
  * The hero product mock (brief §8). It is a *mock* — no wallet, no chain, no
- * data — but it is rendered from the same tokens as the real Home screen so the
- * marketing page and the product look like one thing.
+ * data — but it is drawn from the app's own balance cards
+ * (`components/pocket/home/BalanceCards.tsx`): the yellow total behind, the
+ * purple available balance in front, `yours + borrowed` set inline, and the
+ * repayment row welded to the card's foot. The marketing page and the product
+ * should look like one thing, so the mock mirrors the product's arrangement
+ * rather than inventing a friendlier one.
  */
 export function WalletMockup({ className }: { className?: string }) {
   const reduceMotion = useReducedMotion();
@@ -44,85 +59,79 @@ export function WalletMockup({ className }: { className?: string }) {
     <div className={cn("relative w-full max-w-[340px]", className)}>
       <div
         aria-hidden
-        className="absolute -inset-10 -z-10 rounded-[3rem] bg-mezo/10 blur-3xl"
+        className="absolute -inset-10 -z-10 rounded-[3rem] bg-brand/15 blur-3xl"
       />
 
-      <div className="rounded-3xl border border-border bg-surface p-6 shadow-xl">
-        <div className="flex items-start justify-between">
-          <h2 className="text-base font-semibold">Pocket</h2>
-          <span aria-hidden className="select-none text-muted">
-            ⋯
+      {/* The stacked cards, at the app's own geometry: back at 150px tall,
+          front starting 44px down so the yellow sliver shows above it. */}
+      <div className="relative h-[262px]">
+        <div className="absolute inset-x-0 top-0 h-[150px] rounded-[26px] bg-warning px-5 py-[13px] text-[#111]">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[13px] opacity-70">Total balance</span>
+            <b className="text-[15px]">$250.00</b>
+          </div>
+        </div>
+
+        <div className="absolute inset-x-0 top-[44px] h-[218px] overflow-hidden rounded-[26px] bg-brand px-5 py-[18px] text-white shadow-[0_-10px_30px_#0004]">
+          <p className="text-[13px] opacity-80">Available balance</p>
+
+          <p className="mt-1 whitespace-nowrap text-[30px] font-semibold leading-none tracking-[-1px] tabular">
+            $<motion.span>{display}</motion.span>
+            <span className="opacity-70"> + </span>$0.00
+          </p>
+          <p className="mt-1 text-[11px] opacity-70">yours + borrowed</p>
+
+          <div className="absolute bottom-[18px] left-5">
+            <p className="text-[12px] opacity-80">Repayment balance</p>
+            <p className="text-[20px] font-semibold tabular">$0.00</p>
+          </div>
+
+          <span className="absolute bottom-4 right-4 inline-flex h-[50px] items-center rounded-full bg-[#0b0b0d] px-[26px] text-sm font-semibold text-white shadow-[inset_0_0_0_1px_#2a2a2e]">
+            Repay
           </span>
         </div>
+      </div>
 
-        <div className="mt-7">
-          <p className="text-[13px] font-medium text-muted">Available</p>
-          <p className="mt-1 flex items-baseline gap-2">
-            <span className="tabular text-[40px] font-semibold leading-none tracking-tight">
-              <motion.span>{display}</motion.span>
+      {/* The four actions, in the same white card the app uses. */}
+      <div className="mt-3 grid grid-cols-4 gap-2 rounded-[22px] bg-surface px-2 py-[18px] text-center">
+        {ACTIONS.map(({ icon: Icon, label }) => (
+          <span
+            key={label}
+            className="grid justify-items-center gap-1.5 text-[12px] font-medium text-foreground"
+          >
+            <span className="grid size-[54px] place-items-center rounded-full bg-surface-2">
+              <Icon className="size-5" />
             </span>
-            <span className="text-sm font-medium text-muted">
-              {TICKER}
-            </span>
-          </p>
-        </div>
+            {label}
+          </span>
+        ))}
+      </div>
 
-        <button
-          type="button"
-          tabIndex={-1}
-          aria-hidden
-          className="mt-5 inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-2 text-[13px] font-semibold text-foreground"
-        >
-          <Plus className="size-3.5" />
-          Add funds
-        </button>
-
-        <div className="mt-6 grid grid-cols-2 gap-3">
-          <MockAction icon={ArrowUpRight} label="Send" />
-          <MockAction icon={ArrowDownLeft} label="Request" />
-        </div>
-
-        <div className="mt-7">
-          <p className="text-[13px] font-medium text-muted">Recent</p>
-          <ul className="mt-3 flex flex-col gap-3">
-            {ACTIVITY.map((row, i) => (
-              <motion.li
-                key={row.label}
-                className="flex items-center justify-between text-sm"
-                initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.9 + i * 0.12, ease: "easeOut" }}
+      {/* A strip of activity, so the card reads as a running app. */}
+      <div className="mt-3 rounded-[22px] bg-surface p-4">
+        <ul className="flex flex-col gap-3">
+          {ACTIVITY.map((row, i) => (
+            <motion.li
+              key={row.label}
+              className="flex items-center justify-between text-sm"
+              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.9 + i * 0.12, ease: "easeOut" }}
+            >
+              <span className="text-foreground">{row.label}</span>
+              <span
+                className={cn(
+                  "tabular font-medium",
+                  row.direction === "in" ? "text-success" : "text-muted",
+                )}
               >
-                <span className="text-foreground">{row.label}</span>
-                <span
-                  className={cn(
-                    "tabular font-medium",
-                    row.direction === "in" ? "text-success" : "text-muted",
-                  )}
-                >
-                  {row.direction === "in" ? "+" : "−"}
-                  {row.amount}
-                </span>
-              </motion.li>
-            ))}
-          </ul>
-        </div>
+                {row.direction === "in" ? "+" : "−"}
+                {row.amount}
+              </span>
+            </motion.li>
+          ))}
+        </ul>
       </div>
     </div>
-  );
-}
-
-function MockAction({
-  icon: Icon,
-  label,
-}: {
-  icon: typeof ArrowUpRight;
-  label: string;
-}) {
-  return (
-    <span className="inline-flex items-center justify-center gap-2 rounded-lg bg-surface-2 px-3 py-2.5 text-sm font-semibold text-foreground">
-      <Icon className="size-4" />
-      {label}
-    </span>
   );
 }
