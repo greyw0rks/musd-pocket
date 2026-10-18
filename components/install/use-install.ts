@@ -140,6 +140,20 @@ function subscribe(callback: () => void): () => void {
 if (typeof window !== "undefined" && !listenersBound) {
   listenersBound = true;
 
+  /*
+    Chrome will not fire `beforeinstallprompt` unless a service worker with a
+    fetch handler sits behind the manifest, so the worker is registered as soon
+    as this module loads — on the landing page as well as in the app. It is a
+    pass-through (see `public/sw.js`); registering it early is what makes the
+    "Install Pocket" offer in the entry dialog a real one-tap prompt instead of
+    a page of instructions.
+  */
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").catch(() => {
+      /* installability is an enhancement; the app works without it */
+    });
+  }
+
   window.addEventListener("beforeinstallprompt", (event) => {
     // Chrome shows its own mini-infobar unless the default is prevented. We
     // want the install offered at a moment we choose, inside the gate.

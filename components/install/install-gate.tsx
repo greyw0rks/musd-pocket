@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
-import { Share, MoreVertical, X } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { X } from "lucide-react";
+import { installSteps } from "@/components/install/steps";
 import { useInstall } from "@/components/install/use-install";
 
 /**
@@ -23,19 +24,6 @@ import { useInstall } from "@/components/install/use-install";
 export function InstallGate({ children }: { children: ReactNode }) {
   const { ready, standalone, dismissed, desktop, canPrompt, ios, install, dismiss } =
     useInstall();
-
-  /*
-    Registering the worker is what makes Chrome consider the app installable.
-    It is deliberately a pass-through — see `public/sw.js` — because a wallet
-    that serves a cached balance is a wallet that lies about how much money you
-    have.
-  */
-  useEffect(() => {
-    if (!("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.register("/sw.js").catch(() => {
-      /* installability is an enhancement; the app works without it */
-    });
-  }, []);
 
   /*
     Render nothing until the browser state is known. Rendering the app first and
@@ -103,23 +91,7 @@ function MobileGate({
   const [showSteps, setShowSteps] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const steps = ios
-    ? [
-        {
-          icon: <Share size={16} aria-hidden />,
-          text: "Tap the Share button in Safari's toolbar.",
-        },
-        { icon: <span aria-hidden>＋</span>, text: 'Choose "Add to Home Screen".' },
-        { icon: <span aria-hidden>p</span>, text: 'Tap "Add" — Pocket appears with your apps.' },
-      ]
-    : [
-        {
-          icon: <MoreVertical size={16} aria-hidden />,
-          text: "Open the browser menu (⋮ or ⋯).",
-        },
-        { icon: <span aria-hidden>↓</span>, text: 'Tap "Install app" or "Add to Home screen".' },
-        { icon: <span aria-hidden>p</span>, text: "Confirm — Pocket opens full screen." },
-      ];
+  const steps = installSteps(ios);
 
   const handleInstall = async () => {
     setBusy(true);
