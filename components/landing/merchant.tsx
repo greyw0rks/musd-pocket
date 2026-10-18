@@ -28,7 +28,7 @@ export function Merchant() {
             <ul className="mt-8 flex flex-col gap-4">
               {CAPABILITIES.map((item) => (
                 <li key={item.label} className="flex items-center gap-3">
-                  <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-mezo">
+                  <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-brand">
                     <item.icon className="size-4" />
                   </span>
                   <span className="font-medium">{item.label}</span>

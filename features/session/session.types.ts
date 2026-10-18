@@ -1,14 +1,14 @@
 /**
  * Who the user is, behind an interface.
  *
- * The build plan's rule for authentication before testnet is: mock the flow,
- * but design it so a real provider and embedded-wallet provisioning can be
- * added later. That means the UI must never call `localStorage` or a provider
- * SDK directly — it asks a `SessionService`, and the demo implements it.
+ * The UI never calls a provider SDK directly: it asks a `SessionService`, and
+ * the real adapter is the only implementation. Identity itself is Privy's —
+ * the token, the embedded wallet and the sign-in modal belong to
+ * `lib/auth/session.tsx` — and this interface is the Pocket view of it.
  *
  * Nothing here is a credential. There is no password field, no token, no
- * recovery phrase, and no seed. The demo has no secrets to leak because it
- * never models one.
+ * recovery phrase, and no seed. The wallet is an embedded one, so there are no
+ * secrets in this app to leak because it never holds one.
  */
 
 export type AccountType = "personal" | "merchant";
@@ -21,10 +21,9 @@ export type AccountType = "personal" | "merchant";
  * below. Folding them into one list is how a "Continue with Google" button
  * survives a decision to stop using Google to sign people in.
  */
-export type AuthProvider = "demo" | "x" | "apple" | "email";
+export type AuthProvider = "x" | "apple" | "email";
 
 export const AUTH_PROVIDER_LABEL: Record<AuthProvider, string> = {
-  demo: "Demo account",
   x: "X",
   apple: "Apple",
   email: "Email",

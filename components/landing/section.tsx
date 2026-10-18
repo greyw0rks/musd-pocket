@@ -19,7 +19,7 @@ export function Section({
   );
 }
 
-/** Small orange kicker above a section title. */
+/** Small purple kicker above a section title. */
 export function Eyebrow({
   className,
   children,
@@ -30,7 +30,7 @@ export function Eyebrow({
   return (
     <p
       className={cn(
-        "text-[13px] font-semibold uppercase tracking-[0.18em] text-mezo",
+        "text-[13px] font-semibold uppercase tracking-[0.18em] text-brand",
         className,
       )}
     >

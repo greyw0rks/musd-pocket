@@ -90,7 +90,7 @@ export function TextField({
           {status === "valid" ? (
             <CheckIcon size={16} className="text-[var(--g-ink)]" />
           ) : null}
-          {invalid ? <AlertIcon size={16} className="text-[var(--r)]" /> : null}
+          {invalid ? <AlertIcon size={16} className="text-[var(--r-ink)]" /> : null}
         </span>
       </div>
 
@@ -104,7 +104,7 @@ export function TextField({
         className={cn(
           "min-h-4 px-1 text-[11px] leading-4",
           error
-            ? "text-[var(--r)]"
+            ? "text-[var(--r-ink)]"
             : status === "valid"
               ? "text-[var(--g-ink)]"
               : "text-[var(--m)]",
@@ -159,7 +159,7 @@ export function TextArea({
         id={messageId}
         className={cn(
           "min-h-4 px-1 text-[11px] leading-4",
-          error ? "text-[var(--r)]" : "text-[var(--m)]",
+          error ? "text-[var(--r-ink)]" : "text-[var(--m)]",
         )}
       >
         {error ?? hint}

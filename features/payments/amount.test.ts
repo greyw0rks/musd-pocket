@@ -11,11 +11,17 @@ import {
   pressOperator,
   pressBackspace,
   clearKeypad,
+  CHAIN_DECIMALS,
+  ONE,
+  toDisplayUnits,
+  toChainUnits,
+  btcValueUnits,
   INITIAL_KEYPAD,
   type KeypadState,
   type Op,
   type Token,
 } from "./amount.ts";
+import { MUSD_DECIMALS } from "../../lib/mezo/config.ts";
 
 const num = (text: string): Token => ({ kind: "num", text });
 const op = (value: Op): Token => ({ kind: "op", op: value });
@@ -39,6 +45,46 @@ check("rejects junk", () => assert.equal(parseDecimalToUnits("5x"), null));
 check("renders decimal", () => assert.equal(unitsToDecimal(1234n), "12.34"));
 check("renders sub-unit", () => assert.equal(unitsToDecimal(5n), "0.05"));
 check("renders thousands", () => assert.equal(formatUnits(123456n), "1,234.56"));
+
+console.log("\nchain bridge (18-decimal mUSD <-> 2-decimal minor units)");
+check("the local chain-decimal count matches the config", () =>
+  assert.equal(CHAIN_DECIMALS, MUSD_DECIMALS));
+check("153.00 mUSD is 153e18 on-chain", () =>
+  assert.equal(toChainUnits(15300n), 15300n * 10n ** 16n));
+check("a whole mUSD round-trips", () =>
+  assert.equal(toDisplayUnits(toChainUnits(ONE)), ONE));
+check("zero round-trips", () => {
+  assert.equal(toChainUnits(0n), 0n);
+  assert.equal(toDisplayUnits(0n), 0n);
+});
+check("sub-cent dust truncates down, never up", () =>
+  assert.equal(toDisplayUnits(15300999999999999999n), 1530n));
+check("a balance below one cent reads as zero", () =>
+  assert.equal(toDisplayUnits(10n ** 16n - 1n), 0n));
+check("the bridge agrees with the keypad's own parser", () =>
+  assert.equal(
+    toChainUnits(parseDecimalToUnits("12.34") as bigint),
+    12_340_000_000_000_000_000n,
+  ));
+
+console.log("\nBTC valuation (wei × micro-dollar price -> minor units)");
+// 0.001001 BTC at $68,432.15 is $68.5005…, which truncates to $68.50 — the
+// figure the Home card prints under the amount, and the addend that keeps the
+// total from omitting BTC.
+check("prices a small BTC balance into cents", () =>
+  assert.equal(btcValueUnits(1_001_000_000_000_000n, 68_432_150_000n), 6850n));
+check("one whole BTC at $50,000 is 5,000,000 cents", () =>
+  assert.equal(btcValueUnits(10n ** 18n, 50_000_000_000n), 5_000_000n));
+check("satoshi-scale BTC truncates to nothing, not to a cent", () =>
+  assert.equal(btcValueUnits(10n ** 10n, 68_432_150_000n), 0n));
+check("no BTC is worth nothing at any price", () =>
+  assert.equal(btcValueUnits(0n, 68_432_150_000n), 0n));
+check("a zero price values nothing rather than failing", () =>
+  assert.equal(btcValueUnits(10n ** 18n, 0n), 0n));
+// Sub-cent price precision is kept, not dropped at the wire: $68,432.155 is a
+// different total from $68,432.15 once a whole BTC is behind it.
+check("price keeps its sub-cent precision", () =>
+  assert.equal(btcValueUnits(10n ** 18n, 68_432_155_000n), 6_843_215n));
 
 console.log("\nevaluation (exact, no floats)");
 check("adds", () => assert.equal(evaluate([num("1"), op("+"), num("2")]), 300n));

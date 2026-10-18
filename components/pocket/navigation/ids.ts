@@ -9,9 +9,16 @@
  * Deliberately in its own module with no imports, so the navigation helpers,
  * the store and the host can all refer to it without a cycle.
  *
- * The personal half is grouped the way the dock presents it: the three tabs
- * first (`home`, `vault`, `spending`), then the borrowing screen the home
- * card's Repay notch leads to, then everything the tabs lead *to*.
+ * Three of these are *places* — `home`, `vault` and `transactions` — and they
+ * are the three the dock switches between. Everything else is a step in
+ * something the user is doing — sending, asking, being paid, borrowing against
+ * their Bitcoin — so it is pushed with a way back rather than switched to.
+ *
+ * The dock was absent for a while, correctly: the build that had one carried
+ * three tops behind it, and two of those were fixtures over features that did
+ * not exist. Borrow, the Savings Vault and the ledger are all real now, so the
+ * dock has something to switch between and it is back. `navigation/screens.ts`
+ * holds which screens own it.
  */
 
 export type ScreenId =
@@ -21,39 +28,38 @@ export type ScreenId =
   | "account-type"
   | "profile-setup"
   | "onboarding-done"
-  // 2 · The three dock tabs
+  // 2 · Home, and the record of what happened from it
   | "home"
-  | "vault"
-  | "spending"
-  // 2b · Borrowing — reached from the home card, not the dock
-  | "borrow"
-  // 2c · The ledger
   | "transactions"
   | "transaction"
   | "notifications"
-  // 2d · Account
+  // 2b · The Savings Vault — a place, like Home
+  | "vault"
+  // 3 · Account
   | "contacts"
   | "profile"
   | "settings"
   | "account-overview"
-  // 3 · Receive and requests
+  /*
+    Not an account screen, but reached from one: Settings is where a user goes
+    looking for a way to get money out of the wallet, and a native BTC transfer
+    has nowhere else to live — it belongs to no payment row, so it can never be
+    reached from the ledger.
+  */
+  | "withdraw-btc"
+  // 4 · Receive and requests
   | "receive"
   | "requests"
   | "request"
   | "request-detail"
   | "scan"
-  // 4 · Merchant
-  | "merchant-home"
-  | "merchant-profile"
-  | "merchant-receive"
-  | "merchant-qr"
-  | "merchant-request"
-  | "merchant-payments"
-  | "merchant-payment-detail"
-  | "merchant-settings"
   // 5 · Sending
   | "transfer"
-  | "success";
+  | "success"
+  // 6 · Borrow
+  | "borrow"
+  | "borrow-open"
+  | "borrow-repay";
 
 export interface ScreenParams {
   /** Which recipient a transfer is for. */
@@ -62,8 +68,6 @@ export interface ScreenParams {
   transactionId?: string;
   /** Which request the detail screen is showing. */
   requestId?: string;
-  /** Which vault goal the detail sheet was opened on. */
-  goalId?: string;
 }
 
 export interface StackEntry {

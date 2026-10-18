@@ -20,9 +20,11 @@ import type { AuthProvider } from "@/features/session/session.types";
 /**
  * Screen 02 — Sign in or create an account.
  *
- * The plan asks for a mock login flow with a provider-ready interface, and
- * this is that interface: the shape a real OAuth hand-off would have, with a
- * demo adapter behind it.
+ * The plan asks for a sign-in flow with a provider-ready interface, and this is
+ * that interface. In this build it is unreachable: identity is Privy's, and
+ * `AuthGate` renders nothing until a session exists, so the app opens straight
+ * into Pocket. `signIn` on the real adapter says exactly that rather than
+ * faking a hand-off.
  *
  * Two honesty decisions worth naming, because they are the kind of thing that
  * quietly becomes a lie later:
@@ -32,9 +34,9 @@ import type { AuthProvider } from "@/features/session/session.types";
  *    the closest call of the three, since X's logo is itself a letter — what
  *    keeps this one honest is that it is a plain letter in a neutral circle,
  *    not the wordmark, and the note under the buttons says what it does;
- *  - signing in and signing up are the same screen, because in the demo they
- *    genuinely do the same thing. A "Create account" tab that silently logs
- *    you into someone else's seeded history would be worse than saying so.
+ *  - signing in and signing up are the same screen, because they genuinely do
+ *    the same thing: one provider hand-off either finds the account or makes
+ *    it. A separate "Create account" tab would imply a difference there is not.
  *
  * Google is absent from this list on purpose. It is not how anyone signs in —
  * it is where a receipt copy can be delivered, which is a decision about
@@ -85,8 +87,8 @@ export function AuthScreen() {
       <div className="pt-5">
         <h1 className="pk-h1">Sign in or create account</h1>
         <p className="pk-m mt-2 max-w-[34ch] text-[13px] leading-relaxed">
-          Either way the demo gives you the same mock account, so your balance
-          and contacts are there when you arrive.
+          One hand-off either finds your account or makes it. Either way you
+          arrive with your wallet and your contacts.
         </p>
       </div>
 
@@ -150,17 +152,16 @@ export function AuthScreen() {
             </Button>
           </motion.div>
         ) : error ? (
-          <p role="alert" className="px-1 pt-1 text-[11px] text-[var(--r)]">
+          <p role="alert" className="px-1 pt-1 text-[11px] text-[var(--r-ink)]">
             {error}
           </p>
         ) : null}
       </div>
 
       <p className="pk-card pk-m mt-4 leading-relaxed">
-        <b className="text-[var(--t)]">Mock sign-in.</b> No provider is
-        contacted, no password is stored, and no wallet is created. When this is
-        wired to a real provider, this screen keeps its shape and the buttons
-        start doing something.
+        <b className="text-[var(--t)]">Signing in happens before the app opens.</b>{" "}
+        If you are reading this, the session has ended or has not started —
+        reload to sign in again.
       </p>
     </div>
   );

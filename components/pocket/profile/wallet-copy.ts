@@ -1,18 +1,18 @@
 /**
  * What to say about the wallet, in one place.
  *
- * Two screens now show wallet state — a personal Profile and a merchant's
+ * Two screens show wallet state — a personal Profile and a merchant's
  * Business — and they are looking at the same absence. Written twice, one of
  * them eventually starts saying something cheerier than the other, which is
  * exactly the failure Section 10 is guarding against: a wallet *interface* is
  * allowed before testnet, a claim that a funded on-chain wallet exists is not.
  *
- * So the words live here and both screens read them. `none` is the state the
- * fixtures are permanently in, and it is written as a fact rather than as a gap
- * to fill in — there is no address to show, and no button that would produce
- * one. `ready` is the state `/home` is in, and it may not say anything the app
- * contradicts: the address *is* shown, on the receive screen, because that is
- * what receiving money requires.
+ * So the words live here and both screens read them. `none` is the state a
+ * user is in before Privy has minted anything, and it is written as a fact
+ * rather than as a gap to fill in — there is no address to show, and no button
+ * that would produce one. `ready` is the state a provisioned wallet is in, and
+ * it may not say anything the app contradicts: the address *is* shown, on the
+ * receive screen, because that is what receiving money requires.
  */
 
 import type { WalletStatus } from "@/features/session/session.types";

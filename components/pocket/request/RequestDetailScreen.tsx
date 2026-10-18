@@ -3,7 +3,6 @@
 import { motion } from "motion/react";
 import { useState } from "react";
 import { Avatar } from "@/components/pocket/Avatar";
-import { DemoBadge } from "@/components/pocket/DemoBadge";
 import {
   BanIcon,
   CheckIcon,
@@ -36,11 +35,10 @@ import { cn, relativeTime, untilTime } from "@/lib/utils";
  *
  * Paying is the only action on this screen that can move money, and it goes
  * through the store, which routes it through the payment service. Declining and
- * cancelling are local status changes with nothing behind them — which is true
- * of the fixtures and not yet true of the server, and `canDecline` /
- * `canWithdraw` are how the caller says so. Where the answer is no, the control
- * is not drawn: an app that offers to withdraw a request and then cannot has
- * told the user something false about what they just did.
+ * cancelling are not implemented server-side, so `canDecline` / `canWithdraw`
+ * are how the caller says so. Where the answer is no, the control is not drawn:
+ * an app that offers to withdraw a request and then cannot has told the user
+ * something false about what they just did.
  */
 export function RequestDetailScreen({
   request,
@@ -151,7 +149,6 @@ export function RequestDetailScreen({
 
           <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
             <StatusPill status={request.status} />
-            <DemoBadge label="Demo — no funds move" />
           </div>
         </motion.div>
 
@@ -183,7 +180,7 @@ export function RequestDetailScreen({
           <motion.p
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-4 px-1 text-center text-[12px] font-semibold text-[var(--r)]"
+            className="mt-4 px-1 text-center text-[12px] font-semibold text-[var(--r-ink)]"
           >
             {error}
           </motion.p>

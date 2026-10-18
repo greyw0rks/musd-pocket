@@ -42,9 +42,9 @@ export function Navbar() {
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 py-3.5">
         <Link
           href="/"
-          className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mezo/50"
+          className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
         >
-          <Wordmark className="text-lg" showMusd />
+          <Wordmark className="text-lg" />
         </Link>
 
         <nav aria-label="Sections" className="hidden items-center gap-1 md:flex">
@@ -52,7 +52,7 @@ export function Navbar() {
             <a
               key={link.href}
               href={link.href}
-              className="rounded-md px-3 py-2 text-sm font-medium text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mezo/50"
+              className="rounded-md px-3 py-2 text-sm font-medium text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
             >
               {link.label}
             </a>
@@ -61,8 +61,8 @@ export function Navbar() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <CtaLink href="/waitlist" className="hidden sm:inline-flex">
-            Get early access
+          <CtaLink href="/home" className="hidden sm:inline-flex">
+            Enter app
           </CtaLink>
 
           <Sheet>
@@ -70,7 +70,7 @@ export function Navbar() {
               <button
                 type="button"
                 aria-label="Open menu"
-                className="inline-flex size-9 items-center justify-center rounded-lg text-foreground transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mezo/50 md:hidden"
+                className="inline-flex size-9 items-center justify-center rounded-lg text-foreground transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 md:hidden"
               >
                 <Menu className="size-5" />
               </button>
@@ -91,8 +91,8 @@ export function Navbar() {
                   </SheetClose>
                 ))}
               </nav>
-              <CtaLink href="/waitlist" size="lg" className="w-full">
-                Get early access
+              <CtaLink href="/home" size="lg" className="w-full">
+                Enter app
               </CtaLink>
             </SheetContent>
           </Sheet>

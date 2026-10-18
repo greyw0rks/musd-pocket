@@ -12,6 +12,13 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    /*
+      The Solidity workspace is not Next: it has its own Hardhat tooling and a
+      vendored OpenZeppelin checkout under `contracts/lib`. Linting that tree at
+      the app's rules produced several hundred errors in other people's test
+      files, which drowned the handful that belong to this repository.
+    */
+    "contracts/**",
   ]),
 ]);
 

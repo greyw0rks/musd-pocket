@@ -3,7 +3,6 @@
 import { motion } from "motion/react";
 import { useState } from "react";
 import { Avatar } from "@/components/pocket/Avatar";
-import { DemoBadge } from "@/components/pocket/DemoBadge";
 import {
   CheckIcon,
   CopyIcon,
@@ -16,7 +15,7 @@ import { Button } from "@/components/pocket/ui/Button";
 import { ListGroup, ListRow } from "@/components/pocket/ui/ListRow";
 import { ScreenHeader } from "@/components/pocket/ui/ScreenHeader";
 import { useMounted } from "@/components/pocket/ui/useMounted";
-import { formatMoney, PAYMENT_STATUS_LABEL } from "@/lib/formatters";
+import { formatAssetAmount, PAYMENT_STATUS_LABEL } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type {
   Recipient,
@@ -56,7 +55,6 @@ export function TransactionDetailScreen({
   const [copied, setCopied] = useState(false);
 
   const received = transaction.direction === "received";
-  const isDemo = transaction.kind === "demo";
   const counterpartyLabel = received ? "From" : "To";
 
   async function copyReference() {
@@ -98,26 +96,21 @@ export function TransactionDetailScreen({
         </p>
 
         <h2 className="mt-0.5 text-[30px] font-extrabold tracking-tight tabular-nums">
-          {formatMoney(transaction.amountUnits)}
+          {formatAssetAmount(transaction.asset, transaction.amountUnits)}
         </h2>
 
         <div className="mt-3">
           {/*
             A real row states its *status*, not its chain.
 
-            This used to read a flat "On-chain" for anything that was not a
-            fixture, which is a claim the data does not support: a row can be
-            `pending` (submitted, not settled) or `failed`. `PaymentStatusPill`
-            already makes that distinction for the row below, so the header uses
-            the same one rather than contradicting it — and it keeps the
-            existing decision that confirmed is neutral, since green in this app
-            means money arrived, which a settled outgoing payment is not.
+            This used to read a flat "On-chain" for everything, which is a claim
+            the data does not support: a row can be `pending` (submitted, not
+            settled) or `failed`. `PaymentStatusPill` makes that distinction, so
+            the header uses it rather than making a broader claim — and it keeps
+            the existing decision that confirmed is neutral, since green in this
+            app means money arrived, which a settled outgoing payment is not.
           */}
-          {isDemo ? (
-            <DemoBadge label="Simulated — no funds moved" />
-          ) : (
-            <PaymentStatusPill status={transaction.status} />
-          )}
+          <PaymentStatusPill status={transaction.status} />
         </div>
       </div>
 
@@ -135,7 +128,7 @@ export function TransactionDetailScreen({
             title={`${counterpartyLabel} ${transaction.recipientName}`}
             subtitle={
               recipient?.verified
-                ? "Identity verified in this demo."
+                ? "Identity verified."
                 : "Not a saved contact any more."
             }
             trailing={
@@ -194,7 +187,12 @@ export function TransactionDetailScreen({
             title="Reference"
             subtitle="An identifier for this record inside the app."
             trailing={
-              <span className="pk-m font-mono">{transaction.id}</span>
+              <span
+                className="pk-m font-mono"
+                style={{ wordBreak: "break-all", textAlign: "right" }}
+              >
+                {transaction.id}
+              </span>
             }
           />
 
@@ -210,7 +208,19 @@ export function TransactionDetailScreen({
               as="div"
               title="Transaction hash"
               trailing={
-                <span className="pk-m font-mono">{transaction.txHash}</span>
+                /*
+                  A hash is sixty-six characters with nothing in it to break on,
+                  so it is told where it may break. Without this it is one
+                  unbreakable word and the row runs over the card's edge — the
+                  `min-w-0` on the trailing slot lets it shrink, and this is what
+                  lets it use that room.
+                */
+                <span
+                  className="pk-m font-mono"
+                  style={{ wordBreak: "break-all", textAlign: "right" }}
+                >
+                  {transaction.txHash}
+                </span>
               }
             />
           ) : null}
@@ -273,7 +283,7 @@ function PaymentStatusPill({ status }: { status: Transaction["status"] }) {
       // `.pk-pill` sets its own background and colour, so the failed tone has
       // to outrank both. A failed payment that renders as the neutral pill is
       // the one state this screen must never understate.
-      ? "pk-pill !bg-[color-mix(in_srgb,var(--r)_15%,transparent)] !text-[var(--r)]"
+      ? "pk-pill !bg-[color-mix(in_srgb,var(--r)_15%,transparent)] !text-[var(--r-ink)]"
       : status === "pending"
         ? "pk-pill pk-pill--warn"
         : "pk-pill";

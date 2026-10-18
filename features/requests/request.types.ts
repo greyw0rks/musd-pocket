@@ -52,9 +52,9 @@ export interface PaymentRequest {
   note?: string;
   status: RequestStatus;
   /**
-   * Whether this row is a real record or a fixture. The demo adapter emits
-   * `demo`; the real one emits `onchain`, which is the value meaning "this came
-   * from the server" — not a claim that a chain was involved.
+   * Always `onchain`: a request only ever comes from the server, and
+   * `onchain` is the value meaning "this is a real record" — not a claim that
+   * a chain was involved in raising it.
    */
   kind: PaymentKind;
   createdAt: Date;

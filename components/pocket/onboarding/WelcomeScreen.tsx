@@ -8,7 +8,7 @@ import { Button } from "@/components/pocket/ui/Button";
 
 const FEATURES = [
   { Icon: SendIcon, title: "Instant by username", body: "@someone is all you need." },
-  { Icon: QrIcon, title: "Pay by scanning", body: "Works in person, at the counter." },
+  { Icon: QrIcon, title: "Pay by scanning", body: "Works in person." },
   { Icon: LockIcon, title: "Keys stay yours", body: "Nothing is held on your behalf." },
 ] as const;
 
@@ -20,8 +20,9 @@ const FEATURES = [
  * plan's whole question is whether sending MUSD to a person is easy, and a
  * marketing tour is the opposite of that answer.
  *
- * The demo notice is above the button, not buried under it. Someone who taps
- * "Get started" should already know nothing here is real.
+ * The notice above the button says which network this is, because a figure at
+ * the end of onboarding is a figure the user will price against their own
+ * currency unless the chain is named first.
  *
  * The dark gradient and the hard-coded white ink are gone. This was the last
  * screen that only worked in one theme — it painted a `to-black/40` wash and
@@ -91,9 +92,8 @@ export function WelcomeScreen() {
             className="mt-1.5 size-1.5 shrink-0 rounded-full bg-[var(--y)]"
           />
           <span>
-            This is a <b className="text-[var(--t)]">demo</b>. You will sign in
-            to a mock account with a seeded balance — no real money, no
-            blockchain, and nothing to lose.
+            This runs on Mezo&rsquo;s <b className="text-[var(--t)]">testnet</b>.
+            The balance you see is real on that chain and worth nothing off it.
           </span>
         </p>
 

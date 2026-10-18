@@ -34,7 +34,7 @@ export function Problem() {
       <div className="mt-14 grid gap-10 sm:grid-cols-3 sm:gap-8">
         {POINTS.map((point, i) => (
           <Reveal key={point.title} delay={i * 0.08}>
-            <span className="inline-flex size-11 items-center justify-center rounded-xl border border-border bg-surface text-mezo">
+            <span className="inline-flex size-11 items-center justify-center rounded-xl border border-border bg-surface text-brand">
               <point.icon className="size-5" />
             </span>
             <h3 className="mt-5 text-lg font-semibold">{point.title}</h3>

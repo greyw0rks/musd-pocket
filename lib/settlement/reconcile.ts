@@ -471,7 +471,25 @@ export async function reconcile(limit: number = BATCH): Promise<ReconcileReport>
       include: { sender: { select: { username: true } } },
     }),
     prisma.withdrawal.findMany({
-      where: { status: { in: ["PENDING", "PROCESSING"] } },
+      where: {
+        status: { in: ["PENDING", "PROCESSING"] },
+        /*
+          MUSD only, and this filter is load-bearing rather than tidy.
+
+          Every decision below this line reverses a *ledger debit* — an
+          unresolved vault release is refunded with `creditAvailable`, because
+          the money was taken from the user's Pocket balance up front and never
+          left. A BTC withdrawal was never debited: the user's own wallet signed
+          a native transfer, so the value left the wallet and the ledger never
+          held it. Run this loop over one and an unreadable receipt would be
+          answered by crediting the user for money that genuinely went out —
+          the reconciler would mint balance. `asset` is the only column that
+          distinguishes them, so the query asks for it explicitly instead of
+          relying on a BTC row happening to be COMPLETED (which a row filed
+          while its receipt was unread is not).
+        */
+        asset: "MUSD",
+      },
       orderBy: { createdAt: "asc" },
       take,
     }),

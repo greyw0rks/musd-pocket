@@ -12,6 +12,7 @@ import { Button } from "@/components/pocket/ui/Button";
 import { ScreenHeader } from "@/components/pocket/ui/ScreenHeader";
 import { TextField } from "@/components/pocket/ui/TextField";
 import { parsePayLink } from "@/features/payments/paylink";
+import type { ResolveHandleResult } from "@/features/contacts/api-contact.adapter";
 import type { Recipient } from "@/features/payments/payment.types";
 import { formatMoney } from "@/lib/formatters";
 
@@ -25,30 +26,35 @@ import { formatMoney } from "@/lib/formatters";
  *
  * What a scanner would fall back to when a code will not read is typing the
  * handle, so that is what this screen is: a real, working way in, labelled as
- * the fallback rather than dressed up as the feature. It resolves against the
- * same contact list the rest of the app uses, so a handle that cannot be
- * resolved is refused here for the same reason a transfer to it would be.
+ * the fallback rather than dressed up as the feature. It resolves the handle
+ * through the store, which in the real app is the same directory lookup the
+ * add-contact flow uses — so a name that resolves here is a name that can
+ * actually be paid, and one that does not is refused for that reason rather
+ * than because it was absent from a list this screen happened to hold.
  */
 export function ScanScreen({
-  contacts,
   onBack,
+  onResolve,
   onResolved,
   onOpenReceive,
 }: {
-  contacts: Recipient[];
   onBack: () => void;
+  /** Resolve a handle to somebody payable. Async, and it can refuse. */
+  onResolve: (handle: string) => Promise<ResolveHandleResult>;
   /** Hands a resolved destination, and any amount the link carried, to the transfer flow. */
   onResolved: (recipientId: string, amountUnits?: bigint) => void;
   onOpenReceive: () => void;
 }) {
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [looking, setLooking] = useState(false);
   const [preview, setPreview] = useState<{
     recipient: Recipient;
     amountUnits?: bigint;
   } | null>(null);
 
-  function resolve() {
+  async function resolve() {
+    if (looking) return;
     setError(null);
     setPreview(null);
 
@@ -60,25 +66,26 @@ export function ScanScreen({
       return;
     }
 
-    const recipient = contacts.find(
-      (person) => person.handle.toLowerCase() === parsed.handle.toLowerCase(),
-    );
-
-    if (!recipient) {
+    /*
+      Lookups cost a round-trip and the button is the only way to start one, so
+      it is held shut while one is in flight — a second press would be a second
+      request for the same name.
+    */
+    setLooking(true);
+    try {
+      const result = await onResolve(parsed.handle);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setPreview({ recipient: result.recipient, amountUnits: parsed.amountUnits });
+    } catch {
       setError(
-        `Nothing in this demo knows ${parsed.handle}. Handles are not resolved to addresses yet, so a name you have not saved cannot be paid.`,
+        "That lookup did not go through. Check your connection and try again.",
       );
-      return;
+    } finally {
+      setLooking(false);
     }
-
-    if (!recipient.verified || !recipient.address) {
-      setError(
-        `${recipient.name} is saved but has no payment address — the handle was never resolved.`,
-      );
-      return;
-    }
-
-    setPreview({ recipient, amountUnits: parsed.amountUnits });
   }
 
   return (
@@ -128,10 +135,10 @@ export function ScanScreen({
           full
           size="lg"
           icon={<QrIcon size={16} />}
-          disabled={text.trim().length === 0}
+          disabled={text.trim().length === 0 || looking}
           onClick={resolve}
         >
-          Look it up
+          {looking ? "Looking it up…" : "Look it up"}
         </Button>
       </div>
 

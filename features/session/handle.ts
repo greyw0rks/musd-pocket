@@ -1,7 +1,7 @@
 /**
  * Handle rules, shared by the client and the server.
  *
- * These lived only in `demo-session.adapter.ts`, which was fine while nothing
+ * These lived only in a client-side fixture list, which was fine while nothing
  * on the server could answer a handle question. Now that `GET
  * /api/users/handle` exists, both sides have to agree on what a handle *is* —
  * otherwise the sign-up screen would accept a name the server rejects, or the
@@ -15,7 +15,11 @@ import type { HandleProblem } from "@/features/session/session.types";
 
 /**
  * Handles that would be confusing or misleading if a user claimed one —
- * the product's own name, its chain, the support address, the seeded persona.
+ * the product's own name, its chain, and the names a support desk would use.
+ *
+ * `alex` was here to protect the seeded persona the fixtures shipped with.
+ * There is no seeded persona now, and `alex` is the placeholder on the sign-up
+ * screen — reserving the exact name the form suggests would reject it.
  */
 export const RESERVED_HANDLES = new Set([
   "pocket",
@@ -25,7 +29,6 @@ export const RESERVED_HANDLES = new Set([
   "support",
   "help",
   "official",
-  "alex",
 ]);
 
 export const HANDLE_PATTERN = /^[a-z0-9_]{3,20}$/;

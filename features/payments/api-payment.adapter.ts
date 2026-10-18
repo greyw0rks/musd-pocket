@@ -1,11 +1,9 @@
 /**
  * The real payment adapter.
  *
- * Reads and writes the payment records the server actually holds — the same
- * rows the settlement engine and the reconciler operate on. It is not a
- * simulation of a transfer; it *is* the transfer path, so the honesty rules in
- * `payment.types.ts` apply to it in reverse: it may never emit `kind: "demo"`,
- * because everything it returns came from a real record.
+ * Reads the payment records the server actually holds — the same rows the
+ * settlement engine and the reconciler operate on. Every row it returns came
+ * from a real record, which is why `kind` is always `onchain` here.
  *
  * What it deliberately does not do:
  *
@@ -19,8 +17,10 @@
  */
 
 import { ApiError, type AuthedFetch } from "@/lib/auth/client";
-import { parseDecimalToUnits, unitsToDecimal, formatUnits } from "./amount";
+import { parseDecimalToUnits, unitsToDecimal } from "./amount";
+import { formatAssetAmount, parseAssetAmount } from "./asset-amount";
 import type {
+  PaymentAsset,
   PaymentService,
   PaymentStatus,
   Recipient,
@@ -48,6 +48,8 @@ type ApiPayment = {
 type ApiWithdrawal = {
   id: string;
   amount: string;
+  /** "MUSD" or "BTC". Optional so a payload without it still reads as MUSD. */
+  asset?: string;
   chain: string;
   toAddress: string;
   txHash: string | null;
@@ -113,28 +115,49 @@ function paymentToTransaction(p: ApiPayment): Transaction {
     recipientId: p.counterparty,
     recipientName: name,
     recipientHandle: handle,
+    // A `Payment` row is MUSD by construction: the mUSD transfer the user's
+    // wallet signed. There is no other token in that table.
+    asset: "MUSD",
     amountUnits,
-    amountDisplay: formatUnits(amountUnits),
+    amountDisplay: formatAssetAmount("MUSD", amountUnits),
     direction: p.direction,
     status: statusOf(p.status),
     // A row from this adapter is a real record by construction. The question
     // "has it reached a chain yet?" is answered by `status` and by whether
-    // `txHash` is present — not by pretending the row is a demo.
+    // `txHash` is present, not by the kind.
     kind: "onchain",
     createdAt: new Date(p.createdAt),
     ...(p.payoutTxHash ? { txHash: p.payoutTxHash } : {}),
   };
 }
 
+/**
+ * Why the asset is read before the amount.
+ *
+ * The same `Decimal` column holds both tokens, at each one's display precision,
+ * so `amount` is a string that does not say what it counts. Which parser it
+ * needs is decided by `asset` and by nothing else: a BTC row read as hundredths
+ * comes back as zero (eight decimals are more than `parseDecimalToUnits`
+ * accepts), and a MUSD row read as wei comes back a factor of 10¹⁶ too large.
+ * Both are silent — neither throws — which is why the branch is made here, once,
+ * in `parseAssetAmount`, rather than at each of the places that draw a row.
+ */
 function withdrawalToTransaction(w: ApiWithdrawal): Transaction {
-  const amountUnits = parseDecimalToUnits(w.amount) ?? 0n;
+  /*
+    Absent means MUSD, and that is a fact rather than a default: the column
+    arrived with every existing row already a vault release of MUSD, so a
+    payload without the field can only be one of those.
+  */
+  const asset: PaymentAsset = w.asset === "BTC" ? "BTC" : "MUSD";
+  const amountUnits = parseAssetAmount(asset, w.amount) ?? 0n;
   return {
     id: w.id,
     recipientId: w.toAddress,
     recipientName: shorten(w.toAddress),
     recipientHandle: shorten(w.toAddress),
+    asset,
     amountUnits,
-    amountDisplay: formatUnits(amountUnits),
+    amountDisplay: formatAssetAmount(asset, amountUnits),
     direction: "sent",
     status: statusOf(w.status),
     kind: "onchain",
@@ -224,8 +247,11 @@ export function createApiPaymentService(deps: {
             recipientId: res.counterparty || target,
             recipientName: name,
             recipientHandle: handle,
+            // This path is the server-side settlement route — the vault
+            // releasing MUSD. Bitcoin never goes through it.
+            asset: "MUSD",
             amountUnits: parseDecimalToUnits(res.amount) ?? request.amountUnits,
-            amountDisplay: formatUnits(request.amountUnits),
+            amountDisplay: formatAssetAmount("MUSD", request.amountUnits),
             direction: "sent",
             // The server only answers `ok` once settlement reached a terminal
             // state, so this is confirmed and not pending. A 504 (broadcast,

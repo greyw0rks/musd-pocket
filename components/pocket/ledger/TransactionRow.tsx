@@ -3,7 +3,10 @@
 import { motion } from "motion/react";
 import { Avatar } from "@/components/pocket/Avatar";
 import { useMounted } from "@/components/pocket/ui/useMounted";
-import { formatSignedMoney } from "@/lib/formatters";
+import {
+  formatSignedAssetAmount,
+  PAYMENT_STATUS_LABEL,
+} from "@/lib/formatters";
 import { cn, relativeTime } from "@/lib/utils";
 import type { Transaction } from "@/features/payments/payment.types";
 
@@ -21,8 +24,11 @@ import type { Transaction } from "@/features/payments/payment.types";
  * for, and a made-up category on a real counterparty is the one kind of
  * decoration that would be actively misleading.
  *
- * "Demo" is part of the row, not decoration. Receipts have to be labelled, and
- * a list is where most receipts are actually read.
+ * The caption under the amount is the payment's *status*, not its provenance.
+ * It used to read "Demo", which was a label this build no longer earns — money
+ * now moves on a chain. What a reader of a list actually needs is whether the
+ * row settled: a `pending` transfer is submitted and not confirmed, and saying
+ * so on the row is the difference between a record and a claim.
  */
 export function TransactionRow({
   tx,
@@ -80,9 +86,15 @@ export function TransactionRow({
             received && "pk-pos",
           )}
         >
-          {formatSignedMoney(tx.amountUnits, tx.direction)}
+          {/*
+            Formatted by the row's own asset, not by the app's money unit. This
+            list holds two tokens and `amountUnits` is denominated in whichever
+            one the row names, so the figure is rendered through `tx.asset` —
+            the alternative is a BTC transfer printed as a dollar amount.
+          */}
+          {formatSignedAssetAmount(tx.asset, tx.amountUnits, tx.direction)}
         </span>
-        <span className="pk-m block">Demo</span>
+        <span className="pk-m block">{PAYMENT_STATUS_LABEL[tx.status]}</span>
       </div>
     </>
   );

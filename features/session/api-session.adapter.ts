@@ -17,8 +17,7 @@
  *  2. `provider` is inferred, not reported. The server records an X handle, and
  *     Privy knows the real method, but the two are not joined up in this
  *     payload, so a non-X sign-in is labelled `email` as the closest available
- *     member of the union. Nothing renders it today — see `AUTH_PROVIDER_LABEL`,
- *     which names the "Demo account" default — so this is inert, and the
+ *     member of the union. Nothing renders it today, so this is inert — the
  *     comment is here so it is not mistaken for a fact if it ever is rendered.
  */
 
@@ -68,6 +67,14 @@ export function sessionFromUser(
       name: user.username,
       handle: `@${user.username}`,
       accountType: "personal",
+      /*
+        The X profile picture, persisted at sign-in from Privy's identity
+        payload (`lib/auth/privy-server.ts`) and refreshed on every login. It is
+        dropped to `undefined` rather than `null` so the UI's optional field
+        means "no picture" for both non-X logins and older rows that predate the
+        column.
+      */
+      avatarUrl: user.avatarUrl ?? undefined,
       joinedAt: user.createdAt,
     },
     provider: providerOf(user),
