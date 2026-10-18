@@ -2,7 +2,7 @@
 
 > One balance. Any chain. Spend your Bitcoin without selling it.
 
-**Live:** https://mpocket.vercel.app
+**Live:** https://musd-pocket.vercel.app
 
 ## The idea
 
