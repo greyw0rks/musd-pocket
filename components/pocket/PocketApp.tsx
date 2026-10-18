@@ -40,6 +40,7 @@ import { TransferScreen } from "@/components/pocket/transfer/TransferScreen";
 import { Button } from "@/components/pocket/ui/Button";
 import { Walkthrough } from "@/components/pocket/walkthrough/Walkthrough";
 import { startTour } from "@/components/pocket/walkthrough/store";
+import { Wordmark } from "@/components/wordmark";
 import { MODAL_MOTION, PAGE_MOTION, RESULT_MOTION } from "@/components/pocket/theme";
 import { toDisplayUnits } from "@/features/payments/amount";
 import { useBorrow } from "@/hooks/use-borrow";
@@ -654,21 +655,14 @@ function MissingScreen({ onBack }: { onBack: () => void }) {
  * Privy wallet read — the label names the wallet because that is the one the
  * user is holding, and it is honest about whose turn it is.
  *
- * The brand mark is the purple the rest of the app is built around, not the
- * green the old dark theme used — the splash is the first frame of Pocket
- * anyone sees and it should not advertise a colour the app no longer has.
+ * The mark is the same one-dot wordmark the landing header carries. The splash
+ * is the first frame of Pocket anyone sees, so it uses the brand lockup rather
+ * than an invented "M" badge that appears nowhere else.
  */
 function Splash() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-5">
-      <div className="flex items-center gap-2.5">
-        <span className="grid size-10 place-items-center rounded-xl bg-[var(--p)] text-base font-bold text-white">
-          M$
-        </span>
-        <span className="text-xl font-semibold tracking-tight text-[var(--t)]">
-          Pocket
-        </span>
-      </div>
+      <Wordmark tone="app" className="text-2xl" />
 
       <motion.span
         animate={{ opacity: [0.25, 0.8, 0.25] }}
