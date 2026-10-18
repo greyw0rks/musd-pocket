@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PocketMark } from "@/components/brand/pocket-mark";
 import {
   Dialog,
   DialogContent,
@@ -56,12 +57,7 @@ export function EnterAppDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="gap-0 rounded-3xl border-border bg-surface p-6 sm:max-w-[400px]">
-        <div
-          aria-hidden
-          className="grid size-12 place-items-center rounded-2xl bg-primary pb-0.5 text-xl font-bold text-primary-foreground shadow-lg shadow-primary/30"
-        >
-          p
-        </div>
+        <PocketMark size={48} className="shadow-lg shadow-primary/30" />
 
         <DialogHeader className="mt-4 gap-2 text-left">
           <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">

@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { X } from "lucide-react";
+import { PocketMark } from "@/components/brand/pocket-mark";
 import { installSteps } from "@/components/install/steps";
 import { useInstall } from "@/components/install/use-install";
 
@@ -59,20 +60,12 @@ function AppMark({ size = 76 }: { size?: number }) {
     <div
       aria-hidden
       style={{
-        width: size,
-        height: size,
+        display: "flex",
         borderRadius: size * 0.23,
-        background: "var(--p)",
-        color: "#fff",
-        display: "grid",
-        placeItems: "center",
-        fontSize: size * 0.56,
-        fontWeight: 700,
-        paddingBottom: size * 0.06,
         boxShadow: "0 14px 34px rgb(166 63 217 / 0.32)",
       }}
     >
-      p
+      <PocketMark size={size} />
     </div>
   );
 }

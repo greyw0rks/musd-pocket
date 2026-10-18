@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { PocketMark } from "@/components/brand/pocket-mark";
+import { Wordmark } from "@/components/wordmark";
 import {
   brand,
   motion,
@@ -181,6 +183,51 @@ export function BrandKit() {
             {theme === "light" ? "Dark theme" : "Light theme"}
           </button>
         </header>
+
+        <Section
+          title="Logo"
+          note="Two money cards rising out of a pocket — the same stacked cards the home screen opens on. The mark carries its own ground, so it is always placed as a tile: the tab icon, the installed icon and the badge on the install gate are all this one drawing, scaled."
+        >
+          <div className="grid gap-3 md:grid-cols-[1.2fr_1fr]">
+            <div
+              className="pk-card"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 24,
+                flexWrap: "wrap",
+              }}
+            >
+              <PocketMark size={112} label="Pocket" />
+              <div style={{ display: "flex", alignItems: "flex-end", gap: 14 }}>
+                <PocketMark size={56} />
+                <PocketMark size={32} />
+                <PocketMark size={20} />
+                <PocketMark size={16} />
+              </div>
+            </div>
+
+            <div
+              className="pk-card"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                gap: 14,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <PocketMark size={44} />
+                <Wordmark tone="app" className="text-[26px]" />
+              </div>
+              <p className="pk-m" style={{ lineHeight: 1.6 }}>
+                The lockup is the mark plus the lowercase wordmark. The dot stays
+                the accent, the mark is never recoloured — including in dark
+                theme, where the icon stays the same object on the home screen.
+              </p>
+            </div>
+          </div>
+        </Section>
 
         <Section
           title="Colour"
@@ -552,7 +599,7 @@ export function BrandKit() {
                 <li>Use one primary action per screen.</li>
                 <li>Carry hierarchy with fill, never blur or glass.</li>
                 <li>Let the balance be the largest thing on screen.</li>
-                <li>Say "settled" only when the chain says so.</li>
+                <li>Say &ldquo;settled&rdquo; only when the chain says so.</li>
               </ul>
             </div>
             <div className="pk-card">
