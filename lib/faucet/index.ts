@@ -127,10 +127,14 @@ export async function claimFaucet(user: User): Promise<FaucetStatusView> {
     );
   }
 
-  const { account, client } = getRelayerWallet();
-  const to = normalizeAddress(claim.walletAddress);
-
   try {
+    // Resolved inside the lease window, not before it: anything that throws
+    // here must still release `claimingAt` in the `finally` below, or a broken
+    // key or a malformed stored address would lock the user out until the
+    // lease expires.
+    const { account, client } = getRelayerWallet();
+    const to = normalizeAddress(claim.walletAddress);
+
     // Re-read under the lease: the snapshot taken above may be older than a
     // request that has since paid one of the legs.
     let row = await prisma.faucetClaim.findUniqueOrThrow({
