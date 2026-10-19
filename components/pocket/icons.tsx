@@ -86,6 +86,37 @@ export function BellIcon(p: IconProps) {
   );
 }
 
+/**
+ * The testnet faucet: a tap with a drop under the spout.
+ *
+ * Drawn on the same 24-unit grid and open-stroke style as the rest of the set
+ * so it sits beside the bell without reading as a different icon family.
+ */
+export function FaucetIcon(p: IconProps) {
+  return (
+    <Icon {...p}>
+      <path d="M8 3h7" />
+      <path d="M11.5 3v6" />
+      <path d="M5 9h8a3 3 0 0 1 3 3v2" />
+      <path d="M16 14v2" />
+      <path d="M16 18.5c-1.4 0-2.5 1-2.5 2.2 0 1.2 1.1 2.3 2.5 2.3s2.5-1.1 2.5-2.3c0-1.2-1.1-2.2-2.5-2.2Z" />
+    </Icon>
+  );
+}
+
+/** A gift box, for the rewards that replace the faucet once it is claimed. */
+export function RewardsIcon(p: IconProps) {
+  return (
+    <Icon {...p}>
+      <path d="M4 10h16v10H4z" />
+      <path d="M3 7h18v3H3z" />
+      <path d="M12 7v13" />
+      <path d="M12 7c0-2.2-1.2-4-3-4-1.4 0-2 1-2 2 0 1.5 2 2 5 2Z" />
+      <path d="M12 7c0-2.2 1.2-4 3-4 1.4 0 2 1 2 2 0 1.5-2 2-5 2Z" />
+    </Icon>
+  );
+}
+
 export function MenuIcon(p: IconProps) {
   return (
     <Icon {...p}>

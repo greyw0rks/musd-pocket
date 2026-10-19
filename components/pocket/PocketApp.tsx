@@ -44,6 +44,7 @@ import { Wordmark } from "@/components/wordmark";
 import { MODAL_MOTION, PAGE_MOTION, RESULT_MOTION } from "@/components/pocket/theme";
 import { toDisplayUnits } from "@/features/payments/amount";
 import { useBorrow } from "@/hooks/use-borrow";
+import { useFaucet } from "@/hooks/use-faucet";
 import { EmbeddedWalletActivator, useLiveWallet } from "@/hooks/use-live-wallet";
 import { hasPrivy } from "@/lib/wallet/privy";
 
@@ -236,6 +237,13 @@ function Screen({ id, onBack }: { id: ScreenId; onBack: () => void }) {
     Trove is open part of that MUSD is drawn rather than owned.
   */
   const borrow = useBorrow();
+  /*
+    The faucet shares the same rule as `useBorrow` above: one call at the top,
+    so every screen runs the same hooks, and the query stays dormant until
+    there is a session (`enabled: Boolean(user)`). Home reads it; the other
+    screens carry an idle controller.
+  */
+  const faucet = useFaucet();
   const hasTrove = borrow.data?.hasTrove ?? false;
 
   /*
@@ -279,6 +287,7 @@ function Screen({ id, onBack }: { id: ScreenId; onBack: () => void }) {
           recipients={contacts}
           highlightId={highlightId}
           unreadCount={unreadCount}
+          faucet={faucet}
           onSend={startSend}
           onRequest={() => push("request")}
           onReceive={() => push("receive")}

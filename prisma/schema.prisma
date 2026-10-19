@@ -112,6 +112,7 @@ model User {
   withdrawals      Withdrawal[]
   sentPayments     Payment[]     @relation("PaymentSender")
   receivedPayments Payment[]     @relation("PaymentRecipient")
+  faucetClaim      FaucetClaim?
 
   @@index([walletAddress])
   @@map("users")
@@ -316,4 +317,27 @@ enum RequestStatus {
   PROCESSING
   PAID
   EXPIRED
+}
+
+/// One testnet faucet claim per user.
+///
+/// The row is opened before the first transfer and each transaction hash is
+/// written the moment it exists, so a claim interrupted between the two legs
+/// resumes on retry without paying the finished leg twice. `claimingAt` is a
+/// short lease won by a conditional update: two concurrent requests cannot
+/// both send. A finished claim keeps its hashes as the receipt.
+model FaucetClaim {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id])
+  walletAddress String // lowercase — the wallet the faucet paid
+  btcTxHash     String?
+  musdTxHash    String?
+  error         String?
+  claimingAt    DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("faucet_claims")
 }

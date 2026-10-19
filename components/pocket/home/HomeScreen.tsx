@@ -1,21 +1,26 @@
 "use client";
 
 import { motion } from "motion/react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Avatar } from "@/components/pocket/Avatar";
 import { BalanceCards } from "@/components/pocket/home/BalanceCards";
+import { FaucetSheet } from "@/components/pocket/home/FaucetSheet";
+import { RewardsSheet } from "@/components/pocket/home/RewardsSheet";
 import {
   BellIcon,
   BorrowIcon,
+  FaucetIcon,
   MenuIcon,
   ReceiveIcon,
   RequestIcon,
+  RewardsIcon,
   SendIcon,
 } from "@/components/pocket/icons";
 import { TransactionRow } from "@/components/pocket/ledger/TransactionRow";
 import { EmptyState } from "@/components/pocket/ui/States";
 import { SCREEN } from "@/components/pocket/theme";
 import type { Recipient, Transaction } from "@/features/payments/payment.types";
+import type { FaucetController } from "@/hooks/use-faucet";
 
 /**
  * Home.
@@ -43,6 +48,7 @@ export function HomeScreen({
   recipients,
   highlightId,
   unreadCount,
+  faucet,
   onSend,
   onRequest,
   onReceive,
@@ -85,6 +91,15 @@ export function HomeScreen({
   /** The payment the user just made, drawn lit until they look away. */
   highlightId: string | null;
   unreadCount: number;
+  /**
+   * The one-time testnet faucet, and what sits in its place once it is spent.
+   *
+   * The header owns the icon rather than the screen behind it because a claim
+   * is a thing you do *to* the wallet, and the wallet's controls are the two
+   * corners of the bar. The controller carries its own state machine so this
+   * component never decides whether a claim has happened — it reads it.
+   */
+  faucet: FaucetController;
   onSend: () => void;
   onRequest: () => void;
   onReceive: () => void;
@@ -110,6 +125,9 @@ export function HomeScreen({
     [recipients],
   );
 
+  const [faucetOpen, setFaucetOpen] = useState(false);
+  const [rewardsOpen, setRewardsOpen] = useState(false);
+
   const firstName = user.name.trim().split(/\s+/)[0] || "there";
   const recent = transactions.slice(0, 4);
 
@@ -134,6 +152,36 @@ export function HomeScreen({
         </button>
 
         <div className="pk-row" style={{ gap: 8 }}>
+          {/*
+            The faucet, and after it the rewards it turns into. One slot, two
+            occupants: while a claim is owed it is a tap to claim, and once the
+            claim is spent the same tap becomes the rewards promise. `loading`
+            keeps the slot drawn — empty, disabled — so the bar does not shift
+            a beat after the first paint.
+          */}
+          {faucet.state === "hidden" ? null : faucet.state === "claimed" ? (
+            <button
+              type="button"
+              onClick={() => setRewardsOpen(true)}
+              aria-label="Rewards"
+              title="Rewards"
+              className="pk-ib"
+            >
+              <RewardsIcon size={20} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setFaucetOpen(true)}
+              disabled={faucet.state === "loading"}
+              aria-label="Testnet faucet"
+              title="Testnet faucet"
+              className="pk-ib disabled:opacity-40"
+            >
+              <FaucetIcon size={20} />
+            </button>
+          )}
+
           <span className="relative inline-flex">
             <button
               type="button"
@@ -253,6 +301,16 @@ export function HomeScreen({
           />
         )}
       </div>
+
+      <FaucetSheet
+        open={faucetOpen}
+        onClose={() => setFaucetOpen(false)}
+        faucet={faucet}
+      />
+      <RewardsSheet
+        open={rewardsOpen}
+        onClose={() => setRewardsOpen(false)}
+      />
     </div>
   );
 }
