@@ -37,11 +37,42 @@ check("every step has a title and an explanation", () =>
 check("every step says which side to place the card", () =>
   TOUR_STEPS.forEach((step) => assert.ok(step.place === "above" || step.place === "below")),
 );
-check("the tour opens on the account corner and ends on the dock", () => {
-  // A top-to-bottom sweep of Home: the hook, then the money, then the actions,
-  // then the record, then the places. If this changes, change the copy with it.
+check("the tour opens on the account corner and ends on the passkey", () => {
+  // The hook, the faucet, then a top-to-bottom sweep of Home; then the two
+  // screens the first pass never showed. If this changes, change the copy with
+  // it — the last button says "Start using Pocket" and must land on the end.
   assert.equal(TOUR_STEPS[0].target, "account");
-  assert.equal(TOUR_STEPS[TOTAL - 1].target, "nav");
+  assert.equal(TOUR_STEPS[TOTAL - 1].target, "passkey");
+});
+check("the faucet is the step right after the account corner", () => {
+  // Both live in the header: the faucet is what you claim before anything on
+  // the screen means much, so it is explained there rather than at the end.
+  assert.equal(TOUR_STEPS[1].target, "faucet");
+});
+check("every step names the screen its target lives on", () =>
+  TOUR_STEPS.forEach((step) =>
+    assert.ok(["home", "profile", "settings"].includes(step.screen)),
+  ),
+);
+check("the tour leaves each screen once and never comes back", () => {
+  // The overlay navigates between screens, so a return to an earlier screen
+  // would mean a step bouncing backwards through the app mid-tour. The order
+  // is Home, then Profile, then Settings.
+  const order = ["home", "profile", "settings"];
+  let furthest = 0;
+  TOUR_STEPS.forEach((step) => {
+    const at = order.indexOf(step.screen);
+    assert.ok(at >= furthest, `${step.target} returns to ${step.screen}`);
+    furthest = at;
+  });
+});
+check("the receipts step is on Profile and the passkey step on Settings", () => {
+  const receipts = TOUR_STEPS.find((step) => step.target === "receipts");
+  const passkey = TOUR_STEPS.find((step) => step.target === "passkey");
+  assert.ok(receipts);
+  assert.ok(passkey);
+  assert.equal(receipts.screen, "profile");
+  assert.equal(passkey.screen, "settings");
 });
 
 console.log("\nmoving");

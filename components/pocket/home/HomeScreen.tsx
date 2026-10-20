@@ -159,27 +159,36 @@ export function HomeScreen({
             keeps the slot drawn — empty, disabled — so the bar does not shift
             a beat after the first paint.
           */}
-          {faucet.state === "hidden" ? null : faucet.state === "claimed" ? (
-            <button
-              type="button"
-              onClick={() => setRewardsOpen(true)}
-              aria-label="Rewards"
-              title="Rewards"
-              className="pk-ib"
-            >
-              <RewardsIcon size={20} />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setFaucetOpen(true)}
-              disabled={faucet.state === "loading"}
-              aria-label="Testnet faucet"
-              title="Testnet faucet"
-              className="pk-ib disabled:opacity-40"
-            >
-              <FaucetIcon size={20} />
-            </button>
+          {faucet.state === "hidden" ? null : (
+            /*
+              One hook for both occupants of the slot: the tour step is about
+              the faucet, and after a claim the same spot is the rewards
+              promise, so the spotlight follows it there instead of going dark.
+            */
+            <span className="inline-flex" data-tour="faucet">
+              {faucet.state === "claimed" ? (
+                <button
+                  type="button"
+                  onClick={() => setRewardsOpen(true)}
+                  aria-label="Rewards"
+                  title="Rewards"
+                  className="pk-ib"
+                >
+                  <RewardsIcon size={20} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setFaucetOpen(true)}
+                  disabled={faucet.state === "loading"}
+                  aria-label="Testnet faucet"
+                  title="Testnet faucet"
+                  className="pk-ib disabled:opacity-40"
+                >
+                  <FaucetIcon size={20} />
+                </button>
+              )}
+            </span>
           )}
 
           <span className="relative inline-flex">

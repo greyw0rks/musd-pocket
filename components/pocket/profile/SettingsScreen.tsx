@@ -19,6 +19,7 @@ import { PasskeyCard } from "@/components/pocket/profile/PasskeyCard";
 import { ListGroup, ListRow } from "@/components/pocket/ui/ListRow";
 import { ScreenHeader } from "@/components/pocket/ui/ScreenHeader";
 import { hasPrivy } from "@/lib/wallet/privy";
+import { TOUR_STEPS } from "@/components/pocket/walkthrough/tour";
 import type { AccountType } from "@/features/session/session.types";
 
 const THEMES: readonly { id: PocketTheme; label: string }[] = [
@@ -176,11 +177,13 @@ export function SettingsScreen({
             onPress={onOpenAccount}
           />
 
-          {/* The tour, where someone looks for it after skipping it in a hurry. */}
+          {/* The tour, where someone looks for it after skipping it in a hurry.
+              The count is read off the step list rather than written here, so
+              adding a step cannot leave this sentence lying. */}
           <ListRow
             leading={<span className="pk-ico"><HelpIcon size={18} /></span>}
             title="Take the tour"
-            subtitle="Where everything lives, in five steps"
+            subtitle={`Where everything lives, in ${TOUR_STEPS.length} steps`}
             onPress={onStartTour}
           />
         </div>
@@ -188,25 +191,33 @@ export function SettingsScreen({
 
       <section className="pk-group">
         <p className="pk-m font-semibold uppercase">Security</p>
-        {hasPrivy() ? (
-          <PasskeyCard />
-        ) : (
-          <div className="pk-card" style={{ padding: "16px 20px" }}>
-            <div className="pk-row" style={{ gap: 12, alignItems: "flex-start" }}>
-              <span className="pk-ico" style={{ flex: "none" }}>
-                <LockIcon size={18} />
-              </span>
-              <div>
-                <b className="text-[14px]">Your browser wallet is the gate</b>
-                <p className="pk-m" style={{ marginTop: 2 }}>
-                  Pocket holds no key and sets no passcode of its own. This build
-                  signs in through a wallet in your browser, so the confirmation
-                  that wallet shows you is what stands in front of a transfer.
-                </p>
+        {/*
+          The tour's last stop. The wrapper covers both branches so the
+          spotlight lands on the card whether or not a passkey can be enrolled —
+          and on a build without Privy the card says so rather than the step
+          pointing at nothing.
+        */}
+        <div data-tour="passkey">
+          {hasPrivy() ? (
+            <PasskeyCard />
+          ) : (
+            <div className="pk-card" style={{ padding: "16px 20px" }}>
+              <div className="pk-row" style={{ gap: 12, alignItems: "flex-start" }}>
+                <span className="pk-ico" style={{ flex: "none" }}>
+                  <LockIcon size={18} />
+                </span>
+                <div>
+                  <b className="text-[14px]">Your browser wallet is the gate</b>
+                  <p className="pk-m" style={{ marginTop: 2 }}>
+                    Pocket holds no key and sets no passcode of its own. This build
+                    signs in through a wallet in your browser, so the confirmation
+                    that wallet shows you is what stands in front of a transfer.
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </section>
 
       <ListGroup>

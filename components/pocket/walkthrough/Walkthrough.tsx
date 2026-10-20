@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -9,7 +10,7 @@ import {
   type CSSProperties,
 } from "react";
 import type { ScreenId } from "@/components/pocket/navigation/ids";
-import { TOUR_STEPS } from "@/components/pocket/walkthrough/tour";
+import { TOUR_STEPS, type TourScreen } from "@/components/pocket/walkthrough/tour";
 import {
   getTourServerSnapshot,
   getTourSnapshot,
@@ -35,6 +36,13 @@ import {
  * the dock even though the dock is a sibling of the screen rather than part of
  * it.
  *
+ * **It changes screens itself.** Two steps live off Home — the receipts row on
+ * Profile and the passkey card on Settings — so when the step's `screen` is not
+ * the screen showing, the overlay asks the host to navigate and then waits for
+ * the target to appear. A screen swap is an exit animation followed by an
+ * enter one (`AnimatePresence mode="wait"`), which is why the measurement pass
+ * retries for a while instead of trusting a single frame.
+ *
  * **It runs itself once.** The store decides (see `tour.ts` and `store.ts`);
  * this component only calls `maybeAutoStartTour` when the screen changes. After
  * the user finishes or skips, the flag is written and it never opens on its own
@@ -55,7 +63,17 @@ interface Spot {
   shell: number;
 }
 
-export function Walkthrough({ screenId }: { screenId: ScreenId }) {
+export function Walkthrough({
+  screenId,
+  onNavigate,
+  onClose,
+}: {
+  screenId: ScreenId;
+  /** Puts the step's screen on top. Called only when the tour changes screens. */
+  onNavigate: (screen: TourScreen) => void;
+  /** After the tour closes — finishing on Settings should not strand you there. */
+  onClose: () => void;
+}) {
   const tour = useSyncExternalStore(
     subscribeTour,
     getTourSnapshot,
@@ -76,6 +94,30 @@ export function Walkthrough({ screenId }: { screenId: ScreenId }) {
 
   const step = TOUR_STEPS[tour.step];
 
+  /*
+    Cross-screen steps. The tour navigates rather than asking the user to go
+    somewhere and find the control themselves — by the time the overlay has
+    dimmed the app, they cannot even press the screen underneath.
+
+    The comparison is against `screenId`, so this is a no-op on every render
+    that is already on the right screen, including the render the navigation
+    itself causes.
+  */
+  useEffect(() => {
+    if (!tour.open || !step) return;
+    if (step.screen !== screenId) onNavigate(step.screen);
+  }, [tour.open, tour.step, step, screenId, onNavigate]);
+
+  /*
+    Closing is two things: end the tour in the store, and let the host decide
+    where the user should be standing afterwards. They are separate because the
+    store is testable without a browser and the host owns the stack.
+  */
+  const close = useCallback(() => {
+    stopTour();
+    onClose();
+  }, [onClose]);
+
   useLayoutEffect(() => {
     if (!tour.open || !step) return;
     const overlay = overlayRef.current;
@@ -83,14 +125,16 @@ export function Walkthrough({ screenId }: { screenId: ScreenId }) {
 
     let alive = true;
 
-    const paint = () => {
-      if (!alive) return;
+    /* Returns whether the target existed. A miss is not final: the element may
+       be behind an exit animation or on a screen that has not mounted yet. */
+    const paint = (): boolean => {
+      if (!alive) return true;
       const target = overlay.ownerDocument.querySelector<HTMLElement>(
         `[data-tour="${step.target}"]`,
       );
       if (!target) {
         setSpot(null);
-        return;
+        return false;
       }
 
       target.scrollIntoView({ block: "center", behavior: "auto" });
@@ -104,20 +148,34 @@ export function Walkthrough({ screenId }: { screenId: ScreenId }) {
         height: box.height,
         shell: shell.height,
       });
+      return true;
     };
 
     /*
-      Twice, plus a late pass. The first frame paints as soon as the step
-      changes; the second catches the screen transition and the dock's spring,
-      which are still moving when the step first renders. The third covers the
-      one path the second cannot: starting the tour from Settings resets to
-      Home first, and with `AnimatePresence mode="wait"` the old screen is still
-      leaving at 360ms. Without it the spotlight lands on a Home that is still
-      sliding in.
+      Three timed passes, plus a second-gear retry for cross-screen steps.
+
+      The first frame paints as soon as the step changes; the second catches the
+      screen transition and the dock's spring, which are still moving when the
+      step first renders. The third covers starting the tour from Settings,
+      which resets to Home first — with `AnimatePresence mode="wait"` the old
+      screen is still leaving at 360ms.
+
+      The retry chain exists because a cross-screen step can outlast all three:
+      the exit alone is 180ms and the enter animation starts after it, so a
+      target on Profile or Settings is not in the DOM when the first pass runs.
+      It retries every 300ms, eight times, and stops the moment it finds the
+      element.
     */
-    const frame = requestAnimationFrame(paint);
-    const settle = window.setTimeout(paint, 360);
-    const late = window.setTimeout(paint, 700);
+    let retry: number | undefined;
+    const paintWithRetries = (left: number) => {
+      if (!alive) return;
+      if (paint() || left <= 0) return;
+      retry = window.setTimeout(() => paintWithRetries(left - 1), 300);
+    };
+
+    const frame = requestAnimationFrame(() => paintWithRetries(2));
+    const settle = window.setTimeout(() => paintWithRetries(8), 360);
+    const late = window.setTimeout(() => paintWithRetries(8), 700);
     const onResize = () => paint();
     window.addEventListener("resize", onResize);
 
@@ -126,6 +184,7 @@ export function Walkthrough({ screenId }: { screenId: ScreenId }) {
       cancelAnimationFrame(frame);
       window.clearTimeout(settle);
       window.clearTimeout(late);
+      if (retry !== undefined) window.clearTimeout(retry);
       window.removeEventListener("resize", onResize);
     };
   }, [tour.open, tour.step, step]);
@@ -135,13 +194,13 @@ export function Walkthrough({ screenId }: { screenId: ScreenId }) {
   useEffect(() => {
     if (!tour.open) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") stopTour();
+      if (event.key === "Escape") close();
       else if (event.key === "ArrowRight") nextTourStep();
       else if (event.key === "ArrowLeft") previousTourStep();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [tour.open]);
+  }, [tour.open, close]);
 
   /* Move focus into the card so a keyboard or screen-reader user is taken to
      the tour rather than left behind it. */
@@ -206,7 +265,7 @@ export function Walkthrough({ screenId }: { screenId: ScreenId }) {
           </span>
           <button
             type="button"
-            onClick={stopTour}
+            onClick={close}
             className="pk-m font-semibold outline-none"
           >
             Skip
@@ -256,7 +315,7 @@ export function Walkthrough({ screenId }: { screenId: ScreenId }) {
             type="button"
             className="pk-btn"
             style={{ flex: 2 }}
-            onClick={last ? stopTour : nextTourStep}
+            onClick={last ? close : nextTourStep}
           >
             {last ? "Start using Pocket" : "Next"}
           </button>
