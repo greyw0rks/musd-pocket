@@ -37,7 +37,15 @@ export function AppShell({
     <div
       data-screen={screen}
       data-theme={theme === "system" ? undefined : theme}
-      className="pocket-root flex min-h-[100svh] w-full justify-center font-sans antialiased"
+      /*
+        The wrapper is the device's visible area, not the document's. `dvh`
+        follows the browser's chrome as it collapses, so the app never leaves a
+        band of page background below it on a phone; `svh` stays as the floor
+        for a browser too old to know `dvh`. `overflow-hidden` keeps the page
+        itself from scrolling — every screen scrolls inside `.pk-scr`, and a
+        second document-level scroll is what makes a fixed dock drift on iOS.
+      */
+      className="pocket-root flex h-[100dvh] min-h-[100svh] w-full justify-center overflow-hidden font-sans antialiased"
     >
       <div className={cn("pk-app", className)}>{children}</div>
     </div>

@@ -99,11 +99,14 @@ function MobileGate({
     <div
       className="pocket-root"
       style={{
-        minHeight: "100svh",
+        minHeight: "100dvh",
         background: "var(--bg)",
         display: "grid",
         placeItems: "center",
-        padding: "32px 24px calc(32px + env(safe-area-inset-bottom, 0px))",
+        // The notch and the home indicator are inside the layout now
+        // (`viewport-fit=cover`), so both padding ends carry their insets.
+        padding:
+          "calc(32px + env(safe-area-inset-top, 0px)) 24px calc(32px + env(safe-area-inset-bottom, 0px))",
       }}
     >
       <div style={{ width: "100%", maxWidth: 380, textAlign: "center" }}>

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Poppins } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import "./globals.css";
@@ -42,6 +42,37 @@ export const metadata: Metadata = {
   title: "MUSD Pocket — Send MUSD from your own wallet.",
   description:
     "A mobile-first MUSD wallet. Your balance is held by a wallet only you control, and every send is a real transfer you sign yourself.",
+};
+
+/**
+ * How the app meets the phone's screen.
+ *
+ * `viewportFit: "cover"` is the one that matters: without it iOS lays the page
+ * out between the status bar and the home indicator, so a standalone install
+ * shows bars above and below the app and every `env(safe-area-inset-*)` in the
+ * stylesheet resolves to zero. With it the app paints edge to edge, and the
+ * layout takes the insets into its own padding — which `.pk-scr`, the dock,
+ * the sheets and the install gate all already do.
+ *
+ * `interactiveWidget: "resizes-content"` keeps the on-screen keyboard from
+ * covering the field being typed into on Android: the layout viewport shrinks
+ * with the keyboard, so a screen's scroll area does too.
+ *
+ * `themeColor` is the browser chrome's colour, matched to the page behind it in
+ * each OS setting. The app's own light/dark switch is separate (it is a
+ * `data-theme` attribute, not a media query), but the chrome follows the OS in
+ * both cases, which is the closest the two can be kept without a client-side
+ * listener.
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f4f4f6" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
