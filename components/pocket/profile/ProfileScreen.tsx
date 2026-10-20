@@ -126,31 +126,37 @@ export function ProfileScreen({
           subtitle="The only thing someone needs to pay you."
           trailing={<span className="pk-m">{user?.handle || "—"}</span>}
         />
-        <ListRow
-          onPress={() => setReceiptsOpen(true)}
-          leading={
-            <span className="pk-ico">
-              <MailIcon size={18} />
-            </span>
-          }
-          title="Receipts"
-          subtitle={
-            user?.receipts
-              ? `${RECEIPTS_CHANNEL_LABEL[user.receipts.channel]} connected.`
-              : "Not connected. No copies are being sent."
-          }
-          trailing={
-            /* An address is one unbreakable token, so a long one is told where
-               it may break rather than being allowed to push the row past the
-               card's edge. */
-            <span
-              className="pk-m min-w-0 text-right"
-              style={{ overflowWrap: "anywhere" }}
-            >
-              {user?.receipts?.address ?? "Not set"}
-            </span>
-          }
-        />
+        {/*
+          `data-tour` on a wrapper: `ListRow` takes a fixed prop set, and the
+          walkthrough needs the row's own box, not the group's.
+        */}
+        <div data-tour="receipts">
+          <ListRow
+            onPress={() => setReceiptsOpen(true)}
+            leading={
+              <span className="pk-ico">
+                <MailIcon size={18} />
+              </span>
+            }
+            title="Receipts"
+            subtitle={
+              user?.receipts
+                ? `${RECEIPTS_CHANNEL_LABEL[user.receipts.channel]} connected.`
+                : "Not connected. No copies are being sent."
+            }
+            trailing={
+              /* An address is one unbreakable token, so a long one is told where
+                 it may break rather than being allowed to push the row past the
+                 card's edge. */
+              <span
+                className="pk-m min-w-0 text-right"
+                style={{ overflowWrap: "anywhere" }}
+              >
+                {user?.receipts?.address ?? "Not set"}
+              </span>
+            }
+          />
+        </div>
         {isMerchant && user?.businessName ? (
           <ListRow
             as="div"

@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { AppShell } from "@/components/pocket/PhoneShell";
 import { BorrowScreen } from "@/components/pocket/borrow/BorrowScreen";
 import { OpenTroveScreen } from "@/components/pocket/borrow/OpenTroveScreen";
@@ -40,6 +40,7 @@ import { TransferScreen } from "@/components/pocket/transfer/TransferScreen";
 import { Button } from "@/components/pocket/ui/Button";
 import { Walkthrough } from "@/components/pocket/walkthrough/Walkthrough";
 import { startTour } from "@/components/pocket/walkthrough/store";
+import type { TourScreen } from "@/components/pocket/walkthrough/tour";
 import { Wordmark } from "@/components/wordmark";
 import { MODAL_MOTION, PAGE_MOTION, RESULT_MOTION } from "@/components/pocket/theme";
 import { toDisplayUnits } from "@/features/payments/amount";
@@ -77,6 +78,32 @@ export function PocketApp({ services }: { services: PocketServices }) {
 
 function PocketHost() {
   const { ready, current, back, reset } = usePocket();
+
+  /*
+    The tour's own navigation.
+
+    `reset` rather than `push`: the tour visits places, not a history, and a
+    Back arrow behind the dimmed overlay is not reachable anyway. The guard
+    matters — `reset` always mints a new stack entry, so resetting to the
+    screen already showing would remount it and replay the enter animation
+    under the spotlight.
+  */
+  const navigateTourTo = useCallback(
+    (screen: TourScreen) => {
+      if (screen !== current.id) reset(screen);
+    },
+    [current.id, reset],
+  );
+
+  /*
+    Where the tour leaves you. It ends on Settings, which is two screens away
+    from where the user started; finishing a tour should put them back on the
+    thing it was explaining. Guarded like the navigation above, because most
+    closes happen on Home and a needless reset would flash the screen.
+  */
+  const closeTour = useCallback(() => {
+    if (current.id !== "home") reset("home");
+  }, [current.id, reset]);
 
   const variants = useMemo(() => {
     switch (current.id) {
@@ -161,7 +188,11 @@ function PocketHost() {
             It decides whether to appear on its own — see `walkthrough/tour.ts`
             — and does not render anything until it has.
           */}
-          <Walkthrough screenId={current.id} />
+          <Walkthrough
+            screenId={current.id}
+            onNavigate={navigateTourTo}
+            onClose={closeTour}
+          />
         </div>
       )}
     </AppShell>
@@ -338,14 +369,12 @@ function Screen({ id, onBack }: { id: ScreenId; onBack: () => void }) {
           onOpenReceive={() => push("receive")}
           onOpenWithdrawBtc={() => push("withdraw-btc")}
           /*
-            Reset rather than push: the tour is about Home, and every step
-            points at an element there. Opening it over Settings would leave
-            four of five steps pointing at nothing.
+            No reset here any more. The tour starts on Home and opens by
+            navigating there itself — the overlay changes screens for its
+            Profile and Settings steps too, so this is the same mechanism, not
+            a special case.
           */
-          onStartTour={() => {
-            reset("home");
-            startTour();
-          }}
+          onStartTour={startTour}
           onSignOut={() => reset("welcome")}
         />
       );

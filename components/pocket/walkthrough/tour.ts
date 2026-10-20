@@ -12,16 +12,39 @@
  * that move when the balance loads or a notification arrives — instead of
  * capturing positions that go stale the moment the app draws.
  *
- * **The steps sweep down the Home screen once.** Account corner, then the
- * money, then the verbs, then the record, then the dock. Each one is a thing
- * the user will need in the first minute, and none of them is a feature the
- * app cannot do — a tour that points at a door with nothing behind it is worse
- * than no tour.
+ * **The steps sweep Home, then leave it once.** Account corner, the faucet,
+ * then the money, the verbs, the record and the dock — then two screens the
+ * first pass never showed: the receipts address on Profile and the passkey on
+ * Settings. The overlay navigates to those itself, so the tour can point at a
+ * control that does not live on Home without asking the user to find it first.
+ * Once the sweep leaves Home it does not come back: a tour that bounces
+ * between screens reads as an accident, not a route.
+ *
+ * Each step is a thing the user will need in the first minute, and none of them
+ * is a feature the app cannot do — a tour that points at a door with nothing
+ * behind it is worse than no tour.
  */
 
-export type TourTarget = "account" | "balance" | "actions" | "activity" | "nav";
+export type TourTarget =
+  | "account"
+  | "faucet"
+  | "balance"
+  | "actions"
+  | "activity"
+  | "nav"
+  | "receipts"
+  | "passkey";
+
+/** The screens this tour visits, in the order it visits them. */
+export type TourScreen = "home" | "profile" | "settings";
 
 export interface TourStep {
+  /**
+   * Where the target lives. The overlay navigates when this is not the screen
+   * already showing, so a step never has to be skipped just because its
+   * control is behind the account corner.
+   */
+  screen: TourScreen;
   /** The `data-tour` attribute this step spotlights. */
   target: TourTarget;
   title: string;
@@ -35,33 +58,59 @@ export interface TourStep {
 
 export const TOUR_STEPS: readonly TourStep[] = [
   {
+    screen: "home",
     target: "account",
     title: "This corner is you",
-    body: "Your photo opens your profile, your wallet, settings and your passkey. Everything about your account lives behind it.",
+    body: "Your photo opens your profile, your wallet and settings. Everything about your account lives behind it.",
     place: "below",
   },
   {
+    screen: "home",
+    target: "faucet",
+    title: "Claim your test money",
+    body: "The faucet sends 0.015 BTC and 300 mUSD to this wallet, once — enough to open a Trove and try the vault. After the claim, this spot becomes Rewards.",
+    place: "below",
+  },
+  {
+    screen: "home",
     target: "balance",
     title: "This is your money",
     body: "Your mUSD, in the wallet only you control. Tap the card to flip it and see how much is yours and how much is borrowed against Bitcoin.",
     place: "below",
   },
   {
+    screen: "home",
     target: "actions",
     title: "Four things you can do",
     body: "Send to a name or an address, request money, show your QR to receive, or borrow against Bitcoin — all from here.",
     place: "below",
   },
   {
+    screen: "home",
     target: "activity",
     title: "Every payment leaves a receipt",
     body: "Tap any row to see the amount, who it was with, and the transfer on chain. View All opens your full history.",
     place: "above",
   },
   {
+    screen: "home",
     target: "nav",
     title: "Three places",
     body: "Home is here. Vault puts mUSD into Mezo's savings vault. Spending is where every payment and request is kept.",
+    place: "above",
+  },
+  {
+    screen: "profile",
+    target: "receipts",
+    title: "Receipts can be emailed",
+    body: "Add an address on your profile and a copy of every confirmed payment goes to it. It is optional, and Pocket uses it for nothing else.",
+    place: "below",
+  },
+  {
+    screen: "settings",
+    target: "passkey",
+    title: "Lock the money with a passkey",
+    body: "Add a passkey and every signature asks for your face or fingerprint first. Pocket draws no confirmation sheet of its own, so this is what stands in its place.",
     place: "above",
   },
 ];
