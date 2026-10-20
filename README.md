@@ -1,18 +1,18 @@
 # mUSD Pocket
 
-> One balance. Any chain. Spend your Bitcoin without selling it.
+> Send, receive, borrow and save. All in one place.
 
-**Live:** https://mpocket.vercel.app
+**Live:** https://mpocket.tech
 
 ## The idea
 
 Mezo gives Bitcoin holders a way to earn without selling. But the moment they want
 to *spend* that money, it's stranded — on one chain, behind a bridge, behind a
-second gas token, behind a seed phrase some people never write down.
+second gas token.
 
 Pocket collapses all of that into a single balance.
 
-You sign in with X or Telegram and get a wallet that has no seed phrase. You send
+You sign in with X or Telegram and get a wallet secured by a passkey. You send
 money to a username, a link, or a plain address. You get paid the same way. At no
 point does the chain, the bridge, or the gas token come up — because it shouldn't
 have to.

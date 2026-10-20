@@ -100,6 +100,10 @@ model User {
   /// convenience and never something a screen depends on. Null for accounts
   /// that signed in with Telegram or email, or whose X profile has no picture.
   avatarUrl        String?  @db.Text
+  /// Where a copy of each confirmed payment receipt is emailed. Absent until
+  /// the user adds one in Profile → Receipts; nothing is ever sent to an
+  /// address the user has not deliberately attached here.
+  receiptsEmail    String?  @db.Text
   preferredChain   ChainKey    @default(MEZO)
   role             AccountRole @default(PERSONAL)
   availableBalance Decimal     @default(0) @db.Decimal(38, 18)

@@ -10,10 +10,10 @@
  * Two things are worth stating plainly, because both are places where a
  * plausible implementation would lie:
  *
- *  1. `setReceipts` persists nothing. There is no receipt-address column on the
- *     server, so the method returns the session unchanged and the toggle falls
- *     back. A silent no-op is the honest outcome; writing the link into local
- *     state would make a "Connected" label that no reload would keep.
+ *  1. `setReceipts` writes to the server. The address lives on the user row
+ *     (`users.receiptsEmail`) and is read back with the session, so a
+ *     "Connected" label survives a reload instead of being local state that
+ *     the next person to open the app never sees.
  *  2. `provider` is inferred, not reported. The server records an X handle, and
  *     Privy knows the real method, but the two are not joined up in this
  *     payload, so a non-X sign-in is labelled `email` as the closest available
@@ -52,8 +52,9 @@ type HandleLookup = {
  *
  * Fields the server has no column for are given their honest defaults rather
  * than a guess: `accountType` is always `personal` (merchant has no server
- * representation, which is why merchant stays out of this milestone), and
- * `receipts` is left absent rather than seeded with a fake address.
+ * representation, which is why merchant stays out of this milestone). The
+ * receipt address is a real column now, so it is reported when present and
+ * omitted when absent — never seeded with a placeholder.
  */
 export function sessionFromUser(
   user: ServerPocketUser,
@@ -76,6 +77,15 @@ export function sessionFromUser(
       */
       avatarUrl: user.avatarUrl ?? undefined,
       joinedAt: user.createdAt,
+      /*
+        One channel for now: the sheet accepts a typed address, so "email" is
+        what the user attached. A Google OAuth connection would need a stored
+        channel to tell the two apart; until then, claiming "Google" from an
+        address alone would be a guess about how it was obtained.
+      */
+      receipts: user.receiptsEmail
+        ? { channel: "email", address: user.receiptsEmail }
+        : undefined,
     },
     provider: providerOf(user),
     wallet: walletAddress
@@ -168,9 +178,16 @@ export function createApiSessionService(deps: {
       return lookup.available ? null : (lookup.reason ?? "That username is taken.");
     },
 
-    async setReceipts(_link: ReceiptsLink | null): Promise<Session> {
-      // No column exists for this. See the header: returning the unchanged
-      // session lets the UI's toggle fall back to "Not set", which is true.
+    async setReceipts(link: ReceiptsLink | null): Promise<Session> {
+      /*
+        The server owns the value, so the write is followed by a read rather
+        than a local patch: the sheet should show the address that was actually
+        stored, not the one it asked to store.
+      */
+      await fetchAuthed<ServerPocketUser>("/api/users/me", {
+        method: "PATCH",
+        body: JSON.stringify({ receiptsEmail: link?.address ?? null }),
+      });
       return readSession();
     },
   };

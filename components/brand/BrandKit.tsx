@@ -174,14 +174,19 @@ export function BrandKit() {
             </p>
           </div>
 
-          <button
-            type="button"
-            className="pk-chip"
-            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-            aria-label={`Switch to ${theme === "light" ? "dark" : "light"} theme`}
-          >
-            {theme === "light" ? "Dark theme" : "Light theme"}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <a href="/brand/email" className="pk-chip">
+              Email receipts
+            </a>
+            <button
+              type="button"
+              className="pk-chip"
+              onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+              aria-label={`Switch to ${theme === "light" ? "dark" : "light"} theme`}
+            >
+              {theme === "light" ? "Dark theme" : "Light theme"}
+            </button>
+          </div>
         </header>
 
         <Section

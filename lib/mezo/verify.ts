@@ -1,7 +1,11 @@
-import { parseEventLogs } from "viem";
+import { decodeFunctionData, parseEventLogs } from "viem";
 import type { Address, Hash } from "viem";
 import { getPublicClient, MUSD_ABI, parseMusd } from "./musd";
 import { parseBtc } from "./borrow-format";
+import {
+  BORROWER_OPERATIONS,
+  BORROWER_OPERATIONS_ABI,
+} from "./borrow-write";
 import { MUSD_ADDRESS, CHAIN_ID } from "./config";
 
 export type VerifyResult =
@@ -158,4 +162,121 @@ export async function verifyBtcTransfer(params: {
   }
 
   return { valid: true, from: tx.from, to: tx.to, value: tx.value };
+}
+
+/** Which Mezo Borrow write a transaction turned out to be. */
+export type BorrowWriteKind = "borrow" | "repay" | "close";
+
+export type BorrowWriteVerdict =
+  | {
+      valid: true;
+      kind: BorrowWriteKind;
+      /** Collateral posted, in wei. Only `openTrove` carries any. */
+      collateral: bigint | null;
+      /** mUSD moved by the write, in wei. `closeTrove` moves none. */
+      amount: bigint | null;
+    }
+  | { valid: false; reason: string; pending?: boolean };
+
+/**
+ * Independently verify a claimed **Mezo Borrow** write against the chain.
+ *
+ * The third verifier, and the one with the least to read. A payment leaves a
+ * Transfer log; a BTC transfer leaves a transaction with a destination and a
+ * value. A Trove write leaves a call to one known contract, so the calldata is
+ * the record: it names the function and, in its first argument, the amount.
+ *
+ * Checks, in order:
+ *   1. receipt exists (else still pending / dropped)
+ *   2. tx succeeded
+ *   3. transaction exists
+ *   4. `to` == the BorrowerOperations contract — this is a Borrow write, not
+ *      some other contract the wallet happened to call
+ *   5. the calldata decodes against `BORROWER_OPERATIONS_ABI`, to one of the
+ *      three writes the app can produce
+ *
+ * The sender check belongs to the route, which is the only layer that knows
+ * who is asking — same split as `verifyBtcTransfer`.
+ *
+ * Amounts are returned in wei (18 decimals), not display strings; the caller
+ * decides how to render them, because collateral is BTC and the rest is mUSD.
+ */
+export async function verifyBorrowWrite(params: {
+  txHash: Hash;
+  wallet: string; // lowercase or checksummed
+}): Promise<BorrowWriteVerdict> {
+  const client = getPublicClient();
+
+  let receipt;
+  try {
+    receipt = await client.getTransactionReceipt({ hash: params.txHash });
+  } catch {
+    return { valid: false, reason: "Transaction not found yet", pending: true };
+  }
+
+  if (receipt.status !== "success") {
+    return { valid: false, reason: "Transaction reverted" };
+  }
+
+  let tx;
+  try {
+    tx = await client.getTransaction({ hash: params.txHash });
+  } catch {
+    return { valid: false, reason: "Transaction not found yet", pending: true };
+  }
+
+  if (
+    tx.to === null ||
+    tx.to.toLowerCase() !== BORROWER_OPERATIONS.toLowerCase()
+  ) {
+    return {
+      valid: false,
+      reason: "That transaction did not call Mezo Borrow",
+    };
+  }
+
+  if (tx.from.toLowerCase() !== params.wallet.toLowerCase()) {
+    return {
+      valid: false,
+      reason: "That transaction was not signed by your wallet",
+    };
+  }
+
+  let decoded;
+  try {
+    decoded = decodeFunctionData({
+      abi: BORROWER_OPERATIONS_ABI,
+      data: tx.input,
+    });
+  } catch {
+    return {
+      valid: false,
+      reason: "That transaction is not a Mezo Borrow write",
+    };
+  }
+
+  switch (decoded.functionName) {
+    case "openTrove": {
+      const [debtAmount] = decoded.args as readonly [bigint, Address, Address];
+      // The debt drawn is the first argument; the collateral is `msg.value`,
+      // which is why this function is payable and every other one is not.
+      return {
+        valid: true,
+        kind: "borrow",
+        collateral: tx.value,
+        amount: debtAmount,
+      };
+    }
+    case "repayMUSD": {
+      const [repayAmount] = decoded.args as readonly [bigint, Address, Address];
+      return { valid: true, kind: "repay", collateral: null, amount: repayAmount };
+    }
+    case "closeTrove":
+      return { valid: true, kind: "close", collateral: null, amount: null };
+    default:
+      return {
+        valid: false,
+        reason: "That transaction is not a Mezo Borrow write",
+      };
+  }
 }
