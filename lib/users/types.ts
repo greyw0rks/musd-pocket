@@ -8,6 +8,8 @@ export type PocketUser = {
   xHandle: string | null;
   /** X profile picture, hot-linked; absent for Telegram/email accounts. */
   avatarUrl: string | null;
+  /** Where payment receipts are emailed; null until the user adds one. */
+  receiptsEmail: string | null;
   telegramHandle: string | null;
   preferredChain: ChainKey;
   availableBalance: string;

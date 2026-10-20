@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { useWalletClient } from "wagmi";
 import type { WalletClient } from "viem";
+import { ApiError, useApi } from "@/lib/auth/client";
 import { createBorrowActions } from "@/lib/mezo/borrow-actions";
 
 /**
@@ -27,15 +28,58 @@ import { createBorrowActions } from "@/lib/mezo/borrow-actions";
  * `useMemo` with no dependencies is correct rather than lazy: the actions carry
  * no state, and rebuilding them per render would only hand the screens a new
  * object identity on every keystroke.
+ *
+ * `record` is kept out of that memo, exactly as in `useBtcActions`: it needs no
+ * wallet, only `useApi`, whose identity changes when the access-token getter
+ * does. A `useCallback` keeps it current without pinning the first fetch.
  */
 export function useBorrowActions() {
   const { data } = useWalletClient();
+  const fetchAuthed = useApi();
 
   const walletRef = useRef<WalletClient | null>(null);
   walletRef.current = (data as WalletClient | undefined) ?? null;
 
-  return useMemo(
+  const actions = useMemo(
     () => createBorrowActions({ getWalletClient: () => walletRef.current }),
     [],
   );
+
+  /**
+   * Ask the server to email the receipt for a write the wallet has already
+   * made.
+   *
+   * `POST /api/borrow/record` — best-effort by design, like the payment and
+   * withdrawal record calls. The transaction is on-chain either way; a failure
+   * here means a missing email, not a failed loan, so this reports rather
+   * than throws and the screen never treats it as the outcome of the write.
+   *
+   * The route re-reads the chain and decodes the calldata, so it is the
+   * verifier here; this call only points it at a hash. A refusal (422, or a
+   * 202 while the receipt is not readable yet) is worth a console line, not a
+   * user-facing error.
+   */
+  const record = useCallback(
+    async (txHash: `0x${string}`): Promise<void> => {
+      try {
+        await fetchAuthed<{ ok?: boolean; pending?: boolean }>(
+          "/api/borrow/record",
+          { method: "POST", body: JSON.stringify({ txHash }) },
+        );
+      } catch (e) {
+        console.error("[pocket] borrow receipt not sent", {
+          txHash,
+          reason:
+            e instanceof ApiError
+              ? `${e.status} ${e.message}`
+              : e instanceof Error
+                ? e.message
+                : String(e),
+        });
+      }
+    },
+    [fetchAuthed],
+  );
+
+  return useMemo(() => ({ ...actions, record }), [actions, record]);
 }

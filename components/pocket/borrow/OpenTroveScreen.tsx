@@ -192,6 +192,12 @@ export function OpenTroveScreen({
 
     if (result.ok) {
       await queryClient.invalidateQueries({ queryKey: ["borrow"] });
+      /*
+        The receipt is requested, never awaited: the Trove is open either way,
+        and a mail failure must not look like a borrow failure. The server
+        re-reads the chain before it mails anything.
+      */
+      void actions.record(result.hash);
       setSubmitted({ hash: result.hash, notice: null });
       return;
     }
@@ -205,6 +211,7 @@ export function OpenTroveScreen({
     */
     if (result.hash) {
       await queryClient.invalidateQueries({ queryKey: ["borrow"] });
+      void actions.record(result.hash);
       setSubmitted({ hash: result.hash, notice: result.error });
       return;
     }

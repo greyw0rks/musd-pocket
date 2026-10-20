@@ -12,6 +12,7 @@ export function serializeUser(user: User): PocketUser {
     walletAddress: user.walletAddress,
     xHandle: user.xHandle,
     avatarUrl: user.avatarUrl,
+    receiptsEmail: user.receiptsEmail,
     telegramHandle: user.telegramHandle,
     preferredChain: user.preferredChain,
     availableBalance: user.availableBalance.toString(),

@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { after } from "next/server";
 import { Prisma } from "@prisma/client";
 import { isAddress } from "viem";
 import {
@@ -10,7 +11,10 @@ import {
 import { getUserByWallet } from "@/lib/users/service";
 import { normalizeAddress } from "@/lib/mezo/musd";
 import { verifyBtcTransfer } from "@/lib/mezo/verify";
-import { formatBtc } from "@/lib/mezo/borrow-format";
+import { formatBtc, parseBtc } from "@/lib/mezo/borrow-format";
+import { explorer } from "@/lib/mezo/explorer";
+import { sendReceipt } from "@/lib/email/send";
+import { shortenAddress } from "@/lib/utils";
 import { prisma } from "@/lib/db";
 
 /**
@@ -58,6 +62,48 @@ function storedAmount(amountWei: bigint): string {
     typed at most eight places, so nothing is lost by storing eight.
   */
   return formatBtc(amountWei);
+}
+
+/**
+ * Email the receipt for a withdrawal that is now confirmed on-chain.
+ *
+ * Scheduled with `after()` and never awaited by the request: the Bitcoin has
+ * already left by the time this route runs, so mail is a record of the
+ * transfer, not part of it. A mailbox provider outage must not turn a completed
+ * withdrawal into a failed one.
+ *
+ * Called from exactly two places — the fresh COMPLETED row, and the moment a
+ * PENDING row is promoted — which together are the one transition this route
+ * has from "not confirmed" to "confirmed". A retried call that finds an
+ * already-COMPLETED row sends nothing, so the receipt is a one-per-transfer
+ * document rather than one-per-request.
+ */
+function scheduleWithdrawalReceipt(params: {
+  receiptsEmail: string | null;
+  username: string;
+  amountBtc: string;
+  toAddress: string;
+  txHash: string;
+  at: Date;
+}) {
+  const receiptsEmail = params.receiptsEmail;
+  if (!receiptsEmail) return;
+
+  after(async () => {
+    await sendReceipt(receiptsEmail, {
+      kind: "withdrawal",
+      amount: `${params.amountBtc} BTC`,
+      counterparty: shortenAddress(params.toAddress),
+      counterpartyAddress: params.toAddress,
+      details: [{ label: "From", value: `@${params.username}` }],
+      status: "confirmed",
+      at: params.at,
+      reference: params.txHash,
+      explorerUrl: explorer.tx(params.txHash),
+      appUrl: process.env.NEXT_PUBLIC_APP_URL?.trim() || "https://mpocket.tech",
+      network: "Mezo",
+    });
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -113,6 +159,25 @@ export async function POST(req: NextRequest) {
             where: { id: existing.id },
             data: { status: "COMPLETED" },
           });
+
+          /*
+            The row just became COMPLETED, which is the first moment a receipt
+            is owed. The amount is the one already stored — it is what the
+            promotion just verified — rendered back through `parseBtc` so a
+            Decimal is never stringified into an exponent form ("1e-8 BTC").
+          */
+          const promotedAmount = parseBtc(existing.amount.toFixed());
+          if (promotedAmount !== null) {
+            scheduleWithdrawalReceipt({
+              receiptsEmail: sender.receiptsEmail,
+              username: sender.username,
+              amountBtc: formatBtc(promotedAmount),
+              toAddress: recipient,
+              txHash,
+              at: promoted.createdAt,
+            });
+          }
+
           return Response.json({
             ok: true,
             id: promoted.id,
@@ -186,12 +251,14 @@ export async function POST(req: NextRequest) {
       throw new HttpError("That transfer was not sent from your wallet", 403);
     }
 
+    const amountBtc = storedAmount(verdict.value);
+
     const row = await file({
       userId: sender.id,
       chain: "MEZO",
       asset: "BTC",
       toAddress: recipient,
-      amount: storedAmount(verdict.value),
+      amount: amountBtc,
       status: "COMPLETED",
       txHash,
       paymentId: txHash,
@@ -203,6 +270,15 @@ export async function POST(req: NextRequest) {
       `Payment` and `Withdrawal` — so a row here would be a record nobody can
       see, describing a transfer already recorded above.
     */
+
+    scheduleWithdrawalReceipt({
+      receiptsEmail: sender.receiptsEmail,
+      username: sender.username,
+      amountBtc,
+      toAddress: recipient,
+      txHash,
+      at: row.createdAt,
+    });
 
     return Response.json({ ok: true, id: row.id, status: row.status });
   } catch (e) {

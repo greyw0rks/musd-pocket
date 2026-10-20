@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { after } from "next/server";
 import { Prisma } from "@prisma/client";
 import { isAddress } from "viem";
 import {
@@ -10,7 +11,11 @@ import {
 import { getUserByWallet } from "@/lib/users/service";
 import { normalizeAddress } from "@/lib/mezo/musd";
 import { verifyMusdPayment } from "@/lib/mezo/verify";
+import { explorer } from "@/lib/mezo/explorer";
 import { toDisplayUnits, unitsToDecimal } from "@/features/payments/amount";
+import { formatMoney } from "@/lib/formatters";
+import { sendReceipt } from "@/lib/email/send";
+import { shortenAddress } from "@/lib/utils";
 import { prisma } from "@/lib/db";
 
 /**
@@ -144,7 +149,7 @@ export async function POST(req: NextRequest) {
 
     const recipientUser = await prisma.user.findUnique({
       where: { walletAddress: toAddress },
-      select: { id: true },
+      select: { id: true, username: true, receiptsEmail: true },
     });
 
     const row = await file({
@@ -165,6 +170,85 @@ export async function POST(req: NextRequest) {
       served from `Payment` and `Withdrawal` — so a row here would be a record
       nobody can see, describing a payment already recorded above.
     */
+
+    /*
+      Two receipts leave this route, not one: the payer's "Sent!" and the
+      recipient's "Received!". They are separate documents about the same
+      transaction, addressed to different people, each sent only to an address
+      that person attached themselves. A self-transfer sends one — the sender's
+      — because two copies of the same event in one inbox is noise, not a
+      record.
+
+      The receipt is mailed after the response is finished, and nothing on the
+      payment path awaits it. The money has already moved by the time this route
+      runs, so a mailbox provider having a bad minute must not turn a completed
+      transfer into a failed one.
+
+      `after` rather than a bare floating promise: on a serverless platform the
+      function can be frozen the moment the response is returned, which would
+      silently drop a fire-and-forget send. `after` is the runtime's promise to
+      keep the invocation alive until the callback settles, and the send itself
+      has a 10s timeout.
+
+      `row.status === "PAID"` rather than an assumption: if two calls raced and
+      this one lost, `file()` returns the winner's row, which may still be the
+      pending copy. A "Sent!" email for a transfer the database calls pending
+      would be a receipt for a state that did not exist.
+    */
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL?.trim() || "https://mpocket.tech";
+    const displayAmount = formatMoney(toDisplayUnits(verdict.value));
+    const senderHandle = `@${sender.username}`;
+    const recipientHandle = recipientUser
+      ? `@${recipientUser.username}`
+      : shortenAddress(toAddress);
+    const at = row.paidAt ?? new Date();
+
+    const senderReceiptsEmail = sender.receiptsEmail;
+    if (senderReceiptsEmail && row.status === "PAID") {
+      after(async () => {
+        await sendReceipt(senderReceiptsEmail, {
+          kind: "sent",
+          amount: displayAmount,
+          counterparty: recipientHandle,
+          counterpartyAddress: toAddress,
+          details: [{ label: "From", value: senderHandle }],
+          status: "confirmed",
+          at,
+          reference: txHash,
+          explorerUrl: explorer.tx(txHash),
+          appUrl,
+          network: "Mezo",
+        });
+      });
+    }
+
+    const recipientReceiptsEmail = recipientUser?.receiptsEmail ?? null;
+    const recipientId = recipientUser?.id ?? null;
+    if (
+      recipientReceiptsEmail &&
+      recipientId !== null &&
+      recipientId !== sender.id &&
+      row.status === "PAID"
+    ) {
+      const recipientName = recipientHandle;
+      const receivedFrom = senderHandle;
+      after(async () => {
+        await sendReceipt(recipientReceiptsEmail, {
+          kind: "received",
+          amount: displayAmount,
+          counterparty: receivedFrom,
+          counterpartyAddress: sender.walletAddress,
+          details: [{ label: "To", value: recipientName }],
+          status: "confirmed",
+          at,
+          reference: txHash,
+          explorerUrl: explorer.tx(txHash),
+          appUrl,
+          network: "Mezo",
+        });
+      });
+    }
 
     return Response.json({ ok: true, id: row.id, status: row.status });
   } catch (e) {

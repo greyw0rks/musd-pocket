@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { MailIcon } from "@/components/pocket/icons";
 import { usePocket } from "@/components/pocket/store";
 import { Button } from "@/components/pocket/ui/Button";
 import { Sheet } from "@/components/pocket/ui/Sheet";
@@ -11,21 +10,23 @@ import { RECEIPTS_CHANNEL_LABEL } from "@/features/session/session.types";
 /**
  * Connect or drop the address a receipt copy goes to.
  *
- * This is where Google lives. It is not a sign-in method — signing in with X
- * gives a name and a subject and no address, so a mailbox has to be connected
- * separately, for delivery. Keeping it a separate decision is also what makes
- * it revocable: an identity you cannot sign out of is a trap, and a delivery
+ * Signing in with X gives a name and a subject and no address, so a mailbox is
+ * connected separately. Keeping it a separate decision is what makes it
+ * revocable: an identity you cannot sign out of is a trap, and a delivery
  * address you cannot remove is the same trap wearing a smaller hat.
  *
- * Nothing is emailed, and `setReceipts` stores nothing — there is no
- * receipt-address column on the server — so the sheet says so rather than
- * letting a connected-looking row imply otherwise.
+ * The server stores the address on the user row and reads it back with the
+ * session, so this panel shows what is actually saved. A receipt is only ever
+ * sent to an address the user attached here.
  *
  * It lives in its own module because both a personal Profile and a merchant's
  * Business settings open it. The delivery address is the same fact about the
- * same account either way, and two copies of this panel would be two places
- * for the "nothing is emailed yet" sentence to go missing from.
+ * same account either way, and two copies of this panel would be two places for
+ * the "where receipts go" sentence to go missing from.
  */
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export function ReceiptsSheet({
   open,
   onClose,
@@ -37,41 +38,54 @@ export function ReceiptsSheet({
   const current = session?.user.receipts;
 
   const [address, setAddress] = useState("");
-  const [busy, setBusy] = useState<"google" | "email" | "remove" | null>(null);
+  const [busy, setBusy] = useState<"email" | "remove" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function connect(channel: "google" | "email", value: string) {
+  async function connect(value: string) {
     if (busy) return;
     setError(null);
 
     // The only validation worth doing here: an address that cannot receive
     // anything is not a receipt channel. A stricter pattern would reject real
     // addresses, so it checks the shape people agree on and stops.
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
+    const trimmed = value.trim();
+    if (!EMAIL_PATTERN.test(trimmed)) {
       setError("That does not look like an email address.");
       return;
     }
 
-    setBusy(channel);
-    await setReceipts({ channel, address: value.trim() });
-    setBusy(null);
-    setAddress("");
-    onClose();
+    setBusy("email");
+    try {
+      await setReceipts({ channel: "email", address: trimmed });
+      setAddress("");
+      onClose();
+    } catch {
+      setError("Could not save that address. Try again.");
+    } finally {
+      setBusy(null);
+    }
   }
 
   async function remove() {
     if (busy) return;
+    setError(null);
     setBusy("remove");
-    await setReceipts(null);
-    setBusy(null);
-    onClose();
+    try {
+      await setReceipts(null);
+      onClose();
+    } catch {
+      setError("Could not remove it. Try again.");
+    } finally {
+      setBusy(null);
+    }
   }
 
   return (
     <Sheet open={open} onClose={onClose} title="Receipts">
       <p className="pk-m text-center leading-relaxed">
-        Where a copy of each payment goes. Signing in with X does not share an
-        address, so this is connected separately and can be removed again.
+        Where a copy of each confirmed payment, withdrawal and loan goes.
+        Signing in with X does not share an address, so it is added separately
+        and can be removed again.
       </p>
 
       {current ? (
@@ -85,44 +99,21 @@ export function ReceiptsSheet({
         </div>
       ) : null}
 
-      <div className="mt-5 space-y-2">
-        <Button
-          full
-          size="lg"
-          loading={busy === "google"}
-          disabled={busy !== null}
-          icon={<MailIcon size={15} />}
-          onClick={() => void connect("google", "alex.morgan@gmail.com")}
-        >
-          Connect Google
-        </Button>
-
-        {current ? (
-          <Button
-            full
-            size="lg"
-            variant="danger"
-            loading={busy === "remove"}
-            disabled={busy !== null}
-            onClick={() => void remove()}
-          >
-            Remove
-          </Button>
-        ) : null}
-      </div>
-
-      <div className="mt-5 border-t border-[var(--line)] pt-5">
+      <div className="mt-5">
         <TextField
-          label="Or use another address"
+          label={current ? "Replace with another address" : "Your email address"}
           type="email"
           inputMode="email"
           autoComplete="email"
           placeholder="you@example.com"
           value={address}
           error={error ?? undefined}
-          onChange={(event) => setAddress(event.target.value)}
+          onChange={(event) => {
+            setAddress(event.target.value);
+            if (error) setError(null);
+          }}
           onKeyDown={(event) => {
-            if (event.key === "Enter") void connect("email", address);
+            if (event.key === "Enter") void connect(address);
           }}
         />
         <Button
@@ -132,16 +123,29 @@ export function ReceiptsSheet({
           className="mt-1"
           loading={busy === "email"}
           disabled={busy !== null || address.trim().length === 0}
-          onClick={() => void connect("email", address)}
+          onClick={() => void connect(address)}
         >
-          Use this address
+          Save address
         </Button>
+
+        {current ? (
+          <Button
+            full
+            size="lg"
+            variant="danger"
+            className="mt-2"
+            loading={busy === "remove"}
+            disabled={busy !== null}
+            onClick={() => void remove()}
+          >
+            Remove
+          </Button>
+        ) : null}
       </div>
 
       <p className="pk-m mt-5 leading-relaxed">
-        Receipt copies are not sent yet, and there is nowhere on the server to
-        keep this address — connecting it will not stay. The panel is here so
-        the shape is ready when delivery is.
+        A receipt is emailed after a payment, withdrawal or loan is confirmed
+        on-chain. Remove the address and nothing is sent.
       </p>
     </Sheet>
   );

@@ -184,6 +184,8 @@ export function RepayTroveScreen({
 
     if (result.ok) {
       await queryClient.invalidateQueries({ queryKey: ["borrow"] });
+      // Requested, never awaited — see the note in `OpenTroveScreen.submit`.
+      void actions.record(result.hash);
       setSubmitted({ hash: result.hash, what, notice: null });
       return;
     }
@@ -196,6 +198,7 @@ export function RepayTroveScreen({
     */
     if (result.hash) {
       await queryClient.invalidateQueries({ queryKey: ["borrow"] });
+      void actions.record(result.hash);
       setSubmitted({ hash: result.hash, what, notice: result.error });
       return;
     }
