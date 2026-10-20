@@ -139,7 +139,7 @@ export function HomeScreen({
   ];
 
   return (
-    <div className={`${SCREEN} pt-[max(env(safe-area-inset-top),16px)]`}>
+    <div className={SCREEN}>
       <header className="pk-bar">
         <button
           type="button"

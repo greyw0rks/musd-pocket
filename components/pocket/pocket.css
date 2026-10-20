@@ -115,15 +115,24 @@
 /*
   The app column.
 
-  On a phone this is simply the viewport. On anything wider it stays a phone's
-  width and rounds off, so the layout is the one that was designed rather than
-  a mobile grid stretched across a desktop.
+  On a phone this is simply the viewport — and it is measured against the
+  *dynamic* viewport, because a phone's browser chrome slides away as you
+  scroll and a column sized to `svh` would then stop short of the screen and
+  reveal the page colour underneath. `100vh` stays first as the fallback for a
+  browser that does not know `dvh`; the `svh` floor keeps the column at least
+  as tall as the smallest viewport the browser can show.
+
+  On anything wider it stays a phone's width and caps its height, so the
+  layout is the one that was designed rather than a mobile grid stretched
+  across a desktop.
 */
 .pk-app {
   position: relative;
   display: flex;
   flex-direction: column;
-  width: min(100vw, 400px);
+  width: min(100%, 400px);
+  height: 100vh;
+  height: 100dvh;
   min-height: 100svh;
   overflow: hidden;
   background: var(--bg);
@@ -131,8 +140,8 @@
 
 @media (min-width: 420px) {
   .pk-app {
-    min-height: min(100svh, 820px);
-    height: min(100svh, 820px);
+    min-height: min(100dvh, 820px);
+    height: min(100dvh, 820px);
     border-radius: 44px;
   }
 }
@@ -145,6 +154,11 @@
   positioned screens would both be in the flow at once and the transition would
   have nothing to move. It scrolls itself, so a screen is plain content and
   never nests a second scroller.
+
+  The top padding is the status bar's: with `viewport-fit=cover` the app paints
+  under the notch, so every screen has to start below it or its first row is
+  drawn behind the clock. The bottom is the dock's clearance plus the home
+  indicator's inset.
 */
 .pk-scr {
   position: relative;
@@ -152,7 +166,8 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 16px 20px calc(110px + env(safe-area-inset-bottom, 0px));
+  padding: max(16px, env(safe-area-inset-top, 0px)) 20px
+    calc(110px + env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: none;
