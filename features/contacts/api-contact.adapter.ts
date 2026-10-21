@@ -39,6 +39,17 @@ type HandleLookup = {
   address: string | null;
 };
 
+/** One row of `GET /api/users/search`. */
+type DirectoryRow = {
+  handle: string;
+  address: string;
+  avatarUrl: string | null;
+};
+
+type DirectorySearch = {
+  results: DirectoryRow[];
+};
+
 export type AddContactResult =
   | { ok: true; recipient: Recipient }
   | { ok: false; error: string };
@@ -59,6 +70,15 @@ export interface ContactService {
   add(name: string, handle: string): Promise<AddContactResult>;
   /** Resolve a handle to a person. Saves nothing — see the note above. */
   lookup(handle: string): Promise<ResolveHandleResult>;
+  /**
+   * Find Pocket users by a fragment of their handle.
+   *
+   * Answers with people, not text: every result is already resolvable to an
+   * address, which is what lets a search hit be sent to directly instead of
+   * being an "add contact" chore in disguise. `lookup` answers about one
+   * addressed name; this one answers while the name is still being typed.
+   */
+  search(query: string): Promise<Recipient[]>;
 }
 
 function shorten(address: string): string {
@@ -123,6 +143,35 @@ export function createApiContactService(fetchAuthed: AuthedFetch): ContactServic
           ? lookup.reason
           : `Nobody on Pocket holds ${handle} yet, so there is no address to pay.`,
       };
+    },
+
+    async search(query: string): Promise<Recipient[]> {
+      /*
+        The field is a search box, not a form: a fragment of two characters or
+        fewer is a half-typed thought, and asking the server about it would be a
+        request per keystroke that can only ever return a slice of the user
+        table. The server enforces the same floor — this one is the courtesy
+        that keeps the network quiet.
+      */
+      const needle = query.trim().replace(/^@+/, "");
+      if (needle.length < 2) return [];
+
+      const { results } = await fetchAuthed<DirectorySearch>(
+        `/api/users/search?q=${encodeURIComponent(needle)}`,
+      );
+
+      return results.map((person) => ({
+        // Same construction as `lookup` above: the address is the stable id,
+        // and the username is the only published name. A search hit is a real
+        // destination the moment it arrives — that is the point of it — so it
+        // is marked verified without a second round-trip.
+        id: person.address,
+        name: `@${person.handle}`,
+        handle: `@${person.handle}`,
+        address: person.address,
+        avatarUrl: person.avatarUrl ?? undefined,
+        verified: true,
+      }));
     },
 
     async add(name: string, handle: string): Promise<AddContactResult> {

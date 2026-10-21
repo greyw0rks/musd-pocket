@@ -231,6 +231,8 @@ function Screen({ id, onBack }: { id: ScreenId; onBack: () => void }) {
     pressBackspaceKey,
     addContact,
     resolveHandle,
+    searchDirectory,
+    choosePerson,
     payAddress,
     markNotificationRead,
     markAllNotificationsRead,
@@ -425,7 +427,8 @@ function Screen({ id, onBack }: { id: ScreenId; onBack: () => void }) {
             handle: session?.user.handle ?? "",
             avatarUrl: session?.user.avatarUrl,
           }}
-          onSelect={(recipient) => chooseRecipient(recipient.id)}
+          onSelect={choosePerson}
+          onSearchPeople={searchDirectory}
           onAdd={addContact}
           onPayAddress={payAddress}
           onScan={() => push("scan")}

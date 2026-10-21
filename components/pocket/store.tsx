@@ -152,6 +152,27 @@ interface PocketStore {
    */
   resolveHandle: (handle: string) => Promise<ResolveHandleResult>;
   /**
+   * Find people in the Pocket directory as a handle is typed.
+   *
+   * The contact book only knows who the user saved; the directory knows who
+   * exists. Results are already payable — each carries the address the server
+   * resolved — so a hit can go straight to the transfer screen without first
+   * becoming a contact.
+   *
+   * Async and fallible: network failure is the caller's to absorb, because a
+   * search field should keep showing saved contacts when the directory cannot
+   * be reached.
+   */
+  searchDirectory: (query: string) => Promise<Recipient[]>;
+  /**
+   * Choose somebody from any list — saved, searched or scanned.
+   *
+   * A searched person is not a saved contact, so they are remembered in
+   * `directory` for this send only, exactly where a scanned handle lands.
+   * `recipientById` reads contacts first, so this never shadows a saved entry.
+   */
+  choosePerson: (recipient: Recipient) => void;
+  /**
    * Send to an address the user typed, rather than to a person.
    *
    * The third way into the transfer screen, after a saved contact and a scanned
@@ -814,6 +835,28 @@ export function PocketProvider({
     [resolved.contacts],
   );
 
+  const choosePerson = useCallback(
+    (recipient: Recipient) => {
+      /*
+        A person found by directory search has no contact row. Holding them in
+        `directory` is what lets the transfer screen's `recipientById` find
+        them — the same shelf a scanned handle uses, and the reason searching
+        does not quietly save anybody.
+      */
+      setDirectory((current) => [
+        ...current.filter((person) => person.id !== recipient.id),
+        recipient,
+      ]);
+      chooseRecipient(recipient.id);
+    },
+    [chooseRecipient],
+  );
+
+  const searchDirectory = useCallback(
+    (query: string) => resolved.contacts.search(query),
+    [resolved.contacts],
+  );
+
   const payAddress = useCallback(
     (address: string): AddressRecipientResult => {
       const result = addressRecipient(address);
@@ -932,6 +975,8 @@ export function PocketProvider({
 
     addContact,
     resolveHandle,
+    searchDirectory,
+    choosePerson,
     payAddress,
     recipientById,
   };
