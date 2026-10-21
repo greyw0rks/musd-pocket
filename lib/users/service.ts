@@ -110,3 +110,55 @@ export async function getUserByUsername(
 ): Promise<User | null> {
   return prisma.user.findUnique({ where: { username } });
 }
+
+/** A directory hit: only the fields a payer needs, and nothing else. */
+export type DirectoryMatch = {
+  username: string;
+  walletAddress: string;
+  avatarUrl: string | null;
+};
+
+/**
+ * Find Pocket users whose username contains `query`.
+ *
+ * This is deliberately a different question from `getUserByUsername`: that one
+ * answers "does this exact name exist?", while the search field has to answer
+ * "who might you be typing?" — prefix or fragment, because a person remembers
+ * the middle of a name as readily as its start.
+ *
+ * Two guards make a browsable directory tolerable:
+ *
+ *  - `query` is normalised and must be at least two characters, so an empty
+ *    field is not a request for the whole user table;
+ *  - `excludeWallet` drops the caller, who cannot pay themselves.
+ *
+ * The result set is capped, and it carries only what a picker renders — the
+ * handle, the public address and the avatar. No balances, no emails, no
+ * history.
+ */
+export async function searchUsers(
+  query: string,
+  options: { excludeWallet?: string; limit?: number } = {},
+): Promise<DirectoryMatch[]> {
+  const needle = query
+    .trim()
+    .replace(/^@+/, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, "");
+
+  if (needle.length < 2) return [];
+
+  const limit = Math.min(Math.max(options.limit ?? 8, 1), 20);
+
+  return prisma.user.findMany({
+    where: {
+      username: { contains: needle },
+      ...(options.excludeWallet
+        ? { walletAddress: { not: options.excludeWallet.toLowerCase() } }
+        : {}),
+    },
+    select: { username: true, walletAddress: true, avatarUrl: true },
+    orderBy: { username: "asc" },
+    take: limit,
+  });
+}
