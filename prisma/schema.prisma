@@ -112,7 +112,7 @@ model User {
   withdrawals      Withdrawal[]
   sentPayments     Payment[]     @relation("PaymentSender")
   receivedPayments Payment[]     @relation("PaymentRecipient")
-  faucetClaim      FaucetClaim?
+  faucetClaims     FaucetClaim[]
 
   @@index([walletAddress])
   @@map("users")
@@ -319,7 +319,7 @@ enum RequestStatus {
   EXPIRED
 }
 
-/// One testnet faucet claim per user.
+/// One testnet faucet claim per user per round; old receipts are preserved.
 ///
 /// The row is opened before the first transfer and each transaction hash is
 /// written the moment it exists, so a claim interrupted between the two legs
@@ -328,7 +328,8 @@ enum RequestStatus {
 /// both send. A finished claim keeps its hashes as the receipt.
 model FaucetClaim {
   id            String    @id @default(cuid())
-  userId        String    @unique
+  userId        String
+  round         String    @default("legacy-0.015")
   user          User      @relation(fields: [userId], references: [id])
   walletAddress String // lowercase — the wallet the faucet paid
   btcTxHash     String?
@@ -339,5 +340,6 @@ model FaucetClaim {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  @@unique([userId, round])
   @@map("faucet_claims")
 }

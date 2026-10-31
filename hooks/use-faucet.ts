@@ -4,11 +4,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, useApi } from "@/lib/auth/client";
 import { useSession } from "@/lib/auth/session";
 import type { FaucetStatusView } from "@/lib/faucet/types";
+import { FAUCET_AMOUNTS, FAUCET_ROUND } from "@/lib/faucet/policy";
 
 /**
- * The one-time testnet faucet.
+ * The testnet faucet: one claim per account in the current round.
  *
- * `state` is what the header renders, and it is deliberately three-valued:
+ * `state` is what the header renders:
  *
  *  - `hidden` — signed out, mainnet, or the route says the faucet is off.
  *  - `available` — a claim is still owed. The faucet icon.
@@ -37,15 +38,14 @@ export interface FaucetController {
   clearError: () => void;
 }
 
-const DEFAULT_AMOUNTS = { btc: "0.015", musd: "300" };
-
 export function useFaucet(): FaucetController {
   const { user } = useSession();
   const api = useApi();
   const queryClient = useQueryClient();
+  const queryKey = ["faucet", user?.id, FAUCET_ROUND];
 
   const query = useQuery<FaucetStatusView>({
-    queryKey: ["faucet"],
+    queryKey,
     enabled: Boolean(user),
     queryFn: () => api<FaucetStatusView>("/api/faucet"),
     staleTime: 30_000,
@@ -65,41 +65,46 @@ export function useFaucet(): FaucetController {
     mutationFn: () =>
       api<FaucetStatusView>("/api/faucet", { method: "POST" }),
     onSuccess: (status) => {
-      queryClient.setQueryData(["faucet"], status);
+      queryClient.setQueryData(queryKey, status);
     },
   });
 
-  const data = query.data;
+  const roundMismatch = Boolean(query.data && query.data.round !== FAUCET_ROUND);
+  const data = roundMismatch ? undefined : query.data;
   const authError =
     query.error instanceof ApiError &&
     (query.error.status === 401 || query.error.status === 404);
 
   const state: FaucetState = !user
     ? "hidden"
-    : data?.enabled === false || authError
-      ? "hidden"
-      : data
-        ? data.claimed
-          ? "claimed"
-          : "available"
-        : // A transient read failure must not hide a claim the user still
-          // owes; the sheet can retry through the POST.
-          query.isError
-          ? "available"
-          : "loading";
+    : roundMismatch
+      ? "loading"
+      : data?.enabled === false || authError
+        ? "hidden"
+        : data
+          ? data.claimed
+            ? "claimed"
+            : "available"
+          : // A transient read failure must not hide an available claim;
+            // the sheet can retry through the POST.
+            query.isError
+            ? "available"
+            : "loading";
 
   return {
     state,
     funded: data?.funded ?? null,
     pending: data?.pending ?? false,
     claim: data?.claim ?? null,
-    amounts: data?.amounts ?? DEFAULT_AMOUNTS,
+    amounts: data?.amounts ?? FAUCET_AMOUNTS,
     claiming: mutation.isPending,
-    error: mutation.error
-      ? mutation.error instanceof Error
-        ? mutation.error.message
-        : "The faucet could not send right now. Try again."
-      : null,
+    error: roundMismatch
+      ? "The faucet update is being rolled out. Refresh shortly."
+      : mutation.error
+        ? mutation.error instanceof Error
+          ? mutation.error.message
+          : "The faucet could not send right now. Try again."
+        : null,
     claimFaucet: async () => {
       // The failure is rendered from `mutation.error`; swallowing the rejection
       // here keeps a button click from becoming an unhandled promise.

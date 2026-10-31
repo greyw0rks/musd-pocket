@@ -74,12 +74,13 @@ export function FaucetSheet({
       ) : (
         <>
           <p className="pk-m text-center leading-relaxed">
-            One claim per account. The Bitcoin pays gas on Mezo; the mUSD is
-            yours to send, save and repay with.
+            A new faucet round: previous users can claim again. One claim per
+            account in this round. Use the Bitcoin for collateral and gas,
+            and the mUSD to send, save and repay.
           </p>
 
           <div className="pk-card mt-5 !py-3.5">
-            <Row label="Bitcoin for gas" value={`${amounts.btc} BTC`} />
+            <Row label="Bitcoin for collateral and gas" value={`${amounts.btc} BTC`} />
             <Row
               label="mUSD to spend"
               value={`${amounts.musd} mUSD`}

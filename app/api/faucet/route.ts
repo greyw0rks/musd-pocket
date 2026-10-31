@@ -11,6 +11,7 @@ import {
   faucetStatus,
 } from "@/lib/faucet";
 import { getUserByWallet } from "@/lib/users/service";
+import { FAUCET_ROUND } from "@/lib/faucet/policy";
 
 /**
  * GET  /api/faucet — whether this account has used its claim, and whether the
@@ -34,6 +35,7 @@ export async function GET(req: NextRequest) {
     if (!faucetEnabled()) {
       return Response.json({
         enabled: false,
+        round: FAUCET_ROUND,
         claimed: false,
         pending: false,
         funded: null,

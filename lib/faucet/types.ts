@@ -14,6 +14,8 @@ export type FaucetClaimView = {
 export type FaucetStatusView = {
   /** False on mainnet, where the faucet does not exist and the icon is hidden. */
   enabled: boolean;
+  /** Eligibility is scoped to this deliberate reset round. */
+  round: string;
   /**
    * True once the claim has been used — including the gap between broadcast
    * and confirmation, so a reload cannot offer a second claim to a user whose

@@ -70,3 +70,7 @@ data model but aren't the main way people send yet.
 
 The demo funds live in a vault on Mezo testnet —
 [`0x251B…1735`](https://explorer.mezo.org/address/0x251B3302c0CcB1cFBeb0cda3dE06C2D312a41735).
+
+## Updated testnet faucet
+
+The new faucet round gives each account **0.06 BTC and 300 mUSD**, including previous claimants. Old receipts are preserved, and each account can claim once in this round. See [the faucet rollout guide](docs/faucet-round-v2.md) for the required database migration and verification.

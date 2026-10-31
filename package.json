@@ -15,7 +15,8 @@
     "test:borrow-rules": "node --experimental-strip-types lib/mezo/borrow-rules.test.ts",
     "test:reconcile": "node --experimental-strip-types lib/settlement/reconcile.decision.test.ts",
     "test:tour": "node --experimental-strip-types components/pocket/walkthrough/tour.test.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "test:faucet": "vitest run --config vitest.faucet.config.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -52,15 +53,8 @@
     "eslint-config-next": "16.3.6",
     "prisma": "6.19.3",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   },
-  "packageManager": "pnpm@11.19.0",
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@prisma/client",
-      "@prisma/engines",
-      "prisma",
-      "esbuild"
-    ]
-  }
+  "packageManager": "pnpm@11.19.0"
 }

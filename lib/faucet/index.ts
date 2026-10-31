@@ -8,11 +8,13 @@ import { ACTIVE_ENV, activeChain, MUSD_ADDRESS } from "@/lib/mezo/config";
 import { getPublicClient, MUSD_ABI, normalizeAddress, parseMusd } from "@/lib/mezo/musd";
 import { getRelayerWallet, hasRelayer } from "@/lib/relayer";
 import type { FaucetStatusView } from "@/lib/faucet/types";
+import { FAUCET_BTC, FAUCET_MUSD, FAUCET_ROUND, faucetClaimKey } from "@/lib/faucet/policy";
+export { FAUCET_BTC, FAUCET_MUSD } from "@/lib/faucet/policy";
 
 /**
- * The testnet faucet: one claim per account, enough to try the whole app.
+ * The testnet faucet: one claim per account in the active round.
  *
- * 0.015 BTC is the gas the account needs to do anything on Mezo (gas is paid
+ * 0.06 BTC can fund collateral and gas on Mezo (gas is paid
  * in Bitcoin, not mUSD). 300 mUSD is below the 1,800 mUSD minimum Trove debt,
  * so the claim alone cannot open a loan — but paired with the BTC it lets the
  * user deposit, save, send and repay, and it means a fresh account is never
@@ -24,13 +26,10 @@ import type { FaucetStatusView } from "@/lib/faucet/types";
  * that key is testnet funds.
  */
 
-export const FAUCET_BTC = "0.015";
-export const FAUCET_MUSD = "300";
-
 /**
  * BTC kept back when deciding whether the funding wallet can cover a claim.
  * The faucet pays gas on both transfers; without a reserve a wallet holding
- * exactly 0.015 BTC would send it all and then fail to move the mUSD.
+ * exactly 0.06 BTC would send it all and then fail to move the mUSD.
  */
 const GAS_RESERVE = parseEther("0.0005");
 
@@ -65,13 +64,14 @@ export async function faucetStatus(user: User): Promise<FaucetStatusView> {
   if (!faucetEnabled()) return disabledView();
 
   const claim = await prisma.faucetClaim.findUnique({
-    where: { userId: user.id },
+    where: faucetClaimKey(user.id),
   });
 
   const broadcast = Boolean(claim?.btcTxHash && claim?.musdTxHash);
 
   return {
     enabled: true,
+    round: FAUCET_ROUND,
     claimed: Boolean(claim?.completedAt || broadcast),
     pending: Boolean(broadcast && !claim?.completedAt),
     funded: await fundingState(claim),
@@ -230,19 +230,19 @@ export async function claimFaucet(user: User): Promise<FaucetStatusView> {
 
 /** Create-once; a lost create race resolves to the row the winner made. */
 async function openClaim(userId: string, walletAddress: string) {
-  const existing = await prisma.faucetClaim.findUnique({ where: { userId } });
+  const existing = await prisma.faucetClaim.findUnique({ where: faucetClaimKey(userId) });
   if (existing) return existing;
 
   try {
     return await prisma.faucetClaim.create({
-      data: { userId, walletAddress: walletAddress.toLowerCase() },
+      data: { userId, round: FAUCET_ROUND, walletAddress: walletAddress.toLowerCase() },
     });
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
-      const raced = await prisma.faucetClaim.findUnique({ where: { userId } });
+      const raced = await prisma.faucetClaim.findUnique({ where: faucetClaimKey(userId) });
       if (raced) return raced;
     }
     throw error;
@@ -330,6 +330,7 @@ async function receiptStatus(
 function disabledView(): FaucetStatusView {
   return {
     enabled: false,
+    round: FAUCET_ROUND,
     claimed: false,
     pending: false,
     funded: null,

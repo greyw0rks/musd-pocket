@@ -1,0 +1,49 @@
+{
+  "faucetRound": "btc-0.06-v2",
+  "amounts": {
+    "btc": "0.06",
+    "musd": "300"
+  },
+  "claimTests": {
+    "passed": 6,
+    "config": "vitest.faucet.config.ts"
+  },
+  "migrationChecks": {
+    "engine": "PGlite PostgreSQL",
+    "passed": true,
+    "migrationAppliedTwice": true,
+    "oldReceiptsPreserved": true,
+    "oldUsersCanClaimNewRound": true,
+    "duplicateInRoundRejected": true
+  },
+  "fundingSnapshot": {
+    "chainId": 31611,
+    "relayer": "0xBA46d08B9E298E8E70096Fc238Da207139BCCAB7",
+    "btc": "0.665097999054730243",
+    "musd": "19758.984119073198068887",
+    "canFundNewClaim": true
+  },
+  "productionMigration": "applied; all 3 original receipts preserved",
+  "productionDeployment": {
+    "status": "READY",
+    "deploymentId": "dpl_3GcMaB2VmMMhiEvkNgXeGEm4yraV",
+    "url": "https://musd-pocket-mesme8smu-greyw0rks-projects.vercel.app",
+    "appUrl": "https://mpocket.vercel.app",
+    "alias": "https://mpocket.tech",
+    "build": "passed on Vercel"
+  },
+  "typecheck": {
+    "passed": true,
+    "command": "pnpm exec tsc --noEmit --incremental false",
+    "checkout": "musd-pocket-wave1"
+  },
+  "isolatedFaucetTests": {
+    "passed": 6,
+    "command": "node node_modules/vitest/vitest.mjs run --config vitest.faucet.config.ts"
+  },
+  "lint": {
+    "passed": true,
+    "scope": "faucet, UI hook/sheet, API route and rollout script"
+  },
+  "localBuild": "Sandbox blocked Google Fonts and then Turbopack port binding; authoritative Vercel production build passed."
+}

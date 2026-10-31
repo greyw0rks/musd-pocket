@@ -9,8 +9,4 @@ allowBuilds:
   # platform binaries as optional deps, so the postinstall isn't needed.
   unrs-resolver: false
   utf-8-validate: false
-onlyBuiltDependencies:
-  - "@prisma/client"
-  - "@prisma/engines"
-  - prisma
-  - esbuild
+  esbuild: true
