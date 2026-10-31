@@ -1,4 +1,4 @@
-import { parseEventLogs } from "viem";
+import { parseEventLogs, decodeFunctionData } from "viem";
 import type { Address, Hash } from "viem";
 import { getPublicClient, MUSD_ABI, parseMusd } from "./musd";
 import { parseBtc } from "./borrow-format";
@@ -24,22 +24,42 @@ export async function verifyMusdPayment(params: {
   txHash: Hash;
   recipient: string; // lowercase or checksummed
   amount: string; // human mUSD units, e.g. "25" or "25.00"
-}): Promise<VerifyResult> {
+  sender?: string;
+}): Promise<
+  | { valid: true; from: Address; to: Address; value: bigint; logIndex: number; blockNumber: bigint; timestamp: bigint }
+  | { valid: false; reason: string; pending?: boolean; verifiedIntent?: boolean }
+> {
   const client = getPublicClient();
+
+  if (await client.getChainId() !== CHAIN_ID) return { valid: false, reason: "RPC is on the wrong network" };
+  let transaction;
+  try { transaction = await client.getTransaction({ hash: params.txHash }); }
+  catch { return { valid: false, pending: true, verifiedIntent: false, reason: "Transaction cannot be read yet" }; }
+  const expected = parseMusd(params.amount);
+  const recipient = params.recipient.toLowerCase();
+  if (transaction.to?.toLowerCase() !== MUSD_ADDRESS.toLowerCase() || transaction.value !== 0n) {
+    return { valid: false, reason: "That transaction is not a direct mUSD transfer" };
+  }
+  if (params.sender && transaction.from.toLowerCase() !== params.sender.toLowerCase()) {
+    return { valid: false, reason: "That transfer was not sent from your wallet" };
+  }
+  try {
+    const call = decodeFunctionData({ abi: MUSD_ABI, data: transaction.input });
+    if (call.functionName !== "transfer" || call.args[0].toLowerCase() !== recipient || call.args[1] !== expected) {
+      return { valid: false, reason: "The transfer recipient or amount does not match" };
+    }
+  } catch { return { valid: false, reason: "That transaction is not a direct mUSD transfer" }; }
 
   let receipt;
   try {
     receipt = await client.getTransactionReceipt({ hash: params.txHash });
   } catch {
-    return { valid: false, reason: "Transaction not found yet", pending: true };
+    return { valid: false, reason: "Transaction receipt cannot be read yet", pending: true, verifiedIntent: true };
   }
 
   if (receipt.status !== "success") {
     return { valid: false, reason: "Transaction reverted" };
   }
-
-  const expected = parseMusd(params.amount);
-  const recipient = params.recipient.toLowerCase();
 
   // Only Transfer events emitted by the mUSD contract itself count.
   const transfers = parseEventLogs({
@@ -52,7 +72,7 @@ export async function verifyMusdPayment(params: {
 
   const match = transfers.find(
     (t) =>
-      t.args.to?.toLowerCase() === recipient && t.args.value === expected,
+      t.args.to?.toLowerCase() === recipient && t.args.value === expected && t.args.from?.toLowerCase() === transaction.from.toLowerCase(),
   );
 
   if (!match) {
@@ -68,6 +88,9 @@ export async function verifyMusdPayment(params: {
     from: match.args.from as Address,
     to: match.args.to as Address,
     value: match.args.value as bigint,
+    logIndex: match.logIndex,
+    blockNumber: receipt.blockNumber,
+    timestamp: (await client.getBlock({ blockNumber: receipt.blockNumber })).timestamp,
   };
 }
 

@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { requireIdentity, errorResponse, AuthError, HttpError } from "@/lib/auth/request";
+import { legacySettlementEnabled } from "@/lib/settlement/legacy";
 import { getUserByWallet } from "@/lib/users/service";
 import { MUSD_ADDRESS } from "@/lib/mezo/config";
 import { debitAvailable, creditAvailable, ledgerTx } from "@/lib/ledger/service";
@@ -56,6 +57,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  if (!legacySettlementEnabled()) return Response.json({ error: "PocketVault withdrawals are retired. Use a direct wallet transfer." }, { status: 410 });
   try {
     const identity = await requireIdentity(req);
     if (!settlementEngineReady()) {

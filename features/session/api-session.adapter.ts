@@ -66,7 +66,8 @@ export function sessionFromUser(
       id: user.id,
       name: user.username,
       handle: `@${user.username}`,
-      accountType: "personal",
+      accountType: user.role === "MERCHANT" ? "merchant" : "personal",
+      businessName: user.businessName ?? undefined,
       /*
         The X profile picture, persisted at sign-in from Privy's identity
         payload (`lib/auth/privy-server.ts`) and refreshed on every login. It is

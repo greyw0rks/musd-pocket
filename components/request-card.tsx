@@ -32,7 +32,7 @@ export function RequestCard({
           </span>
         </p>
         <p className="mt-1 text-[12px] text-muted">
-          {request.status === "PAID" && request.paidAt
+          {(request.status === "PAID" || request.status === "LATE_PAID") && request.paidAt
             ? relativeTime(request.paidAt)
             : relativeTime(request.createdAt)}
         </p>

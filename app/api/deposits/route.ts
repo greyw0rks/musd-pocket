@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 import { requireIdentity, errorResponse, AuthError } from "@/lib/auth/request";
+import { legacySettlementEnabled } from "@/lib/settlement/legacy";
 import { getUserByWallet } from "@/lib/users/service";
 import { findVaultDeposits } from "@/lib/mezo/deposits";
 import { getVaultAddress, hasVault } from "@/lib/mezo/vault";
@@ -48,6 +49,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  if (!legacySettlementEnabled()) return Response.json({ error: "PocketVault deposits are retired. Keep funds in your wallet or use Mezo Savings." }, { status: 410 });
   try {
     const identity = await requireIdentity(req);
     if (!hasVault()) {

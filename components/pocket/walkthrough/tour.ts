@@ -68,7 +68,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
     screen: "home",
     target: "faucet",
     title: "Claim your test money",
-    body: "The faucet sends 0.015 BTC and 300 mUSD to this wallet, once — enough to open a Trove and try the vault. After the claim, this spot becomes Rewards.",
+    body: "The new faucet round sends 0.06 BTC and 300 mUSD to this wallet. Previous users can claim again, once in this round. After claiming, this spot opens your one-time 200 MEZO welcome reward, locked for two weekly epochs when rewards are available.",
     place: "below",
   },
   {

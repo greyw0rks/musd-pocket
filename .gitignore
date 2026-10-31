@@ -16,6 +16,7 @@
 # next.js
 /.next/
 /.faucet-backups/
+/.wave1-backups/
 /out/
 
 # production

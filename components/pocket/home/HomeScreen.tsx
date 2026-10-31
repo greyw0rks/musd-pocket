@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Avatar } from "@/components/pocket/Avatar";
 import { BalanceCards } from "@/components/pocket/home/BalanceCards";
@@ -155,7 +156,7 @@ export function HomeScreen({
           {/*
             The faucet, and after it the rewards it turns into. One slot, two
             occupants: while a claim is owed it is a tap to claim, and once the
-            claim is spent the same tap becomes the rewards promise. `loading`
+            claim is spent the same tap opens the welcome reward. `loading`
             keeps the slot drawn — empty, disabled — so the bar does not shift
             a beat after the first paint.
           */}
@@ -163,7 +164,7 @@ export function HomeScreen({
             /*
               One hook for both occupants of the slot: the tour step is about
               the faucet, and after a claim the same spot is the rewards
-              promise, so the spotlight follows it there instead of going dark.
+              claim, so the spotlight follows it there instead of going dark.
             */
             <span className="inline-flex" data-tour="faucet">
               {faucet.state === "claimed" ? (
@@ -278,6 +279,10 @@ export function HomeScreen({
         ))}
       </div>
 
+      <Link href="/merchant" className="pk-card pk-row pk-sp mt-4">
+        <span><b className="text-[14px]">Accept mUSD</b><span className="pk-m mt-1 block">Create a merchant payment link or QR</span></span>
+        <span aria-hidden="true">→</span>
+      </Link>
       <div data-tour="activity">
         <div className="pk-row pk-sp" style={{ margin: "20px 0 4px" }}>
           <h2 className="pk-h2">Manage Expenses</h2>

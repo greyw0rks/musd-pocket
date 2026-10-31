@@ -1,0 +1,12 @@
+{
+  "applicationTests": { "passed": 40, "failed": 0, "config": "vitest.rewards.config.ts" },
+  "foundryUnitTests": { "passed": 25, "failed": 0, "welcomeTests": 14, "legacyVaultTests": 11 },
+  "typecheck": "passed",
+  "focusedLint": "passed",
+  "pdfDeck": { "pages": 8, "overflow": false },
+  "vercel": { "id": "dpl_GiZ1MEDtF8mtXG3uDkKtnZdgzroz", "target": "preview", "state": "READY", "url": "https://musd-pocket-r5ihuraf8-greyw0rks-projects.vercel.app", "compilation": "passed", "typescript": "passed" },
+  "onChainWelcome": "deployment and 200 MEZO funding confirmed; user claim pending",
+  "onChainRepay": "pending; supplied Trove closed",
+  "onChainClaimYield": "simulation passed; user execution pending",
+  "externalAdoption": "pending genuine participants"
+}

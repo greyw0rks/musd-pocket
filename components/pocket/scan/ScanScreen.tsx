@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/pocket/Avatar";
 import {
   ChevronRightIcon,
@@ -45,6 +46,7 @@ export function ScanScreen({
   onResolved: (recipientId: string, amountUnits?: bigint) => void;
   onOpenReceive: () => void;
 }) {
+  const router = useRouter();
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [looking, setLooking] = useState(false);
@@ -57,6 +59,15 @@ export function ScanScreen({
     if (looking) return;
     setError(null);
     setPreview(null);
+
+    // Extract an internal path only; never navigate to a pasted external URL.
+    try {
+      const url = new URL(text.trim(), window.location.origin);
+      if (/^\/pay\/(?:[A-HJ-NP-Z2-9]{26}|[A-HJ-NP-Z2-9]{5})$/i.test(url.pathname)) {
+        router.push(url.pathname);
+        return;
+      }
+    } catch { /* Continue with username parsing. */ }
 
     const parsed = parsePayLink(text);
     if (!parsed) {

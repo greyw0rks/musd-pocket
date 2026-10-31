@@ -2,6 +2,8 @@
 
 import { motion } from "motion/react";
 import { useState } from "react";
+import Link from "next/link";
+import { explorer } from "@/lib/mezo/explorer";
 import { Avatar } from "@/components/pocket/Avatar";
 import {
   BanIcon,
@@ -206,6 +208,9 @@ export function RequestDetailScreen({
           </motion.button>
         ) : null}
 
+        {request.txHash ? <a className="pk-m mt-4 break-all text-center underline" href={explorer.tx(request.txHash)} target="_blank" rel="noreferrer">View payment transaction</a> : null}
+        {request.checkoutUrl && !incoming ? <div className="pk-card mt-4"><p className="pk-m mb-2">Share this payment link</p><a className="pk-m break-all underline" href={request.checkoutUrl}>{mounted ? window.location.origin : ""}{request.checkoutUrl}</a></div> : null}
+
         <p className="pk-m mt-5 px-2 text-center leading-relaxed">
           {open
             ? "This is a question, not a payment. Nothing has moved, and nothing moves until it is answered."
@@ -218,14 +223,14 @@ export function RequestDetailScreen({
           the note behind them.
         */}
         <div className="mt-auto space-y-2 pt-5">
-          {open && incoming ? (
+          {(open || request.status === "processing") && incoming ? (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={stagger(0)}
               className="space-y-2"
             >
-              <Button
+              {request.checkoutUrl ? <Link className="block w-full rounded-xl bg-[var(--t)] p-4 text-center font-bold text-[var(--bg)]" href={request.checkoutUrl}>{request.status === "processing" ? "Open payment confirmation" : `Review and pay ${formatMoney(request.amountUnits)}`}</Link> : <Button
                 full
                 size="lg"
                 icon={<SendIcon size={16} />}
@@ -234,8 +239,8 @@ export function RequestDetailScreen({
                 onClick={() => void pay()}
               >
                 {busy ? "Paying" : `Pay ${formatMoney(request.amountUnits)}`}
-              </Button>
-              {canDecline ? (
+              </Button>}
+              {open && canDecline ? (
                 <Button
                   full
                   size="lg"
@@ -311,7 +316,9 @@ function Detail({
  */
 const STATUS_TONE: Record<PaymentRequest["status"], string> = {
   open: "pk-pill pk-pill--warn",
+  processing: "pk-pill pk-pill--warn",
   paid: "pk-pill pk-pill--ok",
+  "late-paid": "pk-pill pk-pill--ok",
   declined: "pk-pill",
   cancelled: "pk-pill",
   expired: "pk-pill",

@@ -178,6 +178,8 @@ export function RequestsScreen({
  * needs to act on.
  */
 const STATUS_PILL: Record<PaymentRequest["status"], string> = {
+  processing: "pk-pill pk-pill--warn",
+  "late-paid": "pk-pill pk-pill--ok",
   open: "pk-pill pk-pill--warn",
   paid: "pk-pill pk-pill--ok",
   declined: "pk-pill",

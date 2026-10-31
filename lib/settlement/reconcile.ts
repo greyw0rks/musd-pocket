@@ -465,7 +465,7 @@ export async function reconcile(limit: number = BATCH): Promise<ReconcileReport>
 
   const [payments, withdrawals] = await Promise.all([
     prisma.payment.findMany({
-      where: { status: "PENDING" },
+      where: { status: "PENDING", mode: "LEGACY_VAULT" },
       orderBy: { createdAt: "asc" },
       take,
       include: { sender: { select: { username: true } } },

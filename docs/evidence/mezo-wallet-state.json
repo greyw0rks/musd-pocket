@@ -1,0 +1,39 @@
+{
+  "chainId": 31611,
+  "blockNumber": "16494060",
+  "timestamp": "2026-10-31T23:01:33.000Z",
+  "wallet": "0xe66d1c48792a320c16d7abd90c835b25a0ac37db",
+  "savings": {
+    "vault": "0x6f461c68B2c5492C0F5CCEc5a264d692aA7A8e16",
+    "principal": "2000",
+    "storedYield": "0",
+    "claimableYield": "187.366117347141378",
+    "claimSimulation": {
+      "accepted": true,
+      "result": "187366117347141378000"
+    }
+  },
+  "borrow": {
+    "status": "2",
+    "debt": "0",
+    "collateralBtc": "0",
+    "maxRepayment": "0",
+    "proposedRepayment": "0",
+    "repaySimulation": null
+  },
+  "walletBalances": {
+    "btc": "0.242900998968085286",
+    "musd": "4459.818886565668749727"
+  },
+  "welcome": {
+    "token": "0x7B7c000000000000000000000000000000000001",
+    "escrow": "0xaCE816CA2bcc9b12C59799dcC5A959Fb9b98111b",
+    "escrowToken": "0x7B7c000000000000000000000000000000000001",
+    "relayer": "0xBA46d08B9E298E8E70096Fc238Da207139BCCAB7",
+    "availableMezo": "200"
+  },
+  "liveExecution": {
+    "repay": "pending user signature",
+    "claimYield": "pending user signature"
+  }
+}

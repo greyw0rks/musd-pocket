@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
-import { requireIdentity, errorResponse } from "@/lib/auth/request";
-import { getByShortId } from "@/lib/requests/service";
+import { requireIdentity, errorResponse, HttpError } from "@/lib/auth/request";
+import { getByShortId, isPublicRequestId } from "@/lib/requests/service";
 import { serializeRequest } from "@/lib/requests/serialize";
 
 /**
@@ -22,13 +22,14 @@ export async function GET(
   { params }: { params: Promise<{ shortId: string }> },
 ) {
   try {
-    await requireIdentity(req);
+    const identity = await requireIdentity(req);
     const { shortId } = await params;
 
     const request = await getByShortId(shortId);
     if (!request) {
       return Response.json({ error: "Request not found" }, { status: 404 });
     }
+    if (!isPublicRequestId(shortId) && ![request.creatorAddress, request.recipientAddress, request.intendedPayerAddress, request.payerAddress].includes(identity.walletAddress.toLowerCase())) throw new HttpError("This older link is private to its participants.", 403);
     return Response.json(serializeRequest(request));
   } catch (e) {
     return errorResponse(e);

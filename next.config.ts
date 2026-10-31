@@ -31,7 +31,6 @@ const ALIASES = [
   // and an unhandled 404 is what it got instead. It is listed first because it
   // is the one people typed by habit, not because it is special.
   "/app",
-  "/pay",
   "/wallet",
   "/activity",
   "/deposit",

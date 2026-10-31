@@ -1,0 +1,71 @@
+{
+  "packagesRestored": [
+    {
+      "name": "@solana/rpc-subscriptions-channel-websocket",
+      "version": "5.5.1",
+      "integrityVerified": true,
+      "damagedFiles": [
+        "dist/index.native.mjs.map",
+        "dist/index.node.cjs.map"
+      ]
+    },
+    {
+      "name": "@solana/rpc-transport-http",
+      "version": "5.5.1",
+      "integrityVerified": true,
+      "damagedFiles": [
+        "dist/index.browser.mjs",
+        "dist/index.native.mjs"
+      ]
+    },
+    {
+      "name": "zod",
+      "version": "3.25.76",
+      "integrityVerified": true,
+      "damagedFiles": [
+        "v4/core/api.cjs",
+        "v4/locales/ar.cjs",
+        "v4/locales/az.cjs"
+      ]
+    },
+    {
+      "name": "@img/sharp-win32-x64",
+      "version": "0.35.5",
+      "integrityVerified": true,
+      "damagedFiles": [
+        "index.cjs"
+      ]
+    },
+    {
+      "name": "use-sync-external-store",
+      "version": "1.2.0",
+      "integrityVerified": true,
+      "damagedFiles": [
+        "with-selector.js",
+        "shim/with-selector.js",
+        "cjs/use-sync-external-store-shim/with-selector.development.js"
+      ]
+    },
+    {
+      "name": "@babel/generator",
+      "version": "7.29.8",
+      "integrityVerified": true,
+      "damagedFiles": [
+        "lib/buffer.js.map",
+        "lib/buffer.js",
+        "lib/generators/base.js"
+      ]
+    },
+    {
+      "name": "emoji-regex",
+      "version": "8.0.0",
+      "integrityVerified": true,
+      "damagedFiles": [
+        "text.js",
+        "es2015/text.js",
+        "es2015/index.js"
+      ]
+    }
+  ],
+  "corruptBackups": "/tmp/pocket-corrupt-dependency-backups"
+}

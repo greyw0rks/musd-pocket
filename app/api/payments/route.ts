@@ -20,6 +20,8 @@ import {
 import { validateAmount } from "@/lib/validate";
 import { newPaymentId, paymentIdFromKey } from "@/lib/payment-id";
 import { prisma } from "@/lib/db";
+import { legacySettlementEnabled } from "@/lib/settlement/legacy";
+import { reconcileDirectPayments } from "@/lib/payments/direct";
 
 /**
  * Payments (Send) — "Send MUSD. Pocket handles the chain."
@@ -41,6 +43,7 @@ export async function GET(req: NextRequest) {
     const identity = await requireIdentity(req);
     const user = await getUserByWallet(identity.walletAddress);
     if (!user) throw new AuthError("User not found — sync first", 404);
+    await reconcileDirectPayments(user.id, 10);
 
     const payments = await prisma.payment.findMany({
       where: { OR: [{ senderId: user.id }, { recipientId: user.id }] },
@@ -77,6 +80,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  if (!legacySettlementEnabled()) return Response.json({ error: "Vault-mediated sends are retired. Use your wallet and /api/payments/record." }, { status: 410 });
   try {
     const identity = await requireIdentity(req);
     if (!settlementEngineReady()) {
@@ -173,6 +177,7 @@ export async function POST(req: NextRequest) {
           const payment = await tx.payment.create({
             data: {
               paymentId,
+              mode: "LEGACY_VAULT",
               senderId: sender.id,
               recipientId,
               recipientAddress: recipientId ? null : recipientWallet.toLowerCase(),

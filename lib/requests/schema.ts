@@ -1,18 +1,14 @@
 import { z } from "zod";
 import { isAddress } from "viem";
-import { MUSD_DECIMALS } from "@/lib/mezo/config";
+import { paymentAmount } from "@/lib/payments/amount";
 
 const addressSchema = z
   .string()
   .refine((v) => isAddress(v), { message: "Invalid EVM address" });
 
-const amountSchema = z
-  .string()
-  .refine((v) => /^\d+(\.\d+)?$/.test(v), { message: "Invalid amount" })
-  .refine((v) => Number(v) > 0, { message: "Amount must be greater than 0" })
-  .refine((v) => (v.split(".")[1]?.length ?? 0) <= MUSD_DECIMALS, {
-    message: `Max ${MUSD_DECIMALS} decimals`,
-  });
+const amountSchema = z.string().refine((value) => {
+  try { paymentAmount(value); return true; } catch { return false; }
+}, { message: "Enter a positive mUSD amount with at most two decimal places" });
 
 /**
  * Request creation, minus the creator.
@@ -30,6 +26,13 @@ export const createRequestSchema = z.object({
 });
 
 export type CreateRequestInput = z.infer<typeof createRequestSchema>;
+
+export const createInvoiceSchema = z.object({
+  amount: amountSchema,
+  description: z.string().trim().max(120).optional().nullable(),
+  expiry: z.enum(["24h", "7d"]).default("24h"),
+}).strict();
+export const merchantProfileSchema = z.object({ businessName: z.string().trim().min(2).max(80) }).strict();
 
 export function expiryToHours(expiry: "never" | "24h" | "7d"): number | null {
   if (expiry === "24h") return 24;
