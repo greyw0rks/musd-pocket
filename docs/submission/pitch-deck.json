@@ -60,7 +60,7 @@
           "body": "Deposit MUSD, withdraw and claim Savings yield from the embedded wallet."
         }
       ],
-      "footer": "Wave 1 review release: merchant checkout, corrected Savings accounting and configured welcome campaign."
+      "footer": "Live at mpocket.tech \u00b7 Merchant checkout, corrected Savings accounting and configured welcome campaign."
     },
     {
       "eyebrow": "04 / HOW IT WORKS",
@@ -145,7 +145,7 @@
     {
       "eyebrow": "08 / EVIDENCE, ROADMAP & TEAM",
       "title": "Strong integration. Next: proof of use.",
-      "intro": "Builder: greyw0rks \u00b7 github.com/greyw0rks/musd-pocket. Merchant checkout and welcome funding are ready for review. Successful user transactions and independent adoption remain to be demonstrated.",
+      "intro": "Builder: greyw0rks \u00b7 github.com/greyw0rks/musd-pocket. Merchant checkout and the funded welcome campaign are live. Successful user transactions and independent adoption remain to be demonstrated.",
       "cards": [
         {
           "title": "Technical evidence",
@@ -157,7 +157,7 @@
         },
         {
           "title": "Next milestones",
-          "body": "Promote the review release; collect missing embedded-wallet receipts; recruit genuine merchant pilots and external users; record feedback and returning usage."
+          "body": "Collect missing embedded-wallet receipts; recruit genuine merchant pilots and external users; record feedback and returning usage. Additional welcome claims need more MEZO inventory."
         }
       ],
       "footer": "Track 2 \u00b7 Pilot service fees are zero. No external traction or revenue claimed."

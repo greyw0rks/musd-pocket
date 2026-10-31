@@ -2,7 +2,7 @@
 
 One welcome claim gives a synced Pocket account **200 testnet MEZO**, locked for **two weekly epochs** as a veMEZO NFT owned by its verified wallet. Pocket's relayer pays the claim gas. The faucet is a separate **0.06 BTC / 300 mUSD** claim in round `btc-0.06-v2`. Previous users can claim this new faucet allowance once; resetting faucet eligibility does not reset the one-time MEZO welcome reward.
 
-The welcome campaign is deployed at `0x3469818359ce1bae2d137531dcd78c5cc4ec14ba`, funded with **200 MEZO (one claim)**, and configured for the Wave 1 review deployment. Production promotion and the first authenticated user claim remain pending. [Deployment, funding receipts and a successful real-token/escrow claim simulation](../evidence/welcome-rollout.json). With the campaign setting unset or its inventory depleted, the app reports that rewards are unavailable.
+The welcome campaign is deployed at `0x3469818359ce1bae2d137531dcd78c5cc4ec14ba`, funded with **200 MEZO (one claim)**, and configured in the live Pocket app. The first authenticated user claim remains pending. [Deployment, funding receipts and a successful real-token/escrow claim simulation](../evidence/welcome-rollout.json). With the campaign setting unset or its inventory depleted, the app reports that rewards are unavailable.
 
 ## Verified protocol configuration
 

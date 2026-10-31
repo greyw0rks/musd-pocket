@@ -36,11 +36,9 @@ import { cn, relativeTime, untilTime } from "@/lib/utils";
  * would show, reached by id rather than recounted here.
  *
  * Paying is the only action on this screen that can move money, and it goes
- * through the store, which routes it through the payment service. Declining and
- * cancelling are not implemented server-side, so `canDecline` / `canWithdraw`
- * are how the caller says so. Where the answer is no, the control is not drawn:
- * an app that offers to withdraw a request and then cannot has told the user
- * something false about what they just did.
+ * through the dedicated checkout when a checkout URL is present. That screen
+ * owns wallet review, signing and receipt recovery. Decline and cancel use
+ * authorized server transitions; capability flags support other adapters.
  */
 export function RequestDetailScreen({
   request,

@@ -50,10 +50,8 @@ type HandleLookup = {
  * The two types share a name and nothing else, so this mapping is the whole
  * reason the interface can stay stable across the swap.
  *
- * Fields the server has no column for are given their honest defaults rather
- * than a guess: `accountType` is always `personal` (merchant has no server
- * representation, which is why merchant stays out of this milestone), and
- * `receipts` is left absent rather than seeded with a fake address.
+ * Merchant account type and business name come from the saved merchant profile.
+ * Receipt integrations remain absent until a persisted integration is available.
  */
 export function sessionFromUser(
   user: ServerPocketUser,

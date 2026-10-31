@@ -2,7 +2,9 @@
 
 Repository: `greyw0rks/musd-pocket`. Review source: branch `fix/wave-1-complete`, preserving the already released faucet change.
 
-Review deployment: https://musd-pocket-r5ihuraf8-greyw0rks-projects.vercel.app â€” Vercel READY. Production promotion and GitHub push require the final release decision.
+Production: https://mpocket.tech and https://mpocket.vercel.app â€” Vercel READY, deployment `dpl_BUkiyGnXsJ14PjW5PSG6w9mzJn23`. The user approved production publication and the GitHub branch push.
+
+Review deployment: https://musd-pocket-r5ihuraf8-greyw0rks-projects.vercel.app.
 
 | Audit item | Result | Evidence or remaining step |
 | --- | --- | --- |
@@ -11,9 +13,9 @@ Review deployment: https://musd-pocket-r5ihuraf8-greyw0rks-projects.vercel.app â
 | claimYield | False-zero accounting fixed; execution pending | Approximately 187.37 mUSD accrued at the recorded snapshot. User must authorize the actual claim |
 | Direct architecture | README corrected; vault mutations retired by default | Wallet signs transfers; API verifies receipt. Old payment, deposit and withdrawal POST routes return 410 |
 | Receipt recovery | Implemented | Sender-bound pending intents, merchant polling, optional protected cron, unique chain/hash/log settlement |
-| Merchant checkout | Implemented in READY preview | Merchant profile, invoice, high-entropy link, QR, direct wallet payment and receipt; authenticated end-to-end merchant pilot remains pending |
+| Merchant checkout | Implemented in live app | Merchant profile, invoice, high-entropy link, QR, direct wallet payment and receipt; authenticated end-to-end merchant pilot remains pending |
 | Faucet | Existing production release preserved | 0.06 BTC / 300 mUSD, round `btc-0.06-v2`, previous receipts retained and old users eligible once in the new round |
-| Welcome MEZO | Testnet campaign deployed and funded; app configured in preview | 200 MEZO per claim, two weekly epochs; current inventory funds one claim. First authenticated user claim still pending |
+| Welcome MEZO | Testnet campaign deployed and funded; live app configured | 200 MEZO per claim, two weekly epochs; current inventory funds one claim. First authenticated user claim still pending |
 | Database | Additive migration applied | Six users, 14 payments and three faucet records preserved; eight historical direct receipts verified, two unclassified after unreadable RPC responses |
 | Track | Documented | Track 2: Access and Distribution for MUSD/MEZO |
 | Revenue model | Documented hypothesis | Future disclosed merchant fee covering gas; pilot fees are zero and no revenue is claimed |
@@ -23,6 +25,8 @@ Review deployment: https://musd-pocket-r5ihuraf8-greyw0rks-projects.vercel.app â
 ## Validation
 
 40 application regression tests pass, including Savings accrual, authenticated transfer verification, receipt replay, pending-hash handling, cancellation races and welcome/faucet recovery. 25 Foundry unit tests passed, including 14 welcome-contract tests and the existing 11 vault tests. TypeScript and focused lint pass. Vercel compiled and passed TypeScript, then reached READY. The deck renders as eight PDF pages without content overflow. These checks establish implementation quality, not real-user activity.
+
+The optional local browser smoke check did not complete: the localhost stylesheet compiler exceeded the navigation timeout under both local compilers. No successful browser or authenticated merchant pilot is claimed. The remote Vercel build passed independently.
 
 ## Operator handoff
 

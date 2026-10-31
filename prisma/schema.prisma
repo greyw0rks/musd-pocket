@@ -63,9 +63,7 @@ enum ObligationStatus {
   SETTLED
 }
 
-/// Kept so the schema still describes the live database, which carries this
-/// column on every user row (all currently PERSONAL). A retired design — see
-/// the note on Payment.claimHandle. Do not build on it.
+/// Merchant status is persisted when a user saves their checkout profile.
 enum AccountRole {
   PERSONAL
   MERCHANT
