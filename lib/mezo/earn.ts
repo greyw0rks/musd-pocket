@@ -1,6 +1,7 @@
 import type { Address } from "viem";
 import { ACTIVE_ENV, activeMezo } from "./config";
 import { getPublicClient } from "./musd";
+import { accruedYield, claimPayout } from "./earn-math";
 
 /**
  * The Mezo MUSD Savings Vault (sMUSD) — the yield side of MUSD.
@@ -156,7 +157,7 @@ export const SAVINGS_VAULT_ABI = [
     name: "claimYield",
     stateMutability: "nonpayable",
     inputs: [],
-    outputs: [],
+    outputs: [{ name: "amount", type: "uint256" }],
   },
   {
     type: "function",
@@ -173,6 +174,29 @@ export const SAVINGS_VAULT_ABI = [
     outputs: [],
   },
 ] as const;
+
+export const YIELD_ACCOUNTING_ABI = [
+  { type: "function", name: "yieldIndex", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "supplyYieldIndex", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "vaultGauge", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
+  { type: "function", name: "gaugeYieldClaimCap", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+] as const;
+
+/** The public mapping excludes accrual since the holder's last index update. */
+export async function readClaimableYield(owner: Address, blockNumber?: bigint): Promise<bigint> {
+  const client = getPublicClient();
+  const height = blockNumber ?? await client.getBlockNumber();
+  const address = activeEarn.savingsVault;
+  const [shares, stored, globalIndex, userIndex, gauge, cap] = await Promise.all([
+    client.readContract({ address, abi: SAVINGS_VAULT_ABI, functionName: "balanceOf", args: [owner], blockNumber: height }),
+    client.readContract({ address, abi: SAVINGS_VAULT_ABI, functionName: "claimableYield", args: [owner], blockNumber: height }),
+    client.readContract({ address, abi: YIELD_ACCOUNTING_ABI, functionName: "yieldIndex", blockNumber: height }),
+    client.readContract({ address, abi: YIELD_ACCOUNTING_ABI, functionName: "supplyYieldIndex", args: [owner], blockNumber: height }),
+    client.readContract({ address, abi: YIELD_ACCOUNTING_ABI, functionName: "vaultGauge", blockNumber: height }),
+    client.readContract({ address, abi: YIELD_ACCOUNTING_ABI, functionName: "gaugeYieldClaimCap", blockNumber: height }),
+  ]);
+  return claimPayout(accruedYield(shares, stored, globalIndex, userIndex), owner.toLowerCase() === gauge.toLowerCase(), cap);
+}
 
 /**
  * A holder's position, all of it 18-decimal MUSD wei.
@@ -208,28 +232,27 @@ export async function getEarnPosition(owner: Address): Promise<EarnPosition> {
   const client = getPublicClient();
   const vault = activeEarn.savingsVault;
 
+  const blockNumber = await client.getBlockNumber();
+
   const [shares, totalShares] = await Promise.all([
     client.readContract({
       address: vault,
       abi: SAVINGS_VAULT_ABI,
       functionName: "balanceOf",
       args: [owner],
+      blockNumber,
     }),
     client.readContract({
       address: vault,
       abi: SAVINGS_VAULT_ABI,
       functionName: "totalSupply",
+      blockNumber,
     }),
   ]);
 
   let claimableYield: bigint | null = null;
   try {
-    claimableYield = await client.readContract({
-      address: vault,
-      abi: SAVINGS_VAULT_ABI,
-      functionName: "claimableYield",
-      args: [owner],
-    });
+    claimableYield = await readClaimableYield(owner, blockNumber);
   } catch {
     claimableYield = null;
   }

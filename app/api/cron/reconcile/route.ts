@@ -2,6 +2,9 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import type { NextRequest } from "next/server";
 import { hasVault } from "@/lib/mezo/vault";
 import { RECONCILE_GRACE_MS, reconcile } from "@/lib/settlement/reconcile";
+import { legacySettlementEnabled } from "@/lib/settlement/legacy";
+import { reconcileDirectPayments } from "@/lib/payments/direct";
+import { reconcileRequestPayments } from "@/lib/requests/service";
 
 /**
  * POST-free reconciliation entry point for the scheduler.
@@ -47,7 +50,7 @@ export async function GET(req: NextRequest) {
 
   // Without the vault there is no chain truth to read, so every row would hold
   // forever and the run would be pure noise. Say so instead of churning.
-  if (!hasVault()) {
+  if (legacySettlementEnabled() && !hasVault()) {
     return Response.json(
       { error: "Vault not configured (NEXT_PUBLIC_POCKET_VAULT_ADDRESS)" },
       { status: 503 },
@@ -56,9 +59,12 @@ export async function GET(req: NextRequest) {
 
   const startedAt = Date.now();
   try {
-    const report = await reconcile();
+    const [direct, requests] = await Promise.all([reconcileDirectPayments(undefined, 5), reconcileRequestPayments({}, 5)]);
+    const report = legacySettlementEnabled() ? await reconcile() : { scanned: 0, finalized: 0, refunded: 0, held: 0, failed: 0, actions: [] };
     return Response.json({
       ok: true,
+      direct,
+      requests,
       durationMs: Date.now() - startedAt,
       graceMs: RECONCILE_GRACE_MS,
       scanned: report.scanned,

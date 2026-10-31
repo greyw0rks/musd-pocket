@@ -5,7 +5,10 @@ export type RequestStatusValue =
   | "PENDING"
   | "PROCESSING"
   | "PAID"
-  | "EXPIRED";
+  | "EXPIRED"
+  | "CANCELLED"
+  | "DECLINED"
+  | "LATE_PAID";
 
 const config: Record<
   RequestStatusValue,
@@ -32,6 +35,9 @@ const config: Record<
     icon: X,
     className: "bg-error-soft text-error",
   },
+  CANCELLED: { label: "Cancelled", icon: X, className: "bg-error-soft text-error" },
+  DECLINED: { label: "Declined", icon: X, className: "bg-error-soft text-error" },
+  LATE_PAID: { label: "Paid after expiry", icon: Check, className: "bg-warning-soft text-warning" },
 };
 
 export function StatusBadge({

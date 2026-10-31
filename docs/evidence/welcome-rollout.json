@@ -1,0 +1,28 @@
+{
+  "chainId": 31611,
+  "rewardPerClaim": "200",
+  "budgetMezo": "200",
+  "claimCapacity": 1,
+  "recipientOfSimulation": "0xe66d1c48792a320c16d7abd90c835b25a0ac37db",
+  "liveClaim": "pending authenticated user claim",
+  "relayer": "0xBA46d08B9E298E8E70096Fc238Da207139BCCAB7",
+  "relayerBtc": "0.665097999054730243",
+  "relayerMezo": "200",
+  "realTokenEscrowSimulation": {
+    "accepted": true,
+    "simulatedTokenId": "938",
+    "broadcast": false
+  },
+  "deploymentGas": "1345511",
+  "deploymentTxHash": "0xf2cec69d1000c2824491b1400286b071fc74aca4b7fcbef7fe0c4860fc16575e",
+  "campaignAddress": "0x3469818359ce1bae2d137531dcd78c5cc4ec14ba",
+  "deploymentBlock": "16494168",
+  "fundingTxHash": "0xac3ebea256b6e77a0681761e5231b8f751fe72439462895574838b964326d959",
+  "fundedMezo": "200",
+  "deployedClaimSimulation": {
+    "accepted": true,
+    "simulatedTokenId": "938",
+    "broadcast": false
+  },
+  "ready": true
+}

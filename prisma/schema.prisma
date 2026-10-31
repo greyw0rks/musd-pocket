@@ -1,8 +1,8 @@
-// MUSD Pocket — chain-abstracted payment ledger.
+// Pocket — wallet-owned payments and protocol positions.
 //
 // The DB is an INDEXED REPRESENTATION of on-chain state, not the source of truth.
-// On-chain (real, Mezo testnet): vault balances, deposits, withdrawals, payouts.
-// Off-chain (here): users, ledger balances, routing/settlement accounting, history.
+// On-chain: direct transfers, Troves, Savings and reward locks.
+// Off-chain: profiles, requests and verified receipt indexes. Vault/ledger rows are historical.
 // Addresses stored LOWERCASE for lookups; the UI re-checksums for display.
 
 generator client {
@@ -63,12 +63,16 @@ enum ObligationStatus {
   SETTLED
 }
 
-/// Kept so the schema still describes the live database, which carries this
-/// column on every user row (all currently PERSONAL). A retired design — see
-/// the note on Payment.claimHandle. Do not build on it.
+/// Merchant status is persisted when a user saves their checkout profile.
 enum AccountRole {
   PERSONAL
   MERCHANT
+}
+
+enum PaymentMode {
+  UNCLASSIFIED
+  LEGACY_VAULT
+  DIRECT
 }
 
 // <!-- APPEND-MARKER -->
@@ -100,6 +104,7 @@ model User {
   /// convenience and never something a screen depends on. Null for accounts
   /// that signed in with Telegram or email, or whose X profile has no picture.
   avatarUrl        String?  @db.Text
+  businessName     String?  @db.VarChar(80)
   preferredChain   ChainKey    @default(MEZO)
   role             AccountRole @default(PERSONAL)
   availableBalance Decimal     @default(0) @db.Decimal(38, 18)
@@ -112,7 +117,7 @@ model User {
   withdrawals      Withdrawal[]
   sentPayments     Payment[]     @relation("PaymentSender")
   receivedPayments Payment[]     @relation("PaymentRecipient")
-  faucetClaim      FaucetClaim?
+  faucetClaims     FaucetClaim[]
 
   @@index([walletAddress])
   @@map("users")
@@ -210,6 +215,9 @@ model Withdrawal {
 model Payment {
   id               String        @id @default(cuid())
   paymentId        String        @unique // bytes32 hex
+  mode             PaymentMode   @default(UNCLASSIFIED)
+  chainId          Int?
+  token            String?
   senderId         String
   sender           User          @relation("PaymentSender", fields: [senderId], references: [id])
   recipientId      String?
@@ -233,6 +241,7 @@ model Payment {
   @@index([senderId])
   @@index([recipientId])
   @@index([status])
+  @@index([mode, status])
   @@index([claimHandle, status])
   @@map("payments")
 }
@@ -296,18 +305,23 @@ model PaymentRequest {
   shortId          String        @unique
   creatorAddress   String
   recipientAddress String
+  intendedPayerAddress String?
+  merchantName     String?
+  version          Int           @default(1)
   amount           Decimal       @db.Decimal(38, 18)
   token            String
   chainId          Int
   description      String?
   status           RequestStatus @default(PENDING)
   txHash           String?
+  settlementKey    String?       @unique
   payerAddress     String?
   expiresAt        DateTime?
   createdAt        DateTime      @default(now())
   paidAt           DateTime?
 
   @@index([creatorAddress])
+  @@index([intendedPayerAddress])
   @@index([status])
   @@map("payment_requests")
 }
@@ -317,9 +331,12 @@ enum RequestStatus {
   PROCESSING
   PAID
   EXPIRED
+  CANCELLED
+  DECLINED
+  LATE_PAID
 }
 
-/// One testnet faucet claim per user.
+/// One testnet faucet claim per user per round; reset rounds preserve old receipts.
 ///
 /// The row is opened before the first transfer and each transaction hash is
 /// written the moment it exists, so a claim interrupted between the two legs
@@ -328,7 +345,9 @@ enum RequestStatus {
 /// both send. A finished claim keeps its hashes as the receipt.
 model FaucetClaim {
   id            String    @id @default(cuid())
-  userId        String    @unique
+  userId        String
+  /// Existing claims become legacy; new claims explicitly select the active round.
+  round         String    @default("legacy-0.015")
   user          User      @relation(fields: [userId], references: [id])
   walletAddress String // lowercase — the wallet the faucet paid
   btcTxHash     String?
@@ -339,5 +358,6 @@ model FaucetClaim {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  @@unique([userId, round])
   @@map("faucet_claims")
 }

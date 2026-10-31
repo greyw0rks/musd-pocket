@@ -1,10 +1,10 @@
 import type { NextRequest } from "next/server";
 import { requireIdentity, errorResponse } from "@/lib/auth/request";
 import { createRequestSchema, expiryToHours } from "@/lib/requests/schema";
-import { createPaymentRequest, listByCreator } from "@/lib/requests/service";
+import { createPaymentRequest, listForWallet } from "@/lib/requests/service";
 import { serializeRequest } from "@/lib/requests/serialize";
 
-const STATUSES = ["PENDING", "PROCESSING", "PAID", "EXPIRED"] as const;
+const STATUSES = ["PENDING", "PROCESSING", "PAID", "EXPIRED", "CANCELLED", "DECLINED", "LATE_PAID"] as const;
 type Status = (typeof STATUSES)[number];
 
 /**
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
     const req_ = await createPaymentRequest({
       creatorAddress: identity.walletAddress,
-      recipientAddress,
+      intendedPayerAddress: recipientAddress,
       amount,
       description,
       expiresInHours: expiryToHours(expiry),
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
       ? (raw as Status)
       : undefined;
 
-    const rows = await listByCreator(identity.walletAddress, status);
+    const rows = await listForWallet(identity.walletAddress, status);
     return Response.json(rows.map(serializeRequest));
   } catch (e) {
     return errorResponse(e);

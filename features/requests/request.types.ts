@@ -28,14 +28,18 @@ export type RequestDirection = "incoming" | "outgoing";
 
 export type RequestStatus =
   | "open"
+  | "processing"
   | "paid"
+  | "late-paid"
   | "declined"
   | "cancelled"
   | "expired";
 
 export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = {
   open: "Open",
+  processing: "Confirming",
   paid: "Paid",
+  "late-paid": "Paid after closing",
   declined: "Declined",
   cancelled: "Cancelled",
   expired: "Expired",
@@ -64,6 +68,8 @@ export interface PaymentRequest {
   settledAt?: Date;
   /** The ledger entry it became, when it was paid. */
   transactionId?: string;
+  checkoutUrl?: string;
+  txHash?: string;
 }
 
 export interface CreateRequestInput {

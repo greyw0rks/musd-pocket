@@ -1,7 +1,7 @@
 import type { WalletClient } from "viem";
 import { getPublicClient, MUSD_ABI } from "./musd";
 import { MUSD_ADDRESS, CHAIN_ID } from "./config";
-import { SAVINGS_VAULT_ABI, activeEarn } from "./earn";
+import { SAVINGS_VAULT_ABI, activeEarn, readClaimableYield } from "./earn";
 
 /**
  * Depositing into and withdrawing from the Mezo MUSD Savings Vault.
@@ -408,10 +408,9 @@ export function createEarnActions(deps: {
      * reaches the wallet.
      *
      * No amount is passed and none is invented. `claimYield()` takes no
-     * arguments — it pays out whatever `claimableYield(address)` holds — so the
-     * figure the screen shows is a preview, and the chain decides the real one
-     * at the moment of the call. If the two disagree the user gets the larger,
-     * which is the only direction that cannot cheat them.
+     * arguments: it checkpoints index accrual and pays the account's permitted
+     * yield. The screen previews that accounting; the chain decides the final
+     * amount when the transaction executes.
      */
     async claim(): Promise<EarnWriteResult> {
       const signed = signer();
@@ -424,14 +423,7 @@ export function createEarnActions(deps: {
         nothing accrued — into a sentence in the app's voice rather than a
         reverted transaction the user paid BTC gas for.
       */
-      const claimable = await rpc()
-        .readContract({
-          address: vault,
-          abi: SAVINGS_VAULT_ABI,
-          functionName: "claimableYield",
-          args: [from],
-        })
-        .catch(() => null);
+      const claimable = await readClaimableYield(from).catch(() => null);
 
       if (claimable === null) {
         return {

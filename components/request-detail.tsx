@@ -40,7 +40,8 @@ export function RequestDetail({ shortId }: { shortId: string }) {
     );
   }
 
-  const isPaid = req.status === "PAID";
+  const isPaid = req.status === "PAID" || req.status === "LATE_PAID";
+  const canShare = req.status === "PENDING" || req.status === "PROCESSING";
 
   const share = async () => {
     if (navigator.share) {
@@ -69,9 +70,9 @@ export function RequestDetail({ shortId }: { shortId: string }) {
           <h1 className="text-xl font-semibold text-foreground">
             Request created
           </h1>
-          <div className="flex justify-center">
+          {canShare ? <div className="flex justify-center">
             <QRCodeView value={payUrl} />
-          </div>
+          </div> : null}
         </>
       )}
 
@@ -88,7 +89,7 @@ export function RequestDetail({ shortId }: { shortId: string }) {
         </div>
       </div>
 
-      {!isPaid && (
+      {canShare && (
         <div className="flex flex-col gap-2">
           <div className="flex gap-2">
             <div className="flex flex-1 items-center justify-center rounded-lg border border-border bg-surface py-3">

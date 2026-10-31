@@ -4,6 +4,8 @@ import type { ChainKey } from "@prisma/client";
 export type PocketUser = {
   id: string;
   username: string;
+  role: "PERSONAL" | "MERCHANT";
+  businessName: string | null;
   walletAddress: string;
   xHandle: string | null;
   /** X profile picture, hot-linked; absent for Telegram/email accounts. */

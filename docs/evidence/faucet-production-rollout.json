@@ -1,0 +1,16 @@
+{
+  "applied": true,
+  "oldReceiptsPreserved": true,
+  "claimRecords": 3,
+  "rounds": [
+    {
+      "round": "legacy-0.015",
+      "claims": 3
+    }
+  ],
+  "activeRound": "btc-0.06-v2",
+  "amounts": {
+    "btc": "0.06",
+    "musd": "300"
+  }
+}

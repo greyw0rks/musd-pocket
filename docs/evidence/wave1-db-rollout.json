@@ -1,0 +1,14 @@
+{
+  "mode": "apply",
+  "checkedAt": "2026-10-31T23:11:32.658Z",
+  "receiptsPreserved": true,
+  "counts": {
+    "users": 6,
+    "payments": 14,
+    "payment_requests": 0,
+    "faucet_claims": 3
+  },
+  "verifiedHistoricalDirect": 8,
+  "unreadableHistoricalDirect": 2,
+  "applied": true
+}
