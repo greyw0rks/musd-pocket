@@ -1,4 +1,4 @@
-# Mezo features — 2 November 2026
+# Mezo features — 3 November 2026
 
 Working app: `musd-pocket`. `musd-pocket-wave1` remains reference material.
 
@@ -23,7 +23,7 @@ Two existing successful claims were independently verified against transaction c
 | [0x43149c…08cfdf](https://explorer.test.mezo.org/tx/0x43149c59ae2cafafdc764a234ba6df7050a3981218cebd83ca633caaa608cfdf) | 187.366117347141378 |
 | [0x527173…b7a3af](https://explorer.test.mezo.org/tx/0x5271739bb3e06a0f1233efc0ac85df7d9b79e47126242236b28d29a4ecb7a3af) |    0.00228183663115 |
 
-These were existing transactions, **not broadcasts by this work**. The explorer returned all 26 indexed outgoing transactions and no `repayMUSD` transaction. No new loan, claim, deployment or funding transfer was signed here.
+These were existing Savings transactions, verified on November 2. On November 3 the user completed the approved open/10-mUSD-repay/close sequence. [Repayment proof](evidence/wave-2-repayment-proof.json) accounts for interest accrual and matches protocol storage/events and the exact burn. [Lifecycle proof](evidence/wave-2-borrow-lifecycle.json) verifies 0.05 BTC returned and final debt zero.
 
 Evidence: [readiness](evidence/mezo-wealth-readiness.json), [verified receipts](evidence/mezo-feature-receipts.json). Regenerate with `node --env-file=.env --import tsx scripts/check-mezo-wealth.ts` and `scripts/check-mezo-feature-receipts.ts` respectively. Both are read-only.
 
@@ -40,7 +40,7 @@ The [unsigned in-app readiness report](evidence/inapp-wealth-readiness.json) ver
 
 ## Welcome campaign activated — 3 November 2026
 
-The approved 20-MEZO campaign is `0xa78709beb3841aac1ed8fc3d8dedf74d55f62432`, funded with 100 testnet MEZO for five claims. Deployment and funding receipts, verified configuration and gas costs are in [the activation evidence](evidence/wave-2-welcome-deployment.json). Production is configured for this campaign and chain 31611. The first real pilot claim/NFT receipt remains pending.
+The approved 20-MEZO campaign is `0xa78709beb3841aac1ed8fc3d8dedf74d55f62432`, funded with 100 testnet MEZO for five claims. Deployment and funding receipts, verified configuration and gas costs are in [the activation evidence](evidence/wave-2-welcome-deployment.json). Production is configured for this campaign and chain 31611. The first claim is [verified](evidence/wave-2-welcome-claim.json): recipient-owned NFT #941, 20 MEZO, November 12 expiry, matching journal/event and an `AlreadyClaimed` replay simulation. Remaining inventory is 80 MEZO for four claims.
 
 The earlier campaign at `0x3469818359ce1bae2d137531dcd78c5cc4ec14ba` pays 200 MEZO and is empty. It is not the new campaign; prior users' NFTs remain theirs. The builder approved a new 20-MEZO campaign and another claim opportunity for prior recipients. Do not repeat deployment/funding from the evidence; the operator journal preserves both hashes.
 
@@ -57,8 +57,8 @@ Operational limit: a `SENDING` reservation with no hash must be checked against 
 
 ## Remaining verification
 
-- **Partial repayment:** needs a user-selected active Trove, or an approved new loan. Quote BTC collateral, mUSD draw, borrowing fee, reserve, exact repayment and remaining net debt before signing. Refresh the protocol minimum and recovery-mode status. Capture the successful `repayMUSD` receipt and before/after debt and wallet balances. There is no active Trove to test in the inspected wallet.
 - **User/merchant testing:** the user will contact testers. No outreach or adoption claims were made. Use [the testing guide](mezo-testing-guide.md).
+- **Submission:** verify the official Wave 2 rules/deadline, attach current demo/customer evidence and retain submission confirmation. [Delivery status](submission/delivery.md).
 
 ## Checks
 

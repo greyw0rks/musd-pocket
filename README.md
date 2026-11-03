@@ -2,7 +2,7 @@
 
 Send, request and receive mUSD from your own embedded wallet. Borrow against BTC through Mezo Troves and manage Savings, swaps, MEZO locks and liquidity in the same mobile app.
 
-**App:** [mpocket.vercel.app](https://mpocket.vercel.app/home) · **Network:** Mezo testnet (31611)
+**App:** [mpocket.tech](https://mpocket.tech/home) · **Network:** Mezo testnet (31611)
 
 **Track:** Track 2 — Access and Distribution for MUSD/MEZO
 
@@ -25,7 +25,7 @@ flowchart LR
 
 Normal payments do not use PocketVault or debit an internal ledger. Legacy vault and modeled cross-chain settlement code remains for earlier records; only explicitly classified legacy payments enter that reconciler. Base and Ethereum are not live cross-chain payment routes in this build.
 
-Mezo gas is paid in **BTC**. Payers pay gas from their own wallets for payments, borrowing, Savings and Wealth. Receiving requires no transaction. The funded testnet faucet sends **0.015 BTC and 300 mUSD** once per account. Welcome rewards are separately relayed once activated; universal gas sponsorship is not implemented.
+Mezo gas is paid in **BTC**. Payers pay gas from their own wallets for payments, borrowing, Savings and Wealth. Receiving requires no transaction. The funded testnet faucet sends **0.015 BTC and 300 mUSD** once per account. Welcome rewards are separately relayed; universal gas sponsorship is not implemented.
 
 ## Wave 2 product
 
@@ -35,9 +35,11 @@ Mezo gas is paid in **BTC**. Payers pay gas from their own wallets for payments,
 - **Savings:** deposit, withdraw and claim yield. Claimable interest includes stored yield and uncheckpointed global-index accrual; unavailable reads stay unknown.
 - **Swap:** exchange mUSD with BTC, mUSDC or mUSDT through verified testnet pools, with fees, minimum received, slippage and deadline shown.
 - **Wealth:** manage Vault, MEZO locks and pools in Pocket. Lock creation, top-up, extension, expired withdrawal and permanent-lock lifecycle; pool liquidity add/remove and fee claims.
-- **Welcome:** **20 testnet MEZO** per account and wallet, locked into a user-owned veMEZO NFT for two weekly epochs (7–14 days after rounding). The approved campaign is deployed and funded with 100 MEZO for five claims. A verified real pilot claim remains pending.
+- **Welcome:** **20 testnet MEZO** per account and wallet, locked into a user-owned veMEZO NFT for two weekly epochs (7–14 days after rounding). The first claim is verified: NFT #941, 20 MEZO, recipient ownership, and `AlreadyClaimed` on a read-only replay. The campaign retains 80 MEZO for four claims.
 
 This build's dock is **Home · Swap · Wealth**. Activity remains under Home → View All. Each approval and final Wealth action needs its own confirmation. Permanent-lock Start unlock begins a new **208-week countdown**.
+
+Home's total card keeps **mUSD and BTC** prominent. Positive balances of supported mUSDC, mUSDT, MEZO, sMUSD and pool LP tokens appear below. Tokens without a verified valuation show their amount and are excluded from the priced sum; sMUSD contributes its verified 1:1 principal.
 
 [Feature status and activation](docs/mezo-wealth.md) · [Checkout](docs/payment-links.md) · [Recovery](docs/payment-recovery.md) · [Pilot guide](docs/mezo-testing-guide.md)
 
@@ -52,13 +54,15 @@ Two `claimYield` calls were verified against calldata, successful receipts and m
 
 An existing [liquidity addition](https://explorer.test.mezo.org/tx/0xef79292d44ad002722c6e4532abb33d0d679d0240c867c587784391fbd6e9409) also has a successful receipt. These establish specific chain outcomes, not independent adoption or every frontend interaction.
 
-November 3 baseline: 6 personal accounts, 4 completed faucet claims, 8 paid direct transfers, no merchants or invoices. These counts do not establish independent humans. Merchant pilots and repeat-user feedback are pending. No `repayMUSD` appears in the inspected wallet's 29 indexed outgoing transactions; its Trove is closed with zero debt.
+On November 3, the user completed the approved 0.05-BTC / 2,000-mUSD Trove sequence. The [10-mUSD partial repayment](https://explorer.test.mezo.org/tx/0x77596c3ad14f654f73952c2f5dfdcb05bbe8d30e93ff205bc5935ab6d70c31e7) burned exactly 10 mUSD, reduced debt by exactly 10 after accounting for interest accrual, and preserved 0.05 BTC collateral. [Before/after proof](docs/evidence/wave-2-repayment-proof.json).
+
+November 3 baseline: 6 personal accounts, 4 completed faucet claims and 8 paid direct transfers. The @musd_pocket Business profile and a **100-testnet-mUSD closed-mainnet waitlist invoice** are now configured. These builder-operated records do not establish independent humans, paid customer demand or revenue. Merchant pilots and repeat-user feedback remain pending.
 
 The latest checks total **177 passing assertions**: 61 Wealth/profile/reward, 59 checkout, 39 payment and 18 reconciliation. Fork/browser/build evidence is documented separately. Fixture tokens and simulated wallets are not live-signature evidence.
 
 Direct transfers cannot prevent two devices broadcasting duplicate payments before the server sees either. Confirmation uses one successful receipt; reorg monitoring and duplicate-transfer refunds are not implemented. Welcome claims do not prove human uniqueness or new MUSD demand. No mainnet, revenue or guaranteed-yield claim is made.
 
-[Evidence index](docs/submission/evidence.md) · [November 3 baseline](docs/wave-2-status-2026-11-03.md)
+[Evidence index](docs/submission/evidence.md) · [Delivery record](docs/submission/delivery.md) · [November 3 baseline](docs/wave-2-status-2026-11-03.md)
 
 ## Revenue model
 

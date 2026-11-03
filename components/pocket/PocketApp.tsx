@@ -1,5 +1,7 @@
 "use client";
 
+import { useWalletHoldings } from "@/hooks/use-wallet-holdings";
+
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
 import { useCallback, useMemo } from "react";
 import { AppShell } from "@/components/pocket/PhoneShell";
@@ -271,6 +273,7 @@ function Screen({ id, onBack }: { id: ScreenId; onBack: () => void }) {
     through the payment service. See `hooks/use-live-wallet.ts`.
   */
   const liveWallet = useLiveWallet();
+  const walletHoldings = useWalletHoldings(id === "home");
 
   /*
     The Trove, read once here and handed to whichever screen is showing.
@@ -334,6 +337,8 @@ function Screen({ id, onBack }: { id: ScreenId; onBack: () => void }) {
             avatarUrl: session?.user.avatarUrl,
           }}
           balance={balance}
+          otherHoldings={walletHoldings.holdings}
+          otherBalancesUnavailable={walletHoldings.unavailable}
           transactions={transactions}
           recipients={contacts}
           highlightId={highlightId}

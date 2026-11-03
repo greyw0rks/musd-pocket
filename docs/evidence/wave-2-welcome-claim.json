@@ -1,0 +1,23 @@
+{
+  "capturedAt": "2026-11-03T22:15:38.382Z",
+  "chainId": 31611,
+  "campaign": "0xa78709beb3841aac1ed8fc3d8dedf74d55f62432",
+  "hash": "0x798fd4f01b0e9ae68a322ab0848345f655e527e85b1c8f7356ff4d575d74ff48",
+  "block": "16555327",
+  "status": "success",
+  "recipient": "0xe66d1c48792a320c16d7abd90c835b25a0ac37db",
+  "tokenId": "941",
+  "lockedMezo": "20",
+  "nftOwner": "0xE66D1c48792a320c16D7aBd90C835B25A0aC37dB",
+  "unlockAt": "2026-11-12T00:00:00.000Z",
+  "lockDurationSeconds": "698357",
+  "journalState": "BROADCAST",
+  "journalMatches": true,
+  "walletClaimed": true,
+  "inventoryBeforeMezo": "100",
+  "inventoryAfterMezo": "80",
+  "remainingFundedClaims": 4,
+  "replaySimulationRejectedWith": "AlreadyClaimed",
+  "passed": true,
+  "broadcasts": 0
+}

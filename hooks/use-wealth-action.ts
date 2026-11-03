@@ -86,6 +86,7 @@ export function useWealthAction() {
       void cache.invalidateQueries({ queryKey: ["mezo-pool"] });
       void cache.invalidateQueries({ queryKey: ["mezo-locks"] });
       void cache.invalidateQueries({ queryKey: ["mezo-lock-account"] });
+      void cache.invalidateQueries({ queryKey: ["wallet-token"] });
       void refresh().catch(() => {});
       if (result.kind === "approval" && currentPlan) {
         try {

@@ -1,6 +1,8 @@
 # First Pocket merchant pilot
 
-Merchant operator: [@musd_pocket](https://x.com/musd_pocket), confirmed by the builder. Business profile **Pocket** is configured for its existing wallet `0x0a5e59ca4f182561de80172c6da5db927091ea29`. Item/service and price await confirmation. This is builder-operated; independent customers use their own accounts and wallets.
+Merchant operator: [@musd_pocket](https://x.com/musd_pocket), confirmed by the builder. Business profile **Pocket** is configured for its existing wallet `0x0a5e59ca4f182561de80172c6da5db927091ea29`. The confirmed offer is **Pocket closed-mainnet waitlist**, priced at **100 testnet mUSD**. This is builder-operated; independent customers use their own accounts and wallets.
+
+The first [pilot invoice](https://mpocket.tech/pay/89YAGVPYD8ZXYE6FJWZUK652) is created and pending payment. It records one payment; create another invoice for the next customer. Its creation is not a customer purchase. [Setup evidence](../evidence/wave-2-waitlist-pilot.json).
 
 1. Sign into Pocket with the intended X identity and confirm its wallet.
 2. Profile → Payment profile → Business; save the public business name.
@@ -15,13 +17,13 @@ The X page distributes links; Pocket signs payments. Own-wallet transfers are no
 
 | Field | Result |
 | --- | --- |
-| Date / app deployment | Pending |
-| Merchant public name / X handle | Pending |
-| Merchant wallet | Pending |
-| Item/service / exact mUSD price | Pending |
+| Date / app deployment | November 3, 2026 / mpocket.tech |
+| Merchant public name / X handle | Pocket / @musd_pocket |
+| Merchant wallet | 0x0a5e59ca4f182561de80172c6da5db927091ea29 |
+| Item/service / exact mUSD price | Closed-mainnet waitlist / 100 testnet mUSD |
 | Customer public alias, with consent | Pending |
 | Independent of builder's wallets? | Pending |
-| Invoice URL | Pending |
+| Invoice URL | https://mpocket.tech/pay/89YAGVPYD8ZXYE6FJWZUK652 |
 | Transaction explorer URL | Pending |
 | Paid status after reload | Pending |
 | Item/service delivered? | Pending |

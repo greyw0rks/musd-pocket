@@ -1,0 +1,46 @@
+{
+  "capturedAt": "2026-11-03T22:11:59.472Z",
+  "chainId": 31611,
+  "owner": "0xe66d1c48792a320c16d7abd90c835b25a0ac37db",
+  "open": {
+    "hash": "0xa6f7cdd5570fd32f2ead694375072f30bdd26a4623e5b31df29337a31876b752",
+    "block": "16555337",
+    "status": "success",
+    "mintedMusd": "2000",
+    "collateralBtc": "0.05",
+    "before": {
+      "status": 2,
+      "debtMusd": "0",
+      "collateralBtc": "0",
+      "walletMusd": "4747.187285749441277727"
+    },
+    "after": {
+      "status": 1,
+      "debtMusd": "2202",
+      "collateralBtc": "0.05",
+      "walletMusd": "6747.187285749441277727"
+    }
+  },
+  "close": {
+    "hash": "0xa5cc358a589f8966b76c20d6d2881e765e50d25eeec2da2723406d4ec8ed93f6",
+    "block": "16555351",
+    "status": "success",
+    "burnedMusd": "1992.000040389198735212",
+    "collateralReturnedBtc": "0.05",
+    "activePool": "0x143A063F62340DA3A8bEA1C5642d18C6D0F7FF51",
+    "before": {
+      "status": 1,
+      "debtMusd": "2192.000038305347269777",
+      "collateralBtc": "0.05",
+      "walletMusd": "6737.187285749441277727"
+    },
+    "after": {
+      "status": 2,
+      "debtMusd": "0",
+      "collateralBtc": "0",
+      "walletMusd": "4745.187245360242542515"
+    }
+  },
+  "passed": true,
+  "broadcasts": 0
+}

@@ -1,0 +1,21 @@
+{
+  "capturedAt": "2026-11-03T22:24:54.462Z",
+  "fixtureOnly": true,
+  "primaryAssets": [
+    "mUSD",
+    "BTC"
+  ],
+  "zeroBalancesHidden": true,
+  "smallPositiveBalanceShown": true,
+  "savingsPrincipalCountedOnce": true,
+  "unpricedTokensExcluded": true,
+  "primaryTypeLargerThanSecondary": true,
+  "narrowWidths": [
+    390,
+    320
+  ],
+  "noHorizontalOverflow": true,
+  "noCardClipping": true,
+  "flipPreserved": true,
+  "pageErrors": []
+}
