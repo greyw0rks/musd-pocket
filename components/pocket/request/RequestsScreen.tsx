@@ -54,12 +54,17 @@ export function RequestsScreen({
   const counts = useMemo(
     () => ({
       answer: requests.filter(
-        (request) => request.direction === "incoming" && request.status === "open",
+        (request) =>
+          request.direction === "incoming" && request.status === "open",
       ).length,
       waiting: requests.filter(
-        (request) => request.direction === "outgoing" && request.status === "open",
+        (request) =>
+          request.direction === "outgoing" &&
+          ["open", "processing"].includes(request.status),
       ).length,
-      closed: requests.filter((request) => request.status !== "open").length,
+      closed: requests.filter(
+        (request) => !["open", "processing"].includes(request.status),
+      ).length,
     }),
     [requests],
   );
@@ -69,15 +74,21 @@ export function RequestsScreen({
       if (filter === "answer")
         return request.direction === "incoming" && request.status === "open";
       if (filter === "waiting")
-        return request.direction === "outgoing" && request.status === "open";
-      if (filter === "closed") return request.status !== "open";
+        return (
+          request.direction === "outgoing" &&
+          ["open", "processing"].includes(request.status)
+        );
+      if (filter === "closed")
+        return !["open", "processing"].includes(request.status);
       return true;
     });
 
     // Open before settled, newest first inside each group. `sort` is stable, so
     // the service's newest-first order survives inside the two buckets.
     return [...matched].sort(
-      (a, b) => Number(b.status === "open") - Number(a.status === "open"),
+      (a, b) =>
+        Number(["open", "processing"].includes(b.status)) -
+        Number(["open", "processing"].includes(a.status)),
     );
   }, [requests, filter]);
 
@@ -108,13 +119,22 @@ export function RequestsScreen({
         <Chip selected={filter === "all"} onClick={() => setFilter("all")}>
           All {requests.length}
         </Chip>
-        <Chip selected={filter === "answer"} onClick={() => setFilter("answer")}>
+        <Chip
+          selected={filter === "answer"}
+          onClick={() => setFilter("answer")}
+        >
           To answer {counts.answer}
         </Chip>
-        <Chip selected={filter === "waiting"} onClick={() => setFilter("waiting")}>
+        <Chip
+          selected={filter === "waiting"}
+          onClick={() => setFilter("waiting")}
+        >
           Waiting {counts.waiting}
         </Chip>
-        <Chip selected={filter === "closed"} onClick={() => setFilter("closed")}>
+        <Chip
+          selected={filter === "closed"}
+          onClick={() => setFilter("closed")}
+        >
           Closed {counts.closed}
         </Chip>
       </ChipRow>
@@ -179,7 +199,9 @@ export function RequestsScreen({
  */
 const STATUS_PILL: Record<PaymentRequest["status"], string> = {
   open: "pk-pill pk-pill--warn",
+  processing: "pk-pill pk-pill--warn",
   paid: "pk-pill pk-pill--ok",
+  late_paid: "pk-pill pk-pill--warn",
   declined: "pk-pill",
   cancelled: "pk-pill",
   expired: "pk-pill",
@@ -196,11 +218,11 @@ function RequestRow({
 }) {
   const mounted = useMounted();
   const incoming = request.direction === "incoming";
-  const settled = request.status !== "open";
+  const settled = !["open", "processing"].includes(request.status);
 
   // Only an open incoming request wants something from the user, so only that
   // one is drawn as needing attention.
-  const wantsAnswer = incoming && settled === false;
+  const wantsAnswer = incoming && request.status === "open";
 
   return (
     <motion.li
@@ -254,7 +276,7 @@ function RequestRow({
               settled && "text-[var(--m)]",
             )}
           >
-            {formatMoney(request.amountUnits)}
+            {request.amountDisplay ?? formatMoney(request.amountUnits)}
           </span>
           <span className={cn(STATUS_PILL[request.status], "mt-1")}>
             {REQUEST_STATUS_LABEL[request.status]}

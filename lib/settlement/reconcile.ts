@@ -270,6 +270,7 @@ function describePayment(payment: PaymentRow, hash: string | null, kind: Outcome
 }
 
 async function reconcilePayment(payment: PaymentRow): Promise<ReconcileAction> {
+  if (payment.mode !== "LEGACY_VAULT") return describePayment(payment, payment.payoutTxHash, "held", "not an explicitly classified vault payment");
   const paymentId = payment.paymentId as `0x${string}`;
   const evidence = await gatherEvidence({
     paymentId,
@@ -292,7 +293,7 @@ async function reconcilePayment(payment: PaymentRow): Promise<ReconcileAction> {
       // The idempotency gate. Whichever run flips the row out of PENDING owns
       // the work; every other overlapping run sees count === 0 and does nothing.
       const claimed = await tx.payment.updateMany({
-        where: { id: payment.id, status: "PENDING" },
+        where: { id: payment.id, mode: "LEGACY_VAULT", status: "PENDING" },
         data: finalizing
           ? { status: "PAID", paidAt: new Date(), ...(hash ? { payoutTxHash: hash } : {}) }
           : { status: "FAILED" },
@@ -465,7 +466,8 @@ export async function reconcile(limit: number = BATCH): Promise<ReconcileReport>
 
   const [payments, withdrawals] = await Promise.all([
     prisma.payment.findMany({
-      where: { status: "PENDING" },
+      // Historical UNCLASSIFIED rows need review, never a guessed ledger action.
+      where: { status: "PENDING", mode: "LEGACY_VAULT" },
       orderBy: { createdAt: "asc" },
       take,
       include: { sender: { select: { username: true } } },

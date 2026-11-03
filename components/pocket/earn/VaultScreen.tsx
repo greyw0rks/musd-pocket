@@ -11,12 +11,9 @@ import { SCREEN, UP } from "@/components/pocket/theme";
 import { Button } from "@/components/pocket/ui/Button";
 import { Chip, ChipRow } from "@/components/pocket/ui/Chip";
 import { ListGroup, ListRow } from "@/components/pocket/ui/ListRow";
-import { PageHeading } from "@/components/pocket/ui/ScreenHeader";
+import { PageHeading, ScreenHeader } from "@/components/pocket/ui/ScreenHeader";
 import { TextField } from "@/components/pocket/ui/TextField";
-import {
-  ErrorState,
-  ListSkeleton,
-} from "@/components/pocket/ui/States";
+import { ErrorState, ListSkeleton } from "@/components/pocket/ui/States";
 import { formatMusd } from "@/lib/mezo/borrow-format";
 import { parseDecimalToWei, weiToDecimalInput } from "@/lib/mezo/borrow-math";
 
@@ -63,12 +60,16 @@ import { parseDecimalToWei, weiToDecimalInput } from "@/lib/mezo/borrow-math";
  * The screen only reads and hands two decisions to `useEarnActions`, which ask
  * the chain before they ask the wallet.
  */
-export function VaultScreen() {
+export function VaultScreen({ onBack }: { onBack?: () => void }) {
   const { data, isPending, isError, error, refetch, isFetching } = useEarn();
 
   return (
     <div className={SCREEN}>
-      <PageHeading title="Vault" />
+      {onBack ? (
+        <ScreenHeader title="Vault" onBack={onBack} />
+      ) : (
+        <PageHeading title="Vault" />
+      )}
 
       {isPending ? (
         <ListSkeleton rows={3} />
@@ -93,13 +94,7 @@ export function VaultScreen() {
 /* A read vault                                                                */
 /* -------------------------------------------------------------------------- */
 
-function Vault({
-  view,
-  refreshing,
-}: {
-  view: EarnView;
-  refreshing: boolean;
-}) {
+function Vault({ view, refreshing }: { view: EarnView; refreshing: boolean }) {
   const actions = useEarnActions();
   const queryClient = useQueryClient();
   const wallet = useMusdBalance();
@@ -108,7 +103,12 @@ function Vault({
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hash, setHash] = useState<string | null>(null);
+  const [hash, setHash] = useState<string | null>(() =>
+    actions.pendingClaimHash(),
+  );
+  const [pendingClaimHash, setPendingClaimHash] = useState<string | null>(() =>
+    actions.pendingClaimHash(),
+  );
 
   const principal = BigInt(view.principal);
   const claimable =
@@ -167,6 +167,8 @@ function Vault({
     setError(null);
     setHash(null);
     const result = await actions.claim();
+    setPendingClaimHash(actions.pendingClaimHash());
+    if (result.hash) setHash(result.hash);
     setBusy(false);
     if (!result.ok) {
       setError(result.error);
@@ -188,7 +190,11 @@ function Vault({
         <p className="pk-m font-semibold uppercase">Saved</p>
         <p
           className="pk-big"
-          style={{ fontSize: 30, letterSpacing: "-1px", fontVariantNumeric: "tabular-nums" }}
+          style={{
+            fontSize: 30,
+            letterSpacing: "-1px",
+            fontVariantNumeric: "tabular-nums",
+          }}
         >
           {formatMusd(principal)}
         </p>
@@ -246,10 +252,10 @@ function Vault({
         />
       </ListGroup>
 
-      {claimable !== null && claimable > 0n ? (
+      {pendingClaimHash || (claimable !== null && claimable > 0n) ? (
         <div style={{ marginTop: 12 }}>
           <Button full variant="secondary" loading={busy} onClick={claim}>
-            Claim interest
+            {pendingClaimHash ? "Check claim confirmation" : "Claim interest"}
           </Button>
         </div>
       ) : null}
@@ -312,7 +318,9 @@ function Vault({
       <Button
         full
         loading={busy}
-        disabled={(view.vaultAcceptsMusd === false && mode === "save") || !canSubmit}
+        disabled={
+          (view.vaultAcceptsMusd === false && mode === "save") || !canSubmit
+        }
         onClick={run}
       >
         {mode === "save" ? "Save MUSD" : "Take out MUSD"}

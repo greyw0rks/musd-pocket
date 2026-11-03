@@ -1,15 +1,18 @@
-import type { PaymentRequest } from "@prisma/client";
+import type { PaymentRequest, RequestStatus } from "@prisma/client";
 
 export type SerializedRequest = {
   shortId: string;
   displayId: string;
   creatorAddress: string;
   recipientAddress: string;
+  intendedPayerAddress: string | null;
+  merchantName: string | null;
+  version: number;
   amount: string;
   token: string;
   chainId: number;
   description: string | null;
-  status: "PENDING" | "PROCESSING" | "PAID" | "EXPIRED";
+  status: RequestStatus;
   txHash: string | null;
   payerAddress: string | null;
   expiresAt: string | null;
@@ -23,7 +26,10 @@ export function serializeRequest(r: PaymentRequest): SerializedRequest {
     displayId: `POCKET-${r.shortId}`,
     creatorAddress: r.creatorAddress,
     recipientAddress: r.recipientAddress,
-    amount: r.amount.toString(),
+    intendedPayerAddress: r.intendedPayerAddress,
+    merchantName: r.merchantName,
+    version: r.version,
+    amount: r.amount.toFixed(),
     token: r.token,
     chainId: r.chainId,
     description: r.description,

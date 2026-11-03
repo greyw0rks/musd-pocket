@@ -1,0 +1,20 @@
+{
+  "capturedAt": "2026-11-03T21:38:47.251Z",
+  "chainId": 31611,
+  "block": "16555008",
+  "campaign": "0x3469818359ce1bae2d137531dcd78c5cc4ec14ba",
+  "configuredInProduction": true,
+  "configurationMatches": false,
+  "token": "0x7B7c000000000000000000000000000000000001",
+  "escrow": "0xaCE816CA2bcc9b12C59799dcC5A959Fb9b98111b",
+  "authorizer": "0xBA46d08B9E298E8E70096Fc238Da207139BCCAB7",
+  "owner": "0xBA46d08B9E298E8E70096Fc238Da207139BCCAB7",
+  "rewardMezo": "200",
+  "lockDurationSeconds": "1209600",
+  "paused": false,
+  "inventoryMezo": "0",
+  "fundedClaims": 0,
+  "borrowerWalletAlreadyClaimed": true,
+  "merchantWalletAlreadyClaimed": false,
+  "broadcasts": 0
+}

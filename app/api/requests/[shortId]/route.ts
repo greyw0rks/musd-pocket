@@ -12,10 +12,8 @@ import { serializeRequest } from "@/lib/requests/serialize";
  * while an anonymous caller cannot enumerate short ids and harvest addresses
  * and amounts.
  *
- * When the shareable pay-link for *external* wallets is built (Milestone 3),
- * this route has to become public, and at that point the short id must be
- * unguessable rather than 5 characters. Noted here because that change cannot
- * be made safely by accident.
+ * Checkout keeps this authentication gate and uses unguessable 24-character
+ * IDs. The payer signs in on the invoice URL before reading its details.
  */
 export async function GET(
   req: NextRequest,

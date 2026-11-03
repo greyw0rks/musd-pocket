@@ -3,10 +3,7 @@
 import { motion } from "motion/react";
 import { useState } from "react";
 import { Avatar } from "@/components/pocket/Avatar";
-import {
-  ChevronRightIcon,
-  QrIcon,
-} from "@/components/pocket/icons";
+import { ChevronRightIcon, QrIcon } from "@/components/pocket/icons";
 import { SCREEN } from "@/components/pocket/theme";
 import { Button } from "@/components/pocket/ui/Button";
 import { ScreenHeader } from "@/components/pocket/ui/ScreenHeader";
@@ -15,6 +12,7 @@ import { parsePayLink } from "@/features/payments/paylink";
 import type { ResolveHandleResult } from "@/features/contacts/api-contact.adapter";
 import type { Recipient } from "@/features/payments/payment.types";
 import { formatMoney } from "@/lib/formatters";
+import { parseCheckoutLink } from "@/lib/requests/links";
 
 /**
  * Scan to pay.
@@ -58,10 +56,16 @@ export function ScanScreen({
     setError(null);
     setPreview(null);
 
+    const checkout = parseCheckoutLink(text, window.location.origin);
+    if (checkout) {
+      window.location.assign(checkout);
+      return;
+    }
+
     const parsed = parsePayLink(text);
     if (!parsed) {
       setError(
-        "That is not a Pocket username or payment link. Try @someone or pocket:@someone.",
+        "Paste a Pocket payment link from this site, or enter a username such as @someone.",
       );
       return;
     }
@@ -78,7 +82,10 @@ export function ScanScreen({
         setError(result.error);
         return;
       }
-      setPreview({ recipient: result.recipient, amountUnits: parsed.amountUnits });
+      setPreview({
+        recipient: result.recipient,
+        amountUnits: parsed.amountUnits,
+      });
     } catch {
       setError(
         "That lookup did not go through. Check your connection and try again.",
@@ -194,7 +201,9 @@ export function ScanScreen({
             size="lg"
             className="mt-3"
             icon={<ChevronRightIcon size={16} />}
-            onClick={() => onResolved(preview.recipient.id, preview.amountUnits)}
+            onClick={() =>
+              onResolved(preview.recipient.id, preview.amountUnits)
+            }
           >
             Continue to payment
           </Button>
@@ -203,8 +212,7 @@ export function ScanScreen({
 
       <div className="mt-6 border-t border-[var(--line)] pt-4">
         <p className="pk-m leading-relaxed">
-          Being paid rather than paying? Your own code is on the receive
-          screen.
+          Being paid rather than paying? Your own code is on the receive screen.
         </p>
         <Button
           size="sm"

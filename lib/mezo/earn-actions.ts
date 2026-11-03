@@ -1,7 +1,8 @@
+import { pendingClaim, rememberClaim } from "./claim-journal";
 import type { WalletClient } from "viem";
 import { getPublicClient, MUSD_ABI } from "./musd";
 import { MUSD_ADDRESS, CHAIN_ID } from "./config";
-import { SAVINGS_VAULT_ABI, activeEarn } from "./earn";
+import { SAVINGS_VAULT_ABI, activeEarn, readClaimableYield } from "./earn";
 
 /**
  * Depositing into and withdrawing from the Mezo MUSD Savings Vault.
@@ -79,6 +80,8 @@ export type EarnWriteResult =
   | { ok: true; hash: `0x${string}` }
   | { ok: false; error: string; hash?: `0x${string}` };
 
+const claimsInFlight = new Map<string, Promise<EarnWriteResult>>();
+
 /** Mezo mines in about seven seconds; a wait that has not answered in 30s will not. */
 const RECEIPT_TIMEOUT_MS = 30_000;
 
@@ -148,6 +151,7 @@ export function createEarnActions(deps: {
     wallet: WalletClient,
     send: () => Promise<`0x${string}`>,
     done: string,
+    trackClaim = false,
   ): Promise<EarnWriteResult> {
     let hash: `0x${string}`;
     try {
@@ -165,11 +169,13 @@ export function createEarnActions(deps: {
       };
     }
 
+    if (trackClaim) rememberClaim(wallet.account!.address, hash);
     try {
       const receipt = await rpc().waitForTransactionReceipt({
         hash,
         timeout: RECEIPT_TIMEOUT_MS,
       });
+      if (trackClaim) rememberClaim(wallet.account!.address, null);
       if (receipt.status === "reverted") {
         return {
           ok: false,
@@ -190,7 +196,7 @@ export function createEarnActions(deps: {
       return {
         ok: false,
         hash,
-        error: `${done} was signed and broadcast, but this app could not read the receipt yet. Do not repeat it — ${hash} will confirm shortly, and this screen will catch up.`,
+        error: `${done} was signed and broadcast, but this app could not read the receipt yet. Do not repeat it — ${hash} can be checked on the explorer.`,
       };
     }
   }
@@ -201,12 +207,12 @@ export function createEarnActions(deps: {
    * could not be checked — rather than as a guess at which rule fired.
    */
   async function simulate<T>(
-    run: () => Promise<{ request: T }>,
+    run: () => Promise<{ request: T; result?: unknown }>,
     what: string,
     from: string,
-  ): Promise<{ request: T } | { error: string }> {
+  ): Promise<{ request: T; result?: unknown } | { error: string }> {
     try {
-      return { request: (await run()).request };
+      return await run();
     } catch (e) {
       console.error("[pocket] earn simulation refused", {
         from,
@@ -219,7 +225,107 @@ export function createEarnActions(deps: {
     }
   }
 
+  async function recoverClaim(
+    wallet: WalletClient,
+    hash: `0x${string}`,
+  ): Promise<EarnWriteResult> {
+    try {
+      const tx = await rpc().getTransaction({ hash });
+      if (
+        tx.from.toLowerCase() !== wallet.account!.address.toLowerCase() ||
+        tx.to?.toLowerCase() !== activeEarn.savingsVault.toLowerCase() ||
+        tx.input !== "0x406cf229" ||
+        tx.value !== 0n
+      ) {
+        return {
+          ok: false,
+          hash,
+          error:
+            "The saved claim could not be verified. Check its transaction before trying again.",
+        };
+      }
+      const receipt = await rpc().getTransactionReceipt({ hash });
+      rememberClaim(wallet.account!.address, null);
+      return receipt.status === "success"
+        ? { ok: true, hash }
+        : { ok: false, hash, error: "The claim reverted. You can try again." };
+    } catch {
+      return {
+        ok: false,
+        hash,
+        error:
+          "Your claim is still awaiting confirmation. Check again shortly.",
+      };
+    }
+  }
+
+  async function performClaim(): Promise<EarnWriteResult> {
+    const signed = signer();
+    if ("error" in signed) return { ok: false, error: signed.error };
+    const from = signed.wallet.account!.address;
+    const vault = activeEarn.savingsVault;
+    const existing = pendingClaim(from);
+    if (existing) return recoverClaim(signed.wallet, existing);
+
+    /*
+        Asked first, because it turns the common case — pressing Claim with
+        nothing accrued — into a sentence in the app's voice rather than a
+        reverted transaction the user paid BTC gas for.
+      */
+    const claimable = await readClaimableYield(from).catch(() => null);
+
+    if (claimable === null) {
+      return {
+        ok: false,
+        error:
+          "Could not read what is claimable, so nothing was signed. Try again in a moment.",
+      };
+    }
+    if (claimable === 0n) {
+      return { ok: false, error: "There is no interest to claim yet." };
+    }
+
+    /*
+        Simulated with no `value` and no `args`, which is all the contract takes.
+        A revert here is the interesting case and is reported as a refusal: the
+        selector is dispatched by the contract but the *conditions* for a claim
+        are not something this app can see, so a no here means the vault knows
+        something the screen does not.
+      */
+    const sim = await simulate(
+      () =>
+        rpc().simulateContract({
+          account: from,
+          address: vault,
+          abi: SAVINGS_VAULT_ABI,
+          functionName: "claimYield",
+        }),
+      "claim",
+      from,
+    );
+    if ("error" in sim) return { ok: false, error: sim.error };
+
+    if (typeof sim.result !== "bigint" || sim.result <= 0n) {
+      return {
+        ok: false,
+        error:
+          "The vault currently has no yield to pay. Refresh your Savings balance.",
+      };
+    }
+
+    return broadcast(
+      signed.wallet,
+      () => signed.wallet.writeContract(sim.request),
+      "The claim",
+      true,
+    );
+  }
+
   return {
+    pendingClaimHash: () => {
+      const wallet = getWalletClient();
+      return wallet?.account ? pendingClaim(wallet.account.address) : null;
+    },
     /**
      * Put MUSD into the Savings Vault.
      *
@@ -408,67 +514,44 @@ export function createEarnActions(deps: {
      * reaches the wallet.
      *
      * No amount is passed and none is invented. `claimYield()` takes no
-     * arguments — it pays out whatever `claimableYield(address)` holds — so the
+     * arguments — it updates the yield index and pays the accrued amount — so the
      * figure the screen shows is a preview, and the chain decides the real one
-     * at the moment of the call. If the two disagree the user gets the larger,
-     * which is the only direction that cannot cheat them.
+     * at the moment of the call. The confirmed transaction determines the final payout.
      */
     async claim(): Promise<EarnWriteResult> {
-      const signed = signer();
-      if ("error" in signed) return { ok: false, error: signed.error };
-      const from = signed.wallet.account!.address;
-      const vault = activeEarn.savingsVault;
-
-      /*
-        Asked first, because it turns the common case — pressing Claim with
-        nothing accrued — into a sentence in the app's voice rather than a
-        reverted transaction the user paid BTC gas for.
-      */
-      const claimable = await rpc()
-        .readContract({
-          address: vault,
-          abi: SAVINGS_VAULT_ABI,
-          functionName: "claimableYield",
-          args: [from],
-        })
-        .catch(() => null);
-
-      if (claimable === null) {
-        return {
-          ok: false,
-          error:
-            "Could not read what is claimable, so nothing was signed. Try again in a moment.",
-        };
-      }
-      if (claimable === 0n) {
-        return { ok: false, error: "There is no interest to claim yet." };
-      }
-
-      /*
-        Simulated with no `value` and no `args`, which is all the contract takes.
-        A revert here is the interesting case and is reported as a refusal: the
-        selector is dispatched by the contract but the *conditions* for a claim
-        are not something this app can see, so a no here means the vault knows
-        something the screen does not.
-      */
-      const sim = await simulate(
-        () =>
-          rpc().simulateContract({
-            account: from,
-            address: vault,
-            abi: SAVINGS_VAULT_ABI,
-            functionName: "claimYield",
+      const address = getWalletClient()?.account?.address;
+      if (!address) return performClaim();
+      const key = `pocket:savings-claim:${CHAIN_ID}:${address.toLowerCase()}`;
+      const existing = claimsInFlight.get(key);
+      if (existing) return existing;
+      const work = async (): Promise<EarnWriteResult> => {
+        if (typeof navigator !== "undefined" && navigator.locks) {
+          return navigator.locks.request(
+            key,
+            { ifAvailable: true },
+            async (lock) =>
+              lock
+                ? performClaim()
+                : {
+                    ok: false,
+                    error: "A claim is already being checked in another tab.",
+                  },
+          );
+        }
+        return performClaim();
+      };
+      const promise = work()
+        .catch(
+          (): EarnWriteResult => ({
+            ok: false,
+            hash: pendingClaim(address) ?? undefined,
+            error:
+              "Could not finish checking the claim. Refresh and check its confirmation before trying again.",
           }),
-        "claim",
-        from,
-      );
-      if ("error" in sim) return { ok: false, error: sim.error };
-
-      return broadcast(
-        signed.wallet,
-        () => signed.wallet.writeContract(sim.request),
-        "The claim",
-      );
+        )
+        .finally(() => claimsInFlight.delete(key));
+      claimsInFlight.set(key, promise);
+      return promise;
     },
   };
 }

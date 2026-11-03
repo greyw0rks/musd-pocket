@@ -1,0 +1,67 @@
+{
+  "capturedAt": "2026-11-02T10:54:03.775Z",
+  "chainId": 31611,
+  "block": "16525137",
+  "owner": "0xe66d1c48792a320c16d7abd90c835b25a0ac37db",
+  "wallet": {
+    "btc": "0.30290099894726335",
+    "musd": "4947.187285749441277727"
+  },
+  "savings": {
+    "vault": "0x6f461c68B2c5492C0F5CCEc5a264d692aA7A8e16",
+    "principal": "2000",
+    "stored": "0",
+    "accrued": "0",
+    "simulatedPayout": "0",
+    "estimatedGas": "47392",
+    "gasPriceWei": "146",
+    "estimatedBtcFee": "0.000000000006919232",
+    "calldata": "0x406cf229",
+    "value": "0",
+    "receipt": null
+  },
+  "borrow": {
+    "status": "closedByOwner",
+    "debt": "0",
+    "partialRepaymentReady": false,
+    "receipt": null
+  },
+  "rewards": {
+    "escrow": "0xaCE816CA2bcc9b12C59799dcC5A959Fb9b98111b",
+    "token": "0x7B7c000000000000000000000000000000000001",
+    "decimals": 18,
+    "campaignDeployedByThisTask": false
+  },
+  "pools": [
+    {
+      "address": "0xd16A5Df82120ED8D626a1a15232bFcE2366d6AA9",
+      "token0": "0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503",
+      "token1": "0x7b7C000000000000000000000000000000000000",
+      "symbols": [
+        "MUSD",
+        "BTC"
+      ],
+      "stable": false
+    },
+    {
+      "address": "0x525F049A4494dA0a6c87E3C4df55f9929765Dc3e",
+      "token0": "0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503",
+      "token1": "0xe1a26db653708A2AD8F824E92Db9852410e33A59",
+      "symbols": [
+        "MUSD",
+        "mUSDC"
+      ],
+      "stable": true
+    },
+    {
+      "address": "0x27414B76CF00E24ed087adb56E26bAeEEe93494e",
+      "token0": "0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503",
+      "token1": "0x629320719a6190bd145C277226fd45e7648F950A",
+      "symbols": [
+        "MUSD",
+        "mUSDT"
+      ],
+      "stable": true
+    }
+  ]
+}

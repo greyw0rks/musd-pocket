@@ -53,6 +53,7 @@ export function HomeScreen({
   onRequest,
   onReceive,
   onBorrow,
+  onLocks,
   onRepay,
   onOpenNotifications,
   onOpenAccount,
@@ -104,6 +105,7 @@ export function HomeScreen({
   onRequest: () => void;
   onReceive: () => void;
   onBorrow: () => void;
+  onLocks: () => void;
   /**
    * Opens the repay screen. Always given: the button is always drawn, disabled
    * when there is nothing to repay.
@@ -317,6 +319,7 @@ export function HomeScreen({
         faucet={faucet}
       />
       <RewardsSheet
+        onManageLocks={onLocks}
         open={rewardsOpen}
         onClose={() => setRewardsOpen(false)}
       />

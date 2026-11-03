@@ -70,6 +70,14 @@ export function SpendIcon(p: IconProps) {
   );
 }
 
+export function SwapIcon(p: IconProps) {
+  return (
+    <Icon {...p}>
+      <path d="M4 7h16l-4-4M20 17H4l4 4" />
+    </Icon>
+  );
+}
+
 export function BackIcon(p: IconProps) {
   return (
     <Icon {...p}>
@@ -414,7 +422,6 @@ export function DeleteIcon(p: IconProps) {
   );
 }
 
-
 /* --------------------------------------------------------------------------
    Added by the vocabulary sweep.
    --------------------------------------------------------------------------
@@ -509,6 +516,14 @@ export function ShareIcon(p: IconProps) {
       <circle cx="6" cy="12" r="2.5" />
       <circle cx="17" cy="19" r="2.5" />
       <path d="M8.2 10.8l6.6-3.6M8.2 13.2l6.6 3.6" />
+    </Icon>
+  );
+}
+
+export function PoolIcon(p: IconProps) {
+  return (
+    <Icon {...p}>
+      <path d="M4 9c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2M4 14c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2M4 19c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2" />
     </Icon>
   );
 }

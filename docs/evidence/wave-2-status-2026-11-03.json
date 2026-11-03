@@ -1,0 +1,110 @@
+{
+  "capturedAt": "2026-11-03T21:19:23.125Z",
+  "scope": "Read-only source, live deployment, aggregate database and public Mezo inspection; existing local tests rerun. No application fixes, database writes or financial broadcasts.",
+  "repository": {
+    "path": "/home/greyw0rks/musd-pocket",
+    "publicMain": "8599ebfac0dc6983d2264bd7a15bcbf45a9a211a",
+    "wave2ChangesUncommitted": true
+  },
+  "deployment": {
+    "id": "dpl_BUkiyGnXsJ14PjW5PSG6w9mzJn23",
+    "createdAt": "2026-10-31T23:36:06Z",
+    "status": "Ready",
+    "target": "production",
+    "aliases": [
+      "https://mpocket.vercel.app",
+      "https://mpocket.tech"
+    ],
+    "checkoutHttpStatus": 200,
+    "checkoutMatchedPath": "/pay/[shortId]",
+    "liveDock": [
+      "Home",
+      "Vault",
+      "Spending"
+    ],
+    "localDock": [
+      "Home",
+      "Swap",
+      "Wealth"
+    ]
+  },
+  "database": {
+    "capturedAt": "2026-11-03T21:17:46.000Z",
+    "users": 6,
+    "personal": 6,
+    "merchant": 0,
+    "completedFaucets": 4,
+    "payments": [
+      {
+        "mode": "DIRECT",
+        "status": "PAID",
+        "count": 8
+      },
+      {
+        "mode": "UNCLASSIFIED",
+        "status": "PAID",
+        "count": 5
+      },
+      {
+        "mode": "UNCLASSIFIED",
+        "status": "FAILED",
+        "count": 1
+      }
+    ],
+    "paymentRequests": 0,
+    "welcomeRewardJournalExists": false,
+    "independentHumanAdoptionVerified": false
+  },
+  "chain": {
+    "chainId": 31611,
+    "owner": "0xe66d1c48792a320c16d7abd90c835b25a0ac37db",
+    "block": "16554728",
+    "troveStatus": "closedByOwner",
+    "debt": "0",
+    "outgoingTransactionsInspected": 29,
+    "explorerNextPage": null,
+    "repayMUSDMatches": 0,
+    "claims": [
+      {
+        "hash": "0x43149c59ae2cafafdc764a234ba6df7050a3981218cebd83ca633caaa608cfdf",
+        "musdReceived": "187.366117347141378"
+      },
+      {
+        "hash": "0x5271739bb3e06a0f1233efc0ac85df7d9b79e47126242236b28d29a4ecb7a3af",
+        "musdReceived": "0.00228183663115"
+      }
+    ],
+    "liquidityAdd": {
+      "hash": "0xef79292d44ad002722c6e4532abb33d0d679d0240c867c587784391fbd6e9409",
+      "status": "success",
+      "block": "16526068"
+    },
+    "claimAmountsSource": "docs/evidence/mezo-feature-receipts.json, verified 2026-11-02; outgoing index reconfirmed 2026-11-03"
+  },
+  "testsRerun": {
+    "wealth": 61,
+    "checkout": 59,
+    "payments": 39,
+    "reconcile": 18,
+    "total": 177,
+    "allPassed": true
+  },
+  "materials": {
+    "deck": "/home/greyw0rks/musd-pocket-wave1/docs/submission/pitch-deck.pdf",
+    "slideCount": 8,
+    "editableJson": true,
+    "printableHtml": true,
+    "track": "Track 2: Access and Distribution for MUSD/MEZO",
+    "revenue": "Proposed disclosed merchant fee covering gas sponsorship; premium merchant tools later. No revenue claimed.",
+    "currentMainReadmeStillLegacy": true,
+    "deckNeedsWave2Refresh": true
+  },
+  "tracker": {
+    "url": "https://app.notion.com/p/3edd8749621b81efb73ae63666abb7a5",
+    "status": "Building",
+    "wave1Won": true,
+    "wave2SubmissionConfirmed": false,
+    "wave2DeadlineVerified": false
+  }
+}
+

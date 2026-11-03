@@ -1,0 +1,48 @@
+{
+  "date": "2026-11-02",
+  "application": "musd-pocket",
+  "navigation": ["Home", "Swap", "Wealth"],
+  "wealthUnitTests": 61,
+  "forkTests": {
+    "passed": 5,
+    "chainId": 31611,
+    "block": 16525761,
+    "tokenFixtures": true,
+    "testGasLimit": 100000000,
+    "permanentUnlockUsesPeriodicCheckpoints": true,
+    "actions": [
+      "add liquidity",
+      "remove liquidity",
+      "swap both directions",
+      "slippage rejection",
+      "claim pool fees",
+      "create lock",
+      "add MEZO",
+      "extend lock",
+      "withdraw expired lock",
+      "make permanent",
+      "start 208-week unlock"
+    ]
+  },
+  "browserComponents": {
+    "rpcAndWalletFixtures": true,
+    "realClientControllers": true,
+    "walletCallsNeverBroadcast": true,
+    "separateApprovalAndFinalConfirmation": true,
+    "pendingRecoveryWithoutSignature": true,
+    "unknownSubmissionAcknowledgement": true,
+    "navigationWidths": [390, 320],
+    "pageErrors": []
+  },
+  "anonymousAppSmoke": {
+    "home": 200,
+    "checkout": 200,
+    "invoiceUrlPreserved": true,
+    "anonymousInvoice": 401,
+    "pageErrors": []
+  },
+  "focusedEslint": "passed",
+  "productionBuild": "passed",
+  "agentLiveFinancialBroadcasts": 0,
+  "databaseMigrationsApplied": false
+}

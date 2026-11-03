@@ -9,6 +9,8 @@ export function serializeUser(user: User): PocketUser {
   return {
     id: user.id,
     username: user.username,
+    role: user.role,
+    businessName: user.businessName,
     walletAddress: user.walletAddress,
     xHandle: user.xHandle,
     avatarUrl: user.avatarUrl,

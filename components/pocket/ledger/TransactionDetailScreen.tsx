@@ -4,7 +4,6 @@ import { motion } from "motion/react";
 import { useState } from "react";
 import { Avatar } from "@/components/pocket/Avatar";
 import {
-  CheckIcon,
   CopyIcon,
   RefreshIcon,
   RequestIcon,
@@ -15,44 +14,52 @@ import { Button } from "@/components/pocket/ui/Button";
 import { ListGroup, ListRow } from "@/components/pocket/ui/ListRow";
 import { ScreenHeader } from "@/components/pocket/ui/ScreenHeader";
 import { useMounted } from "@/components/pocket/ui/useMounted";
-import { formatAssetAmount, PAYMENT_STATUS_LABEL } from "@/lib/formatters";
+import { PAYMENT_STATUS_LABEL } from "@/lib/formatters";
+import { MEZO } from "@/lib/mezo/config";
 import { cn } from "@/lib/utils";
-import type {
-  Recipient,
-  Transaction,
-} from "@/features/payments/payment.types";
+import type { Recipient, Transaction } from "@/features/payments/payment.types";
 
 /**
- * One payment, in full.
- *
- * Section 8 asks for a details screen and section 10 is specific about what it
- * may not claim: this is where "confirmed" would be most tempting to dress up
- * as a settlement, so it is where the screen has to say what it actually is —
- * a record of something that happened inside this app.
- *
- * The "Network" row is the one that carries that. A real receipt shows a chain
- * and a hash; this one shows that there is nothing to show, in the same slot a
- * chain name would occupy, because an absent row reads as an oversight while
- * an explicit one reads as the truth.
- *
- * There is deliberately no explorer link. There is nothing to link to, and a
- * disabled "View on explorer" would be the exact control this build keeps
- * removing.
+ * A recorded or locally retained payment. Pending transfers offer receipt
+ * recovery and hide Send again. Explorer links use the recorded chain ID.
  */
 export function TransactionDetailScreen({
   transaction,
   recipient,
   onBack,
   onSendAgain,
+  onRefresh,
 }: {
   transaction: Transaction;
   /** The counterparty, when they are still in the contact list. */
   recipient: Recipient | null;
   onBack: () => void;
   onSendAgain: (recipientId: string) => void;
+  onRefresh?: () => Promise<void>;
 }) {
   const mounted = useMounted();
   const [copied, setCopied] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const network = Object.entries(MEZO).find(
+    ([, value]) => value.chainId === transaction.chainId,
+  );
+  const explorer = network?.[1].chain.blockExplorers.default.url;
+
+  async function checkConfirmation() {
+    if (!onRefresh || checking) return;
+    setChecking(true);
+    setRefreshError(null);
+    try {
+      await onRefresh();
+    } catch {
+      setRefreshError(
+        "Could not refresh confirmation. Keep this hash and try again.",
+      );
+    } finally {
+      setChecking(false);
+    }
+  }
 
   const received = transaction.direction === "received";
   const counterpartyLabel = received ? "From" : "To";
@@ -92,11 +99,17 @@ export function TransactionDetailScreen({
         </motion.div>
 
         <p className="pk-m mt-3 font-medium">
-          {received ? "You received" : "You sent"}
+          {transaction.status === "pending"
+            ? "Payment submitted"
+            : transaction.status === "failed"
+              ? "Payment not completed"
+              : received
+                ? "You received"
+                : "You sent"}
         </p>
 
-        <h2 className="mt-0.5 text-[30px] font-extrabold tracking-tight tabular-nums">
-          {formatAssetAmount(transaction.asset, transaction.amountUnits)}
+        <h2 className="mt-0.5 break-words text-[30px] font-extrabold tracking-tight tabular-nums">
+          {transaction.amountDisplay}
         </h2>
 
         <div className="mt-3">
@@ -143,8 +156,10 @@ export function TransactionDetailScreen({
             title="Status"
             subtitle={
               transaction.status === "confirmed"
-                ? "Recorded. This is a record in the app, not a settlement."
-                : undefined
+                ? "Payment confirmed."
+                : transaction.status === "pending"
+                  ? "Confirmation is being checked. Do not send this payment again."
+                  : "The payment did not complete."
             }
             trailing={<PaymentStatusPill status={transaction.status} />}
           />
@@ -199,8 +214,16 @@ export function TransactionDetailScreen({
           <ListRow
             as="div"
             title="Network"
-            subtitle="Nothing here has reached a blockchain. The chain and hash will appear here."
-            trailing={<span className="pk-pill">None</span>}
+            subtitle={
+              network
+                ? "Open the transaction to check its network status."
+                : "The network was not recorded for this older payment."
+            }
+            trailing={
+              <span className="pk-pill">
+                {network ? `Mezo ${network[0]}` : "Not recorded"}
+              </span>
+            }
           />
 
           {transaction.txHash ? (
@@ -240,7 +263,7 @@ export function TransactionDetailScreen({
             {copied ? "Copied" : "Copy reference"}
           </Button>
 
-          {recipient ? (
+          {recipient && transaction.status !== "pending" ? (
             <Button
               size="lg"
               className="min-w-0 flex-1"
@@ -252,17 +275,30 @@ export function TransactionDetailScreen({
           ) : null}
         </div>
 
-        <p className="pk-m flex items-start gap-2 leading-relaxed">
-          <CheckIcon
-            size={13}
-            className="mt-0.5 shrink-0 text-[var(--g-ink)]"
-          />
-          <span>
-            When this is wired to a real wallet, the amount, the recipient and
-            this screen keep their shape. What changes is that the status would
-            come from a chain rather than from the app.
-          </span>
-        </p>
+        {transaction.status === "pending" && onRefresh ? (
+          <Button
+            full
+            loading={checking}
+            onClick={() => void checkConfirmation()}
+          >
+            Check confirmation
+          </Button>
+        ) : null}
+        {transaction.txHash && explorer ? (
+          <a
+            href={`${explorer}/tx/${transaction.txHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block text-center text-sm font-semibold underline"
+          >
+            View on explorer
+          </a>
+        ) : null}
+        {transaction.error || refreshError ? (
+          <p role="status" className="pk-m">
+            {refreshError ?? transaction.error}
+          </p>
+        ) : null}
       </div>
     </div>
   );
@@ -280,10 +316,10 @@ export function TransactionDetailScreen({
 function PaymentStatusPill({ status }: { status: Transaction["status"] }) {
   const tone =
     status === "failed"
-      // `.pk-pill` sets its own background and colour, so the failed tone has
-      // to outrank both. A failed payment that renders as the neutral pill is
-      // the one state this screen must never understate.
-      ? "pk-pill !bg-[color-mix(in_srgb,var(--r)_15%,transparent)] !text-[var(--r-ink)]"
+      ? // `.pk-pill` sets its own background and colour, so the failed tone has
+        // to outrank both. A failed payment that renders as the neutral pill is
+        // the one state this screen must never understate.
+        "pk-pill !bg-[color-mix(in_srgb,var(--r)_15%,transparent)] !text-[var(--r-ink)]"
       : status === "pending"
         ? "pk-pill pk-pill--warn"
         : "pk-pill";

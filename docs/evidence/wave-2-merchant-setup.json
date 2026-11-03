@@ -1,0 +1,14 @@
+{
+  "capturedAt": "2026-11-03T21:31:25.398Z",
+  "requestedByBuilder": true,
+  "merchant": {
+    "username": "musd_pocket",
+    "xHandle": "Musd_pocket",
+    "walletAddress": "0x0a5e59ca4f182561de80172c6da5db927091ea29",
+    "role": "MERCHANT",
+    "businessName": "Pocket"
+  },
+  "welcomeRewardJournalCreated": true,
+  "invoiceCreated": false,
+  "financialBroadcasts": 0
+}

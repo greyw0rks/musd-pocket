@@ -1,0 +1,54 @@
+{
+  "capturedAt": "2026-11-03T21:35:38.681Z",
+  "block": "16554962",
+  "chainId": 31611,
+  "broadcasts": 0,
+  "owner": {
+    "address": "0xe66d1c48792a320c16d7abd90c835b25a0ac37db",
+    "btc": "0.300357643743264865",
+    "musd": "4747.187285749441277727",
+    "mezo": "0"
+  },
+  "merchant": {
+    "address": "0x0a5e59ca4f182561de80172c6da5db927091ea29",
+    "btc": "0.001000999982353418",
+    "musd": "518",
+    "mezo": "0"
+  },
+  "relayer": {
+    "address": "0xBA46d08B9E298E8E70096Fc238Da207139BCCAB7",
+    "btc": "0.590097998734973161",
+    "musd": "19158.984119073198068887",
+    "mezo": "100"
+  },
+  "welcome": {
+    "proposedClaims": 5,
+    "rewardMezo": "20",
+    "proposedInventoryMezo": "100",
+    "adminAndAuthorizer": "0xBA46d08B9E298E8E70096Fc238Da207139BCCAB7",
+    "estimatedDeploymentBtcFee": "0.000000000196442854",
+    "campaignConfigured": false
+  },
+  "repayment": {
+    "owner": "0xe66d1c48792a320c16d7abd90c835b25a0ac37db",
+    "existingStatus": "closedByOwner",
+    "existingDebt": "0",
+    "proposalOnly": true,
+    "btcCollateral": "0.05",
+    "musdDraw": "2000",
+    "borrowingFeeMusd": "2",
+    "gasReserveMusd": "200",
+    "compositeDebtMusd": "2202",
+    "partialRepaymentMusd": "10",
+    "remainingNetDebtMusd": "1992",
+    "minimumNetDebtMusd": "1800",
+    "btcPriceUsd": "77867.46751",
+    "collateralRatioPercent": "176.81",
+    "recoveryMode": false,
+    "simulation": {
+      "passed": true,
+      "estimatedBtcFee": "0.000000000401979026"
+    },
+    "userWalletSignatureRequired": true
+  }
+}

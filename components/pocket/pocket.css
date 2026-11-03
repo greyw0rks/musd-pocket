@@ -933,9 +933,9 @@
 
   Always dark, in both themes. It floats over content that scrolls beneath it,
   so it has to stay legible whatever passes under — the same reasoning that
-  made it the one dark object in the light theme's reference. The active tab
-  grows a white pill and reveals its label, which is what makes three icons
-  readable as navigation instead of as three buttons.
+  made it the one dark object in the light theme's reference. All three labels
+  remain visible so Home, Swap and Wealth are easy to find. The active tab
+  uses a white pill.
 */
 .pk-nav {
   position: absolute;
@@ -943,6 +943,7 @@
   right: 0;
   bottom: calc(18px + env(safe-area-inset-bottom, 0px));
   width: fit-content;
+  max-width: calc(100% - 24px);
   margin-inline: auto;
   z-index: 40;
   display: flex;
@@ -956,7 +957,7 @@
 .pk-nav > button {
   height: 46px;
   min-width: 46px;
-  padding: 0 14px;
+  padding: 0 clamp(8px, 2.5vw, 14px);
   border: 0;
   border-radius: 23px;
   background: none;
@@ -976,10 +977,6 @@
 }
 
 .pk-nav > button > span {
-  display: none;
-}
-
-.pk-nav > button[aria-current="page"] > span {
   display: inline;
 }
 
