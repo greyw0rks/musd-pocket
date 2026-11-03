@@ -4,7 +4,7 @@ Current payments are direct wallet transfers; they do not call PocketVault.
 The legacy vault below describes the earlier deployment. Mezo Troves, Savings,
 router, pools and veMEZO are existing protocol contracts used by the app.
 
-## PocketWelcomeReward — activation pending
+## PocketWelcomeReward — active testnet campaign
 
 `src/PocketWelcomeReward.sol` implements one 20-testnet-MEZO reward per identity
 hash and wallet per campaign deployment. EIP-712 authorization binds the
@@ -12,7 +12,11 @@ recipient and deadline; the campaign creates a recipient-owned veMEZO NFT for
 two weekly epochs (7–14 days after rounding). A persistent server reservation
 prevents blind repeat broadcasts.
 
-Deployment script: `script/DeployPocketWelcomeReward.s.sol`. Review the admin,
+The November 3 campaign is `0xa78709beb3841aac1ed8fc3d8dedf74d55f62432`.
+Its first 20-MEZO claim is verified as NFT #941 with recipient ownership and
+replay refusal. Inventory is 80 MEZO for four more claims. [Live proof](../docs/evidence/wave-2-welcome-claim.json).
+
+For a new environment, use deployment script `script/DeployPocketWelcomeReward.s.sol`. Review the admin,
 authorizer and inventory budget; deploy, verify and fund the campaign before
 setting `POCKET_WELCOME_REWARD_ADDRESS`. Deployment does not fund it.
 The database also needs `prisma/sql/2026-11-02-merchant-and-rewards.sql`.

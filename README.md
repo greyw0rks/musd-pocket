@@ -25,7 +25,7 @@ flowchart LR
 
 Normal payments do not use PocketVault or debit an internal ledger. Legacy vault and modeled cross-chain settlement code remains for earlier records; only explicitly classified legacy payments enter that reconciler. Base and Ethereum are not live cross-chain payment routes in this build.
 
-Mezo gas is paid in **BTC**. Payers pay gas from their own wallets for payments, borrowing, Savings and Wealth. Receiving requires no transaction. The funded testnet faucet sends **0.015 BTC and 300 mUSD** once per account. Welcome rewards are separately relayed once activated; universal gas sponsorship is not implemented.
+Mezo gas is paid in **BTC**. Payers pay gas from their own wallets for payments, borrowing, Savings and Wealth. Receiving requires no transaction. The funded testnet faucet sends **0.015 BTC and 300 mUSD** once per account. Welcome rewards are separately relayed; universal gas sponsorship is not implemented.
 
 ## Wave 2 product
 

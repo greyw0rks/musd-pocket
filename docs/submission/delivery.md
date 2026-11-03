@@ -4,6 +4,8 @@ Canonical website: **https://mpocket.tech**. [App](https://mpocket.tech/home) ·
 
 [PR #16](https://github.com/greyw0rks/musd-pocket/pull/16) merged at 22:00:50 UTC, commit `030fa92faae1daaeeacbe12e26be5971499e1157`. Its production deployment `dpl_93PqmUxg49M7RvmDCM3UxhZ5heNB` is Ready and serves mpocket.tech. Both PR checks passed. Anonymous mobile Home/checkout/authentication checks passed without page errors.
 
+Follow-up source for the balance card, completed receipts and canonical links: [PR #17](https://github.com/greyw0rks/musd-pocket/pull/17).
+
 ## Wave 1 feedback delivered
 
 | Feedback | Result |
