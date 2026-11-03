@@ -41,3 +41,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local session projections and unrelated media build output.
+/.atlas/
+/brag-output/
+/.local/wave-2-welcome-deployment.json*

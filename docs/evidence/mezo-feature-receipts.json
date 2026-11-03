@@ -1,0 +1,28 @@
+{
+  "capturedAt": "2026-11-02T10:57:21.143Z",
+  "chainId": 31611,
+  "owner": "0xe66d1c48792a320c16d7abd90c835b25a0ac37db",
+  "inspected": 26,
+  "complete": true,
+  "broadcastsByThisScript": 0,
+  "matches": [
+    {
+      "kind": "claimYield",
+      "hash": "0x5271739bb3e06a0f1233efc0ac85df7d9b79e47126242236b28d29a4ecb7a3af",
+      "block": "16524955",
+      "status": "success",
+      "musdReceived": "0.00228183663115",
+      "requestedRepay": null,
+      "explorer": "https://explorer.test.mezo.org/tx/0x5271739bb3e06a0f1233efc0ac85df7d9b79e47126242236b28d29a4ecb7a3af"
+    },
+    {
+      "kind": "claimYield",
+      "hash": "0x43149c59ae2cafafdc764a234ba6df7050a3981218cebd83ca633caaa608cfdf",
+      "block": "16494652",
+      "status": "success",
+      "musdReceived": "187.366117347141378",
+      "requestedRepay": null,
+      "explorer": "https://explorer.test.mezo.org/tx/0x43149c59ae2cafafdc764a234ba6df7050a3981218cebd83ca633caaa608cfdf"
+    }
+  ]
+}

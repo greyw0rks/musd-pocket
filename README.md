@@ -1,72 +1,96 @@
 # mUSD Pocket
 
-> One balance. Any chain. Spend your Bitcoin without selling it.
+Send, request and receive mUSD from your own embedded wallet. Borrow against BTC through Mezo Troves and manage Savings, swaps, MEZO locks and liquidity in the same mobile app.
 
-**Live:** https://mpocket.vercel.app
+**App:** [mpocket.vercel.app](https://mpocket.vercel.app/home) · **Network:** Mezo testnet (31611)
 
-## The idea
+**Track:** Track 2 — Access and Distribution for MUSD/MEZO
 
-Mezo gives Bitcoin holders a way to earn without selling. But the moment they want
-to *spend* that money, it's stranded — on one chain, behind a bridge, behind a
-second gas token, behind a seed phrase some people never write down.
+**Pitch:** [PDF](docs/submission/pitch-deck.pdf) · [editable slides](docs/submission/pitch-deck.json) · [HTML](docs/submission/pitch-deck.html)
 
-Pocket collapses all of that into a single balance.
+## How payments work
 
-You sign in with X or Telegram and get a wallet that has no seed phrase. You send
-money to a username, a link, or a plain address. You get paid the same way. At no
-point does the chain, the bridge, or the gas token come up — because it shouldn't
-have to.
+Sign in with X, Telegram or email through Privy. Your embedded wallet holds the spendable mUSD and BTC. Pocket stores profiles, payment requests and Activity in Postgres.
 
-## How it works
+The payer reviews the recipient and amount, then signs a direct ERC-20 `transfer`. Pocket verifies the network, sender, token, recipient, exact amount, successful receipt and matching Transfer log before recording the outcome. A saved transaction hash recovers a pending or unrecorded payment without signing another transfer.
 
-Your money lives in a vault on Mezo. When you deposit, it goes into that vault and
-your balance goes up. When you send, the vault pays the other person directly.
+```mermaid
+flowchart LR
+  A[Privy sign-in] --> B[User wallet]
+  B -->|Direct mUSD transfer| C[Recipient wallet]
+  B -->|User signs| D[Mezo Troves and Wealth]
+  C --> E[Verified receipt]
+  E --> F[Postgres requests and Activity]
+```
 
-In between, the app keeps a ledger — the same one you see as your balance — with
-one detail worth caring about. When you send money, that amount is *committed*
-rather than spent: it's held against the payment while the transfer is in flight,
-and only really leaves when the chain confirms it. If something goes wrong, the
-money goes back. Nobody's balance ever flickers.
+Normal payments do not use PocketVault or debit an internal ledger. Legacy vault and modeled cross-chain settlement code remains for earlier records; only explicitly classified legacy payments enter that reconciler. Base and Ethereum are not live cross-chain payment routes in this build.
 
-The person receiving never needs to hold any cryptocurrency for gas. Pocket pays
-that on their behalf. On Mezo, gas isn't paid in mUSD — it's paid in Bitcoin — and
-the entire point of the design is that a user should never have to know that.
+Mezo gas is paid in **BTC**. Payers pay gas from their own wallets for payments, borrowing, Savings and Wealth. Receiving requires no transaction. The funded testnet faucet sends **0.015 BTC and 300 mUSD** once per account. Welcome rewards are separately relayed once activated; universal gas sponsorship is not implemented.
 
-## What's real, and what's a demo
+## Wave 2 product
 
-Pocket talks about three chains. Being honest about which ones are real matters
-more than the number being three.
+- **Merchant checkout:** save a Business payment profile, create a payment link or QR and receive mUSD directly. Checkout retains its invoice URL during sign-in, shows the exact recipient and amount, and verifies payment before showing paid. Each invoice keeps its merchant-name snapshot. Business names are self-declared.
+- **Recovery:** hashes survive reloads; retries verify the existing transfer. Proof reuse across invoices is blocked, late transfers are shown as late paid, and direct sends stay isolated from legacy refunds.
+- **Borrow:** open, inspect, partially repay or close a BTC-backed Trove with the owning wallet. Minimum debt, fees and health are read from Mezo.
+- **Savings:** deposit, withdraw and claim yield. Claimable interest includes stored yield and uncheckpointed global-index accrual; unavailable reads stay unknown.
+- **Swap:** exchange mUSD with BTC, mUSDC or mUSDT through verified testnet pools, with fees, minimum received, slippage and deadline shown.
+- **Wealth:** manage Vault, MEZO locks and pools in Pocket. Lock creation, top-up, extension, expired withdrawal and permanent-lock lifecycle; pool liquidity add/remove and fee claims.
+- **Welcome:** **20 testnet MEZO** per account and wallet, locked into a user-owned veMEZO NFT for two weekly epochs (7–14 days after rounding). The approved campaign is deployed and funded with 100 MEZO for five claims. A verified real pilot claim remains pending.
 
-**Mezo is real.** It's the one chain the app actually transacts on, and every
-deposit, payout, and withdrawal is a real on-chain transaction on Mezo testnet.
+This build's dock is **Home · Swap · Wealth**. Activity remains under Home → View All. Each approval and final Wealth action needs its own confirmation. Permanent-lock Start unlock begins a new **208-week countdown**.
 
-**Base and Ethereum are modeled.** Their token and bridge addresses are real
-reference data, but no spendable mUSD exists on those testnets, so a free live
-demo can't use them. Cross-chain sends there are simulated end to end — the app
-records what *would* move, nets it against everything else in flight, and settles
-the difference. It's a faithful sketch of a settlement system, and it is a sketch.
+[Feature status and activation](docs/mezo-wealth.md) · [Checkout](docs/payment-links.md) · [Recovery](docs/payment-recovery.md) · [Pilot guide](docs/mezo-testing-guide.md)
 
-## Who can move your money
+## Evidence and limits
 
-This is the part worth being straight about.
+Two `claimYield` calls were verified against calldata, successful receipts and mUSD Transfer logs:
 
-Your funds aren't held by a company's wallet. They sit in a smart contract, and
-the only way out is through a key the app's server controls. That key can move
-money in the vault — it can pay people and cash people out — but it can never
-hold your money, and it can't take funds the vault doesn't have. It can also be
-replaced without touching anyone's balance.
+| Receipt | Testnet mUSD received |
+| --- | ---: |
+| [0x43149c…08cfdf](https://explorer.test.mezo.org/tx/0x43149c59ae2cafafdc764a234ba6df7050a3981218cebd83ca633caaa608cfdf) | 187.366117347141378 |
+| [0x527173…b7a3af](https://explorer.test.mezo.org/tx/0x5271739bb3e06a0f1233efc0ac85df7d9b79e47126242236b28d29a4ecb7a3af) | 0.00228183663115 |
 
-That's still a key someone has to be trusted with. A production version would
-split that authority across many parties so no single one could move funds alone.
-Calling that out is more useful than pretending it's not there.
+An existing [liquidity addition](https://explorer.test.mezo.org/tx/0xef79292d44ad002722c6e4532abb33d0d679d0240c867c587784391fbd6e9409) also has a successful receipt. These establish specific chain outcomes, not independent adoption or every frontend interaction.
 
-## Where it stands
+November 3 baseline: 6 personal accounts, 4 completed faucet claims, 8 paid direct transfers, no merchants or invoices. These counts do not establish independent humans. Merchant pilots and repeat-user feedback are pending. No `repayMUSD` appears in the inspected wallet's 29 indexed outgoing transactions; its Trove is closed with zero debt.
 
-Pocket runs on Mezo testnet today with the real money path wired up: real
-deposits, real payouts, real gasless receives, and a ledger that holds its
-balance invariants under failure. Base and Ethereum routing is modeled, the
-server key is a single point of trust, and shareable payment links exist in the
-data model but aren't the main way people send yet.
+The latest checks total **177 passing assertions**: 61 Wealth/profile/reward, 59 checkout, 39 payment and 18 reconciliation. Fork/browser/build evidence is documented separately. Fixture tokens and simulated wallets are not live-signature evidence.
 
-The demo funds live in a vault on Mezo testnet —
-[`0x251B…1735`](https://explorer.mezo.org/address/0x251B3302c0CcB1cFBeb0cda3dE06C2D312a41735).
+Direct transfers cannot prevent two devices broadcasting duplicate payments before the server sees either. Confirmation uses one successful receipt; reorg monitoring and duplicate-transfer refunds are not implemented. Welcome claims do not prove human uniqueness or new MUSD demand. No mainnet, revenue or guaranteed-yield claim is made.
+
+[Evidence index](docs/submission/evidence.md) · [November 3 baseline](docs/wave-2-status-2026-11-03.md)
+
+## Revenue model
+
+Proposed disclosed fees on successful merchant payments, partly covering BTC gas sponsorship and operations. Ordinary P2P sends are not the initial fee target. Premium merchant reporting and reconciliation tools can follow pilot demand.
+
+Pricing and sponsorship need validation with real merchants and measured costs. This build collects no Pocket fee and claims no revenue. Mezo pool fees shown in Swap/Wealth are not Pocket revenue.
+
+## Run locally
+
+Requires Node.js 22+, pnpm and Postgres.
+
+```sh
+pnpm install --frozen-lockfile
+cp .env.example .env
+# Configure Privy, DATABASE_URL, DIRECT_URL and Mezo testnet.
+pnpm dev --hostname 127.0.0.1 --port 3000
+```
+
+Open http://localhost:3000/home. Register local and deployed origins in Privy. Use the same public Privy app ID and Mezo network for the build and server.
+
+Review additive scripts in `prisma/sql/` against the target schema. **Do not run `prisma db push` against the existing live database:** unrelated drift exists. Welcome activation needs its dedicated journal and reviewed campaign settings.
+
+```sh
+pnpm exec next typegen
+pnpm exec tsc --noEmit
+pnpm test:wealth
+pnpm test:checkout
+pnpm test:payments
+pnpm test:reconcile
+pnpm build
+node scripts/check-wealth-browser.mjs
+node scripts/check-checkout-browser.mjs
+```
+
+Set `POCKET_TEST_ORIGIN` to check another origin with the anonymous checkout smoke test. It never signs or pays. Read-only chain scripts are listed in the evidence index.

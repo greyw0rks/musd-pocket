@@ -5,7 +5,10 @@ export type RequestStatusValue =
   | "PENDING"
   | "PROCESSING"
   | "PAID"
-  | "EXPIRED";
+  | "EXPIRED"
+  | "CANCELLED"
+  | "DECLINED"
+  | "LATE_PAID";
 
 const config: Record<
   RequestStatusValue,
@@ -31,6 +34,17 @@ const config: Record<
     label: "Expired",
     icon: X,
     className: "bg-error-soft text-error",
+  },
+  CANCELLED: {
+    label: "Cancelled",
+    icon: X,
+    className: "bg-surface text-muted",
+  },
+  DECLINED: { label: "Declined", icon: X, className: "bg-surface text-muted" },
+  LATE_PAID: {
+    label: "Paid after expiry",
+    icon: Check,
+    className: "bg-warning-soft text-warning",
   },
 };
 

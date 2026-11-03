@@ -1,0 +1,207 @@
+{
+  "title": "Pocket — Wave 2",
+  "track": "Track 2: Access and Distribution for MUSD/MEZO",
+  "updatedAt": "2026-11-03",
+  "slides": [
+    {
+      "eyebrow": "01 / THE PROBLEM",
+      "title": "Bitcoin capital needs everyday uses.",
+      "intro": "Mezo lets Bitcoin holders borrow mUSD. Everyday payments still need a clear recipient, a familiar checkout and a reason to acquire that money.",
+      "cards": [
+        {
+          "title": "Access",
+          "body": "Social sign-in and an embedded wallet make the first payment easier."
+        },
+        {
+          "title": "Use",
+          "body": "A merchant invoice gives mUSD a destination beyond transfers among existing holders."
+        },
+        {
+          "title": "Confidence",
+          "body": "Exact amounts, verified receipts and clear recovery help users trust the outcome."
+        }
+      ],
+      "footer": "Pocket turns Mezo access into a practical payment flow."
+    },
+    {
+      "eyebrow": "02 / THE PRODUCT",
+      "title": "Pocket. Send. Request. Get paid.",
+      "intro": "One mobile app for mUSD payments and Mezo money management. Users keep funds in their own Privy embedded wallets.",
+      "cards": [
+        {
+          "title": "Home",
+          "body": "Send to a username or wallet, create an invoice and follow Activity."
+        },
+        {
+          "title": "Swap",
+          "body": "Exchange mUSD with BTC, mUSDC or mUSDT through verified Mezo testnet pools."
+        },
+        {
+          "title": "Wealth",
+          "body": "Manage Savings, MEZO locks and liquidity pools. Borrow against BTC from Home."
+        }
+      ],
+      "footer": "Track 2: Access and Distribution for MUSD/MEZO."
+    },
+    {
+      "eyebrow": "03 / MERCHANT CHECKOUT",
+      "title": "A payment link that settles in mUSD.",
+      "intro": "A business creates an invoice, shares its link or QR and receives mUSD directly. Checkout keeps the invoice open through sign-in.",
+      "cards": [
+        {
+          "title": "Create",
+          "body": "Business profile, exact mUSD price, description and expiry. Each invoice preserves its merchant-name snapshot."
+        },
+        {
+          "title": "Pay",
+          "body": "The customer checks the recipient and amount, then signs one direct wallet transfer."
+        },
+        {
+          "title": "Confirm",
+          "body": "Pocket verifies the transaction and records the paid invoice and Activity together. Recovery uses the existing hash."
+        }
+      ],
+      "footer": "Checkout is built. Independent merchant/customer demand still needs pilot evidence."
+    },
+    {
+      "eyebrow": "04 / ARCHITECTURE",
+      "title": "Wallet to wallet, verified on Mezo.",
+      "intro": "The user wallet holds and signs the funds. Postgres records profiles, invoices and payment outcomes; it does not create spendable money.",
+      "cards": [
+        {
+          "title": "User wallet",
+          "body": "Privy sign-in resolves the embedded wallet. Direct payments do not use PocketVault."
+        },
+        {
+          "title": "Mezo",
+          "body": "mUSD moves on-chain. The payer uses BTC for gas; the recipient needs no transaction."
+        },
+        {
+          "title": "Pocket API",
+          "body": "Verify sender, token, exact recipient/amount, calldata, receipt and Transfer log. Prevent invoice-proof reuse."
+        }
+      ],
+      "footer": "Legacy vault reconciliation is isolated from direct transfers."
+    },
+    {
+      "eyebrow": "05 / BORROW AND SAVINGS",
+      "title": "Deep Mezo integration, from one wallet.",
+      "intro": "BTC-backed Troves and sMUSD Savings remain central. Wave 2 fixes Savings interest that the stored mapping alone could incorrectly show as zero.",
+      "cards": [
+        {
+          "title": "Borrow",
+          "body": "Open, inspect, partially repay or close the owning wallet's Trove. Read protocol debt limits, fees and health."
+        },
+        {
+          "title": "Savings",
+          "body": "Deposit, withdraw and claim. Total claimable interest includes global-index accrual, with a positive payout simulation."
+        },
+        {
+          "title": "Verified claims",
+          "body": "Two successful claimYield receipts: 187.366117347141378 and 0.00228183663115 testnet mUSD."
+        }
+      ],
+      "footer": "claimYield evidence exists. A live partial-repayment receipt remains pending."
+    },
+    {
+      "eyebrow": "06 / SWAP AND WEALTH",
+      "title": "Manage Mezo assets inside Pocket.",
+      "intro": "Reviews show amounts, fees, slippage, minimum output and deadlines. Each approval and final action gets a separate user confirmation.",
+      "cards": [
+        {
+          "title": "Swaps and pools",
+          "body": "mUSD/BTC, mUSD/mUSDC and mUSD/mUSDT. Add/remove liquidity and claim pool fees; empty pairs cannot swap."
+        },
+        {
+          "title": "MEZO locks",
+          "body": "Create, top up, extend or withdraw eligible locks. Permanent Start unlock starts a new 208-week wait."
+        },
+        {
+          "title": "Recovery",
+          "body": "Save pending actions by wallet and chain. Check the existing receipt after reload without signing again."
+        }
+      ],
+      "footer": "A live liquidity addition is confirmed. Fork and wallet fixtures cover broader lifecycle behavior."
+    },
+    {
+      "eyebrow": "07 / EVIDENCE",
+      "title": "Receipts, checks and an honest baseline.",
+      "intro": "Specific on-chain actions are verified. Local validation covers payment integrity, merchant profiles, Savings accounting and Wealth recovery.",
+      "cards": [
+        {
+          "title": "On-chain",
+          "body": "Two successful Savings claims and one liquidity addition. The inspected Trove is closed; no repayMUSD receipt."
+        },
+        {
+          "title": "Validation",
+          "body": "177 passing assertions: 61 Wealth/profile/reward, 59 checkout, 39 payment and 18 reconciliation."
+        },
+        {
+          "title": "Current usage",
+          "body": "6 personal accounts, 4 faucet claims and 8 paid direct transfers. No merchants or invoices at the November 3 baseline."
+        }
+      ],
+      "footer": "Account counts do not prove independent people. All financial evidence is testnet."
+    },
+    {
+      "eyebrow": "08 / DEMAND AND PILOT",
+      "title": "Prove a reason to acquire and reuse mUSD.",
+      "intro": "The first proposed merchant is the product's @musd_pocket account. Independent customers must pay an intended item or service for demand evidence.",
+      "cards": [
+        {
+          "title": "First pilot",
+          "body": "One builder-operated business and two independent customers, each using their own account and wallet."
+        },
+        {
+          "title": "Measure",
+          "body": "Settled invoices, distinct independent payers, fulfillment, confusing steps and returning users."
+        },
+        {
+          "title": "Welcome",
+          "body": "20 testnet MEZO locked for two weekly epochs (7–14 days). The campaign is deployed and funded for five claims; first pilot receipt pending."
+        }
+      ],
+      "footer": "Pilot sizes are planning targets. Reward claims and own-wallet tests are not MUSD demand."
+    },
+    {
+      "eyebrow": "09 / REVENUE MODEL",
+      "title": "Merchant fees that can fund useful service.",
+      "intro": "Proposed disclosed fees on successful merchant payments, with part covering BTC gas sponsorship and operations. Validate pricing with real merchants.",
+      "cards": [
+        {
+          "title": "Payments",
+          "body": "Show a merchant fee before payment. Ordinary P2P sends are not the first fee target."
+        },
+        {
+          "title": "Unit economics",
+          "body": "Measure actual gas and support costs before promising sponsorship or margin."
+        },
+        {
+          "title": "Merchant tools",
+          "body": "Premium reporting and reconciliation can follow demonstrated demand."
+        }
+      ],
+      "footer": "No Pocket fee collection, revenue or universal gas sponsorship is implemented."
+    },
+    {
+      "eyebrow": "10 / NEXT DELIVERY",
+      "title": "Ship the build. Prove the use.",
+      "intro": "Builder: greyw0rks · github.com/greyw0rks/musd-pocket. Wave 1 feedback is the checklist for the next delivery.",
+      "cards": [
+        {
+          "title": "Publish",
+          "body": "Current merchant + Home/Swap/Wealth build, direct-transfer README and this pitch deck."
+        },
+        {
+          "title": "Prove",
+          "body": "Independent merchant/customer transactions and feedback; one intended partial repayment with before/after debt."
+        },
+        {
+          "title": "Complete",
+          "body": "Verify the first new-campaign reward receipt. Confirm Wave 2 rules/deadline and retain submission confirmation."
+        }
+      ],
+      "footer": "mpocket.vercel.app · Source and proof links are in docs/submission/evidence.md."
+    }
+  ]
+}

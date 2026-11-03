@@ -96,7 +96,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
     screen: "home",
     target: "nav",
     title: "Three places",
-    body: "Home is here. Vault puts mUSD into Mezo's savings vault. Spending is where every payment and request is kept.",
+    body: "Home is here, with your payment history under View All. Swap exchanges tokens in your wallet. Wealth brings together Savings, your MEZO locks and Mezo pools.",
     place: "above",
   },
   {
@@ -151,7 +151,8 @@ export function moveTour(
   if (!state.open) return state;
 
   const step = state.step + direction;
-  if (step >= total) return { ...state, open: false, step: total - 1, seen: true };
+  if (step >= total)
+    return { ...state, open: false, step: total - 1, seen: true };
   if (step < 0) return state;
   return { ...state, step };
 }

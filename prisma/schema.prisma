@@ -1,8 +1,9 @@
-// MUSD Pocket — chain-abstracted payment ledger.
+// MUSD Pocket — direct-wallet payments with indexed Activity and invoices.
 //
 // The DB is an INDEXED REPRESENTATION of on-chain state, not the source of truth.
-// On-chain (real, Mezo testnet): vault balances, deposits, withdrawals, payouts.
-// Off-chain (here): users, ledger balances, routing/settlement accounting, history.
+// Current on-chain path: user-wallet mUSD transfers and Mezo protocol actions.
+// Off-chain: profiles, payment requests, verified Activity and recovery journals.
+// Legacy vault balances/routing remain for earlier records and explicit legacy settlement.
 // Addresses stored LOWERCASE for lookups; the UI re-checksums for display.
 
 generator client {
@@ -63,9 +64,7 @@ enum ObligationStatus {
   SETTLED
 }
 
-/// Kept so the schema still describes the live database, which carries this
-/// column on every user row (all currently PERSONAL). A retired design — see
-/// the note on Payment.claimHandle. Do not build on it.
+/// Profile type; both roles receive payments into their own authenticated wallet.
 enum AccountRole {
   PERSONAL
   MERCHANT
@@ -100,6 +99,7 @@ model User {
   /// convenience and never something a screen depends on. Null for accounts
   /// that signed in with Telegram or email, or whose X profile has no picture.
   avatarUrl        String?  @db.Text
+  businessName     String? @db.VarChar(80)
   preferredChain   ChainKey    @default(MEZO)
   role             AccountRole @default(PERSONAL)
   availableBalance Decimal     @default(0) @db.Decimal(38, 18)
@@ -205,11 +205,21 @@ model Withdrawal {
   @@map("withdrawals")
 }
 
-/// A Pocket-to-Pocket (or Pocket-to-address) send. `paymentId` is the bytes32
-/// handle the on-chain vault payout is tagged with (idempotency key).
+/// The settlement path a payment record belongs to.
+enum PaymentMode {
+  UNCLASSIFIED
+  LEGACY_VAULT
+  DIRECT
+}
+
+/// `paymentId` is a vault payout handle for legacy sends or the transaction
+/// hash for a direct wallet transfer. Direct checkout records are PAID only.
 model Payment {
   id               String        @id @default(cuid())
   paymentId        String        @unique // bytes32 hex
+  mode             PaymentMode   @default(UNCLASSIFIED)
+  chainId          Int?
+  token            String?
   senderId         String
   sender           User          @relation("PaymentSender", fields: [senderId], references: [id])
   recipientId      String?
@@ -290,24 +300,29 @@ model Contact {
   @@map("contacts")
 }
 
-/// Retained for P1 (QR / shareable payment links). Status flow unchanged.
+/// Shareable invoice. Version 2 always pays the authenticated creator.
 model PaymentRequest {
   id               String        @id @default(cuid())
   shortId          String        @unique
   creatorAddress   String
   recipientAddress String
+  intendedPayerAddress String?
+  merchantName     String?
+  version          Int           @default(1)
   amount           Decimal       @db.Decimal(38, 18)
   token            String
   chainId          Int
   description      String?
   status           RequestStatus @default(PENDING)
   txHash           String?
+  settlementKey    String?       @unique
   payerAddress     String?
   expiresAt        DateTime?
   createdAt        DateTime      @default(now())
   paidAt           DateTime?
 
   @@index([creatorAddress])
+  @@index([intendedPayerAddress])
   @@index([status])
   @@map("payment_requests")
 }
@@ -317,6 +332,9 @@ enum RequestStatus {
   PROCESSING
   PAID
   EXPIRED
+  CANCELLED
+  DECLINED
+  LATE_PAID
 }
 
 /// One testnet faucet claim per user.
@@ -340,4 +358,20 @@ model FaucetClaim {
   updatedAt     DateTime  @updatedAt
 
   @@map("faucet_claims")
+}
+
+/// Durable claim reservation; a lost broadcast response must never auto-resend.
+model WelcomeRewardAttempt {
+  id            String   @id
+  chainId       Int
+  campaign      String
+  claimId       String
+  walletAddress String
+  state         String   @default("SENDING")
+  txHash        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([chainId, campaign, walletAddress])
+  @@map("welcome_reward_attempts")
 }

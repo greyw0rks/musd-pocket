@@ -7,7 +7,13 @@ import { BorrowScreen } from "@/components/pocket/borrow/BorrowScreen";
 import { OpenTroveScreen } from "@/components/pocket/borrow/OpenTroveScreen";
 import { RepayTroveScreen } from "@/components/pocket/borrow/RepayTroveScreen";
 import { ContactsScreen } from "@/components/pocket/contacts/ContactsScreen";
+import {
+  WealthScreen,
+  LockScreen,
+  PoolsScreen,
+} from "@/components/pocket/wealth/WealthScreen";
 import { VaultScreen } from "@/components/pocket/earn/VaultScreen";
+import { SwapScreen } from "@/components/pocket/wealth/SwapScreen";
 import { HomeScreen } from "@/components/pocket/home/HomeScreen";
 import { AllTransactionsScreen } from "@/components/pocket/ledger/AllTransactionsScreen";
 import { TransactionDetailScreen } from "@/components/pocket/ledger/TransactionDetailScreen";
@@ -33,7 +39,11 @@ import { RequestDetailScreen } from "@/components/pocket/request/RequestDetailSc
 import { RequestScreen } from "@/components/pocket/request/RequestScreen";
 import { RequestsScreen } from "@/components/pocket/request/RequestsScreen";
 import { ScanScreen } from "@/components/pocket/scan/ScanScreen";
-import { PocketProvider, recentRecipients, usePocket } from "@/components/pocket/store";
+import {
+  PocketProvider,
+  recentRecipients,
+  usePocket,
+} from "@/components/pocket/store";
 import type { PocketServices } from "@/components/pocket/store";
 import { SuccessScreen } from "@/components/pocket/success/SuccessScreen";
 import { TransferScreen } from "@/components/pocket/transfer/TransferScreen";
@@ -42,11 +52,18 @@ import { Walkthrough } from "@/components/pocket/walkthrough/Walkthrough";
 import { startTour } from "@/components/pocket/walkthrough/store";
 import type { TourScreen } from "@/components/pocket/walkthrough/tour";
 import { Wordmark } from "@/components/wordmark";
-import { MODAL_MOTION, PAGE_MOTION, RESULT_MOTION } from "@/components/pocket/theme";
+import {
+  MODAL_MOTION,
+  PAGE_MOTION,
+  RESULT_MOTION,
+} from "@/components/pocket/theme";
 import { toDisplayUnits } from "@/features/payments/amount";
 import { useBorrow } from "@/hooks/use-borrow";
 import { useFaucet } from "@/hooks/use-faucet";
-import { EmbeddedWalletActivator, useLiveWallet } from "@/hooks/use-live-wallet";
+import {
+  EmbeddedWalletActivator,
+  useLiveWallet,
+} from "@/hooks/use-live-wallet";
 import { hasPrivy } from "@/lib/wallet/privy";
 
 /**
@@ -238,6 +255,7 @@ function Screen({ id, onBack }: { id: ScreenId; onBack: () => void }) {
     markAllNotificationsRead,
     clearNotifications,
     recipientById,
+    refresh,
     reset,
     replace,
     push,
@@ -325,6 +343,7 @@ function Screen({ id, onBack }: { id: ScreenId; onBack: () => void }) {
           onRequest={() => push("request")}
           onReceive={() => push("receive")}
           onBorrow={() => push("borrow")}
+          onLocks={() => push("locks")}
           /*
             The debt, and the way to settle it. Both are drawn whether or not a
             Trove is open: `borrowedUnits` decomposes the available balance into
@@ -497,6 +516,11 @@ function Screen({ id, onBack }: { id: ScreenId; onBack: () => void }) {
           // it was already showing, so asking someone for money does not start
           // by making you pick them out again.
           initialCounterparty={recipientById(current.params.recipientId)}
+          initialMerchantName={
+            session?.user.accountType === "merchant"
+              ? session.user.businessName
+              : undefined
+          }
           onCreate={createRequest}
           onBack={onBack}
           // Replaces rather than pushes: the composer has done its job, and
@@ -553,7 +577,9 @@ function Screen({ id, onBack }: { id: ScreenId; onBack: () => void }) {
 
     case "transaction": {
       const receipt = transactions.find(
-        (tx) => tx.id === current.params.transactionId,
+        (tx) =>
+          tx.id === current.params.transactionId ||
+          tx.txHash === current.params.transactionId,
       );
       if (!receipt) return <MissingScreen onBack={onBack} />;
 
@@ -563,6 +589,7 @@ function Screen({ id, onBack }: { id: ScreenId; onBack: () => void }) {
           recipient={recipientById(receipt.recipientId)}
           onBack={onBack}
           onSendAgain={(recipientId) => chooseRecipient(recipientId)}
+          onRefresh={refresh}
         />
       );
     }
@@ -610,7 +637,9 @@ function Screen({ id, onBack }: { id: ScreenId; onBack: () => void }) {
 
     case "success": {
       const receipt = transactions.find(
-        (tx) => tx.id === current.params.transactionId,
+        (tx) =>
+          tx.id === current.params.transactionId ||
+          tx.txHash === current.params.transactionId,
       );
       if (!receipt) return <MissingScreen onBack={onBack} />;
 
@@ -624,7 +653,9 @@ function Screen({ id, onBack }: { id: ScreenId; onBack: () => void }) {
             reopening a composer that has already fired would invite a second
             send.
           */
-          onViewDetails={() => push("transaction", { transactionId: receipt.id })}
+          onViewDetails={() =>
+            push("transaction", { transactionId: receipt.id })
+          }
         />
       );
     }
@@ -660,8 +691,22 @@ function Screen({ id, onBack }: { id: ScreenId; onBack: () => void }) {
       nothing behind it. It owns no back arrow for that reason — `VaultScreen`
       draws `PageHeading` instead of `ScreenHeader`.
     */
+    case "swap":
+      return <SwapScreen />;
+    case "wealth":
+      return (
+        <WealthScreen
+          onVault={() => push("vault")}
+          onLocks={() => push("locks")}
+          onPools={() => push("pools")}
+        />
+      );
+    case "locks":
+      return <LockScreen onBack={onBack} />;
+    case "pools":
+      return <PoolsScreen onBack={onBack} />;
     case "vault":
-      return <VaultScreen />;
+      return <VaultScreen onBack={onBack} />;
   }
 }
 

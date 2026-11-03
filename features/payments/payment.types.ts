@@ -79,6 +79,8 @@ export interface Transaction {
   error?: string;
   /** On-chain reference — only ever set for `kind: "onchain"`. */
   txHash?: string;
+  /** Recorded network identity; absent on older records pending classification. */
+  chainId?: number;
 }
 
 /**
@@ -96,7 +98,7 @@ export interface SendRequest {
   recipient: Recipient;
   amountUnits: bigint;
   /**
-   * Reuse-across-retries key for the server's replay guard.
+   * Reuse-across-retries key for one send attempt.
    *
    * Optional because the interface predates it and a service is free to ignore
    * it; a service that *can* honour it must. The caller owns the lifecycle:
@@ -126,8 +128,8 @@ export interface PaymentService {
   listTransactions(): Promise<Transaction[]>;
 
   /**
-   * Submit a transfer. Resolves when the transfer reaches a terminal state
-   * (confirmed or failed) — callers must not assume success.
+   * Submit or recover a transfer. An ok result may still be pending; inspect
+   * the transaction status before showing confirmation or offering another send.
    */
   send(request: SendRequest): Promise<SendResult>;
 }

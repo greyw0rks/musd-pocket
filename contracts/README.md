@@ -1,4 +1,27 @@
-# PocketVault — MUSD Pocket on-chain leg
+# Pocket contracts
+
+Current payments are direct wallet transfers; they do not call PocketVault.
+The legacy vault below describes the earlier deployment. Mezo Troves, Savings,
+router, pools and veMEZO are existing protocol contracts used by the app.
+
+## PocketWelcomeReward — activation pending
+
+`src/PocketWelcomeReward.sol` implements one 20-testnet-MEZO reward per identity
+hash and wallet per campaign deployment. EIP-712 authorization binds the
+recipient and deadline; the campaign creates a recipient-owned veMEZO NFT for
+two weekly epochs (7–14 days after rounding). A persistent server reservation
+prevents blind repeat broadcasts.
+
+Deployment script: `script/DeployPocketWelcomeReward.s.sol`. Review the admin,
+authorizer and inventory budget; deploy, verify and fund the campaign before
+setting `POCKET_WELCOME_REWARD_ADDRESS`. Deployment does not fund it.
+The database also needs `prisma/sql/2026-11-02-merchant-and-rewards.sql`.
+
+[Configuration, safeguards and activation steps](../docs/mezo-wealth.md).
+Unit tests cover signature replay, NFT ownership, expiry and rollback; fork
+tests use mock tokens for Cosmos precompiles and do not prove live funding.
+
+## PocketVault — legacy on-chain leg
 
 Minimal liquidity vault for MUSD Pocket. Holds MUSD and releases it only on the
 authority of the off-chain settlement engine. One real deployment target: **Mezo

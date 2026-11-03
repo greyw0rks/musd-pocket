@@ -23,6 +23,7 @@ import {
 } from "@/features/requests/request.types";
 import { formatMoney } from "@/lib/formatters";
 import { cn, relativeTime, untilTime } from "@/lib/utils";
+import { PaymentLink } from "@/components/checkout/PaymentLink";
 
 /**
  * One request, in full.
@@ -77,6 +78,10 @@ export function RequestDetailScreen({
   const expires = mounted ? untilTime(request.expiresAt) : "";
 
   async function pay() {
+    if (request.checkoutPath) {
+      window.location.assign(request.checkoutPath);
+      return;
+    }
     if (busy) return;
     setBusy(true);
     setError(null);
@@ -134,11 +139,13 @@ export function RequestDetailScreen({
             className="ring-2 ring-[var(--s2)]"
           />
 
-          <p className="mt-3 text-[14px] font-bold">{request.counterpartyName}</p>
+          <p className="mt-3 text-[14px] font-bold">
+            {request.counterpartyName}
+          </p>
           <p className="pk-m">{request.counterpartyHandle}</p>
 
-          <p className="mt-5 text-[38px] leading-none font-bold tracking-tight tabular-nums">
-            {formatMoney(request.amountUnits)}
+          <p className="mt-5 break-all text-[38px] leading-none font-bold tracking-tight tabular-nums">
+            {request.amountDisplay ?? formatMoney(request.amountUnits)}
           </p>
 
           <p className="pk-m mt-2">
@@ -176,6 +183,17 @@ export function RequestDetailScreen({
           />
         </div>
 
+        {open && !incoming && request.checkoutPath ? (
+          <PaymentLink shortId={request.id} />
+        ) : null}
+        {request.checkoutPath ? (
+          <a
+            href={request.checkoutPath}
+            className="mt-4 text-center text-sm font-semibold underline"
+          >
+            Open payment details
+          </a>
+        ) : null}
         {error ? (
           <motion.p
             initial={{ opacity: 0, y: -6 }}
@@ -233,7 +251,11 @@ export function RequestDetailScreen({
                 disabled={settling}
                 onClick={() => void pay()}
               >
-                {busy ? "Paying" : `Pay ${formatMoney(request.amountUnits)}`}
+                {busy
+                  ? "Paying"
+                  : request.checkoutPath
+                    ? "Review and pay"
+                    : `Pay ${formatMoney(request.amountUnits)}`}
               </Button>
               {canDecline ? (
                 <Button
@@ -311,7 +333,9 @@ function Detail({
  */
 const STATUS_TONE: Record<PaymentRequest["status"], string> = {
   open: "pk-pill pk-pill--warn",
+  processing: "pk-pill pk-pill--warn",
   paid: "pk-pill pk-pill--ok",
+  late_paid: "pk-pill pk-pill--warn",
   declined: "pk-pill",
   cancelled: "pk-pill",
   expired: "pk-pill",
@@ -319,9 +343,9 @@ const STATUS_TONE: Record<PaymentRequest["status"], string> = {
 
 function StatusPill({ status }: { status: PaymentRequest["status"] }) {
   const icon =
-    status === "open" ? (
+    status === "open" || status === "processing" ? (
       <ClockIcon size={12} />
-    ) : status === "paid" ? (
+    ) : status === "paid" || status === "late_paid" ? (
       <CheckIcon size={12} />
     ) : status === "cancelled" ? (
       <UndoIcon size={12} />

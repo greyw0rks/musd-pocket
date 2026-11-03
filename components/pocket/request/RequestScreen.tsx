@@ -14,7 +14,7 @@ import { Button } from "@/components/pocket/ui/Button";
 import { ListGroup, ListRow } from "@/components/pocket/ui/ListRow";
 import { ScreenHeader } from "@/components/pocket/ui/ScreenHeader";
 import { Sheet } from "@/components/pocket/ui/Sheet";
-import { TextArea } from "@/components/pocket/ui/TextField";
+import { TextArea, TextField } from "@/components/pocket/ui/TextField";
 import {
   currentValue,
   expressionText,
@@ -59,6 +59,7 @@ import { shortenAddress } from "@/lib/utils";
 export function RequestScreen({
   contacts,
   initialCounterparty,
+  initialMerchantName = "",
   title = "Request",
   subtitle = "Ask someone to pay you",
   notePlaceholder = "Design deposit, half up front",
@@ -70,6 +71,7 @@ export function RequestScreen({
   contacts: Recipient[];
   /** Who is being asked, when the screen was reached from a known person. */
   initialCounterparty?: Recipient | null;
+  initialMerchantName?: string;
   /**
    * Header copy. A merchant asking a customer to settle a bill and a person
    * asking a friend to split one are the same act with different words, so the
@@ -80,7 +82,8 @@ export function RequestScreen({
   subtitle?: string;
   notePlaceholder?: string;
   onCreate: (input: {
-    counterparty: Recipient;
+    counterparty?: Recipient;
+    merchantName?: string;
     amountUnits: bigint;
     note?: string;
   }) => Promise<CreateRequestResult>;
@@ -97,6 +100,7 @@ export function RequestScreen({
   );
   const [keypad, setKeypad] = useState<KeypadState>(INITIAL_KEYPAD);
   const [note, setNote] = useState("");
+  const [merchantName, setMerchantName] = useState(initialMerchantName);
   const [picking, setPicking] = useState(false);
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
@@ -104,7 +108,7 @@ export function RequestScreen({
 
   const amountUnits = currentValue(keypad);
   const amountReady = amountUnits !== null && amountUnits > 0n;
-  const canSubmit = Boolean(counterparty) && amountReady && !busy;
+  const canSubmit = amountReady && !busy;
 
   const matches = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -117,13 +121,14 @@ export function RequestScreen({
   }, [contacts, query]);
 
   async function submit() {
-    if (!counterparty || !amountReady || busy) return;
+    if (!amountReady || busy) return;
 
     setBusy(true);
     setError(null);
 
     const result = await onCreate({
-      counterparty,
+      counterparty: counterparty ?? undefined,
+      merchantName: merchantName.trim() || undefined,
       amountUnits: amountUnits ?? 0n,
       note: note.trim() || undefined,
     });
@@ -208,8 +213,8 @@ export function RequestScreen({
                 </span>
               )
             }
-            title={counterparty?.name ?? "Choose someone"}
-            subtitle={counterparty?.handle ?? "Who is paying?"}
+            title={counterparty?.name ?? "Anyone with the link"}
+            subtitle={counterparty?.handle ?? "Share with a customer or friend"}
             onPress={() => setPicking(true)}
             trailing={
               <ChevronRightIcon size={18} className="text-[var(--m)]" />
@@ -217,6 +222,14 @@ export function RequestScreen({
           />
         </ListGroup>
 
+        <TextField
+          className="mt-3"
+          label="Business or display name (optional)"
+          value={merchantName}
+          maxLength={80}
+          onChange={(event) => setMerchantName(event.target.value)}
+          placeholder="Name your customer will recognize"
+        />
         <TextArea
           className="mt-3"
           label="What is it for?"
@@ -241,17 +254,19 @@ export function RequestScreen({
             loading={busy}
             onClick={() => void submit()}
           >
-            {busy ? "Sending request" : "Send request"}
+            {busy ? "Creating link" : "Create payment link"}
           </Button>
 
           <p className="pk-m mt-2 text-center">
-            Nothing moves. This opens a request they can pay or turn down, and
-            it expires on its own after a week.
+            Payment goes to your Pocket wallet. Share the link or QR code after
+            creating it. This request expires in seven days.
           </p>
 
           <div className="mt-3">
             <NumberPad
-              onDigit={(digit) => setKeypad((state) => pressDigit(state, digit))}
+              onDigit={(digit) =>
+                setKeypad((state) => pressDigit(state, digit))
+              }
               onDecimal={() => setKeypad(pressDecimal)}
               onOperator={(op: Op) =>
                 setKeypad((state) => pressOperator(state, op))
@@ -268,6 +283,17 @@ export function RequestScreen({
         onClose={() => setPicking(false)}
         title="Who is paying?"
       >
+        <Button
+          full
+          variant="secondary"
+          className="mb-3"
+          onClick={() => {
+            setCounterparty(null);
+            setPicking(false);
+          }}
+        >
+          Anyone with the link
+        </Button>
         <div className="flex items-center gap-2 rounded-full bg-[var(--s2)] px-4 py-2.5">
           <SearchIcon size={16} className="shrink-0 text-[var(--m)]" />
           <input

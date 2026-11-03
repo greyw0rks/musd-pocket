@@ -17,13 +17,13 @@
  */
 
 import { ApiError, type AuthedFetch } from "@/lib/auth/client";
-import { parseDecimalToUnits, unitsToDecimal } from "./amount";
+import { parseDecimalToUnits, toDisplayUnits, unitsToDecimal } from "./amount";
+import { parseMusd } from "@/lib/mezo/musd";
 import { formatAssetAmount, parseAssetAmount } from "./asset-amount";
 import type {
   PaymentAsset,
   PaymentService,
   PaymentStatus,
-  Recipient,
   SendRequest,
   SendResult,
   Transaction,
@@ -38,6 +38,7 @@ type ApiPayment = {
   amount: string;
   note: string | null;
   destChain: string;
+  chainId?: number | null;
   status: string;
   payoutTxHash: string | null;
   counterparty: string;
@@ -106,7 +107,7 @@ function splitCounterparty(value: string): { name: string; handle: string } {
 }
 
 function paymentToTransaction(p: ApiPayment): Transaction {
-  const amountUnits = parseDecimalToUnits(p.amount) ?? 0n;
+  const amountUnits = toDisplayUnits(parseMusd(p.amount));
   const { name, handle } = splitCounterparty(p.counterparty);
   return {
     id: p.id,
@@ -119,7 +120,7 @@ function paymentToTransaction(p: ApiPayment): Transaction {
     // wallet signed. There is no other token in that table.
     asset: "MUSD",
     amountUnits,
-    amountDisplay: formatAssetAmount("MUSD", amountUnits),
+    amountDisplay: `${p.amount} MUSD`,
     direction: p.direction,
     status: statusOf(p.status),
     // A row from this adapter is a real record by construction. The question
@@ -128,6 +129,7 @@ function paymentToTransaction(p: ApiPayment): Transaction {
     kind: "onchain",
     createdAt: new Date(p.createdAt),
     ...(p.payoutTxHash ? { txHash: p.payoutTxHash } : {}),
+    ...(p.chainId ? { chainId: p.chainId } : {}),
   };
 }
 
@@ -237,9 +239,7 @@ export function createApiPaymentService(deps: {
           }),
         });
 
-        const { name, handle } = splitCounterparty(
-          res.counterparty || target,
-        );
+        const { name, handle } = splitCounterparty(res.counterparty || target);
         return {
           ok: true,
           transaction: {

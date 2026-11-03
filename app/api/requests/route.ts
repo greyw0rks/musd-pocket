@@ -1,14 +1,23 @@
+import { getUserByWallet } from "@/lib/users/service";
 import type { NextRequest } from "next/server";
 import { requireIdentity, errorResponse } from "@/lib/auth/request";
 import { createRequestSchema, expiryToHours } from "@/lib/requests/schema";
-import { createPaymentRequest, listByCreator } from "@/lib/requests/service";
+import { createPaymentRequest, listForWallet } from "@/lib/requests/service";
 import { serializeRequest } from "@/lib/requests/serialize";
 
-const STATUSES = ["PENDING", "PROCESSING", "PAID", "EXPIRED"] as const;
+const STATUSES = [
+  "PENDING",
+  "PROCESSING",
+  "PAID",
+  "EXPIRED",
+  "CANCELLED",
+  "DECLINED",
+  "LATE_PAID",
+] as const;
 type Status = (typeof STATUSES)[number];
 
 /**
- * Payment requests created *by* the caller.
+ * Payment requests created by or addressed to the caller.
  *
  * The creator used to arrive as `?creator=<address>` on GET and
  * `creatorAddress` in the POST body. Both were attacker-controlled, so either
@@ -26,11 +35,21 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: "Invalid request" }, { status: 400 });
     }
 
-    const { recipientAddress, amount, description, expiry } = parsed.data;
+    const { intendedPayerAddress, merchantName, amount, description, expiry } =
+      parsed.data;
 
+    const profile =
+      merchantName === undefined
+        ? await getUserByWallet(identity.walletAddress)
+        : null;
     const req_ = await createPaymentRequest({
       creatorAddress: identity.walletAddress,
-      recipientAddress,
+      intendedPayerAddress,
+      merchantName:
+        merchantName ??
+        (profile?.role === "MERCHANT"
+          ? (profile.businessName ?? undefined)
+          : undefined),
       amount,
       description,
       expiresInHours: expiryToHours(expiry),
@@ -51,7 +70,7 @@ export async function GET(req: NextRequest) {
       ? (raw as Status)
       : undefined;
 
-    const rows = await listByCreator(identity.walletAddress, status);
+    const rows = await listForWallet(identity.walletAddress, status);
     return Response.json(rows.map(serializeRequest));
   } catch (e) {
     return errorResponse(e);

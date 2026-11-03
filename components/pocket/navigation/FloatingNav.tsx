@@ -2,11 +2,7 @@
 
 import type { ReactElement } from "react";
 import { motion } from "motion/react";
-import {
-  HomeIcon,
-  SpendIcon,
-  VaultIcon,
-} from "@/components/pocket/icons";
+import { HomeIcon, SwapIcon, VaultIcon } from "@/components/pocket/icons";
 import type { IconProps } from "@/components/pocket/icons";
 import {
   DOCK_TABS,
@@ -19,10 +15,8 @@ import { DOCK_MOTION } from "@/components/pocket/theme";
  * The floating dock.
  *
  * Three tabs in a pill, and the only navigation control in the app that is
- * always in the same place. The current tab grows a white pill that reveals its
- * label — so the dock tells you where you are, not just where you can go, and
- * it does that without the label taking up room on the two tabs you can read
- * from their icons alone.
+ * always in the same place. All labels stay visible; a white pill marks the
+ * current tab.
  *
  * **Switching tabs is a reset, not a push.** `onChange` hands the tab up and
  * the host resets the stack to `screenForTab(tab)`, so the dock never builds a
@@ -85,6 +79,6 @@ export function FloatingNav({
 /** One icon per tab, kept here so the dock's tabs and their glyphs cannot drift. */
 const ICONS: Record<PocketTab, (props: IconProps) => ReactElement> = {
   home: HomeIcon,
-  vault: VaultIcon,
-  spending: SpendIcon,
+  wealth: VaultIcon,
+  swap: SwapIcon,
 };

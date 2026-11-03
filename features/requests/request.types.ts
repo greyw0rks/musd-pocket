@@ -5,10 +5,8 @@
  * answered — and the two are modelled separately because collapsing them is
  * how an app ends up drawing a receipt for money nobody sent.
  *
- * `RequestService` mirrors `PaymentService`, and its `pay` deliberately does
- * not move money itself: it delegates to the payment service. Section 10's rule
- * that the app must not claim a settlement it did not make is easier to keep
- * when there is exactly one place in the codebase where a transfer happens.
+ * Version 2 requests open a dedicated checkout. The wallet signs there, and
+ * the server confirms the request only after independently verifying payment.
  */
 
 import type {
@@ -28,14 +26,18 @@ export type RequestDirection = "incoming" | "outgoing";
 
 export type RequestStatus =
   | "open"
+  | "processing"
   | "paid"
+  | "late_paid"
   | "declined"
   | "cancelled"
   | "expired";
 
 export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = {
   open: "Open",
+  processing: "Confirming payment",
   paid: "Paid",
+  late_paid: "Paid after expiry",
   declined: "Declined",
   cancelled: "Cancelled",
   expired: "Expired",
@@ -43,11 +45,14 @@ export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = {
 
 export interface PaymentRequest {
   id: string;
+  checkoutPath?: string;
   direction: RequestDirection;
   counterpartyId: string;
   counterpartyName: string;
   counterpartyHandle: string;
   amountUnits: bigint;
+  /** Exact token amount when a link uses more than the keypad's two decimals. */
+  amountDisplay?: string;
   /** What the request is for. Free text, and often the reason it gets paid. */
   note?: string;
   status: RequestStatus;
@@ -67,7 +72,8 @@ export interface PaymentRequest {
 }
 
 export interface CreateRequestInput {
-  counterparty: Recipient;
+  counterparty?: Recipient;
+  merchantName?: string;
   amountUnits: bigint;
   note?: string;
 }

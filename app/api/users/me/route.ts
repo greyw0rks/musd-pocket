@@ -13,7 +13,7 @@ import {
   getUserByUsername,
   serializeUser,
 } from "@/lib/users/service";
-import { normaliseHandle, validateHandleFormat } from "@/features/session/handle";
+import { profileUpdateSchema, profileData } from "@/lib/users/profile";
 
 /**
  * POST /api/users/me — sync-on-login. Verifies the Privy token, resolves the
@@ -49,11 +49,7 @@ export async function GET(req: NextRequest) {
 /**
  * PATCH /api/users/me — change the caller's own profile.
  *
- * Only `username` is writable, because only `username` exists on the server
- * User row. The UI's profile carries a name, an avatar, an account type and a
- * business name; none of those have a column, so sending them here is a no-op
- * rather than a silent write. Accepting a field the database cannot hold would
- * be the more comfortable choice and the dishonest one.
+ * Updates username and merchant preferences for the authenticated wallet.
  *
  * Races are real here: two requests can pass the availability check and then
  * collide on the unique index. That collision is caught (P2002) and reported as
@@ -69,24 +65,20 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => null);
-    if (!body || typeof body.username !== "string") {
-      throw new HttpError("Send a username to update.");
+    const parsed = profileUpdateSchema.safeParse(body);
+    if (!parsed.success)
+      throw new HttpError(
+        parsed.error.issues[0]?.message ?? "Invalid profile.",
+      );
+    const data = profileData(parsed.data, user);
+    if (data.username && data.username !== user.username) {
+      const taken = await getUserByUsername(data.username);
+      if (taken) throw new HttpError("That username is already taken.", 409);
     }
-
-    const username = normaliseHandle(body.username);
-    const problem = validateHandleFormat(username);
-    if (problem) throw new HttpError(problem);
-
-    if (username === user.username) {
-      return Response.json(serializeUser(user)); // nothing to do
-    }
-
-    const taken = await getUserByUsername(username);
-    if (taken) throw new HttpError("That username is already taken.", 409);
 
     const updated = await prisma.user.update({
       where: { id: user.id },
-      data: { username },
+      data,
     });
     return Response.json(serializeUser(updated));
   } catch (e) {

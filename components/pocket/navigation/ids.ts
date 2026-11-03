@@ -1,26 +1,3 @@
-/**
- * Every screen the app can show, named once.
- *
- * A union rather than free strings so a navigation to a screen that does not
- * exist is a type error rather than a blank panel. Adding a screen means
- * extending this union and adding a case to the switch in `PocketApp` — those
- * are the only two places that have to know a screen exists.
- *
- * Deliberately in its own module with no imports, so the navigation helpers,
- * the store and the host can all refer to it without a cycle.
- *
- * Three of these are *places* — `home`, `vault` and `transactions` — and they
- * are the three the dock switches between. Everything else is a step in
- * something the user is doing — sending, asking, being paid, borrowing against
- * their Bitcoin — so it is pushed with a way back rather than switched to.
- *
- * The dock was absent for a while, correctly: the build that had one carried
- * three tops behind it, and two of those were fixtures over features that did
- * not exist. Borrow, the Savings Vault and the ledger are all real now, so the
- * dock has something to switch between and it is back. `navigation/screens.ts`
- * holds which screens own it.
- */
-
 export type ScreenId =
   // 1 · Onboarding
   | "welcome"
@@ -30,10 +7,14 @@ export type ScreenId =
   | "onboarding-done"
   // 2 · Home, and the record of what happened from it
   | "home"
+  | "swap"
   | "transactions"
   | "transaction"
   | "notifications"
   // 2b · The Savings Vault — a place, like Home
+  | "wealth"
+  | "locks"
+  | "pools"
   | "vault"
   // 3 · Account
   | "contacts"

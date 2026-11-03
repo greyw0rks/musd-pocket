@@ -3,7 +3,7 @@ import { isAddress } from "viem";
 import { Prisma } from "@prisma/client";
 import { requireIdentity, errorResponse, AuthError, HttpError } from "@/lib/auth/request";
 import { getUserByWallet, getUserByUsername } from "@/lib/users/service";
-import { MUSD_ADDRESS } from "@/lib/mezo/config";
+import { CHAIN_ID, MUSD_ADDRESS } from "@/lib/mezo/config";
 import { normalizeAddress, parseMusd } from "@/lib/mezo/musd";
 import { hasVault, readVaultLiquidity } from "@/lib/mezo/vault";
 import {
@@ -57,9 +57,10 @@ export async function GET(req: NextRequest) {
         id: p.id,
         paymentId: p.paymentId,
         direction: p.senderId === user.id ? "sent" : "received",
-        amount: p.amount.toString(),
+        amount: p.amount.toFixed(),
         note: p.note,
         destChain: p.destChain,
+        chainId: p.chainId,
         status: p.status,
         payoutTxHash: p.payoutTxHash,
         counterparty:
@@ -173,6 +174,9 @@ export async function POST(req: NextRequest) {
           const payment = await tx.payment.create({
             data: {
               paymentId,
+              mode: "LEGACY_VAULT",
+              chainId: CHAIN_ID,
+              token,
               senderId: sender.id,
               recipientId,
               recipientAddress: recipientId ? null : recipientWallet.toLowerCase(),
@@ -201,6 +205,9 @@ export async function POST(req: NextRequest) {
       } catch (e) {
         if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
           const existing = await prisma.payment.findUnique({ where: { paymentId } });
+          if (existing && (existing.mode !== "LEGACY_VAULT" || existing.senderId !== sender.id || !existing.amount.equals(amount) || existing.recipientId !== recipientId || existing.recipientAddress !== (recipientId ? null : recipientWallet.toLowerCase()))) {
+            throw new HttpError("That key belongs to a different payment.", 409);
+          }
           if (existing && (existing.status === "PAID" || existing.status === "SETTLED")) {
             return Response.json({
               ok: true,

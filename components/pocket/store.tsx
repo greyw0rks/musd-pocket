@@ -132,6 +132,7 @@ interface PocketStore {
   startSend: () => void;
   chooseRecipient: (recipientId: string, amountUnits?: bigint) => void;
   confirmSend: () => Promise<void>;
+  refresh: () => Promise<void>;
 
   /* People */
   /**
@@ -266,14 +267,8 @@ export function PocketProvider({
    */
   const contactsRef = useRef<Recipient[]>([]);
 
-  /*
-    Held in a ref for the lifetime of the mount.
-
-    The provider is handed a freshly-built service set once, and every hook
-    below closes over it. Reading it through state would let a re-render swap
-    the services underneath a `useCallback` that had already captured them.
-  */
-  const resolved = useRef<PocketServices>(services).current;
+  // Capture services once per mount without reading a mutable ref in render.
+  const [resolved] = useState(() => services);
   const { payments, sessions, requests: requestService } = resolved;
 
   const [ready, setReady] = useState(false);
@@ -450,12 +445,14 @@ export function PocketProvider({
    * is what produces the bugs this plan exists to avoid.
    */
   const refresh = useCallback(async () => {
-    const [nextBalance, nextTransactions] = await Promise.all([
+    const [nextBalance, nextTransactions] = await Promise.allSettled([
       payments.getBalance(),
       payments.listTransactions(),
     ]);
-    setBalance(nextBalance);
-    setTransactions(nextTransactions);
+    if (nextBalance.status === "fulfilled") setBalance(nextBalance.value);
+    if (nextTransactions.status === "fulfilled") setTransactions(nextTransactions.value);
+    if (nextTransactions.status === "rejected") throw nextTransactions.reason;
+    if (nextBalance.status === "rejected") throw nextBalance.reason;
   }, [payments]);
 
   /**
@@ -620,7 +617,7 @@ export function PocketProvider({
     setError(null);
 
     try {
-      const result = await payments.send({ recipient, amountUnits });
+      const result = await payments.send({ recipient, amountUnits, idempotencyKey: current.key });
 
       if (!result.ok) {
         setError(result.error);
@@ -629,17 +626,19 @@ export function PocketProvider({
       }
 
       setHighlightId(result.transaction.id);
-      await refresh();
-      announce(result.transaction);
-
+      setTransactions(rows => [result.transaction, ...rows.filter(row => row.txHash !== result.transaction.txHash)]);
       setKeypad(clearKeypad());
+      // Recording and balance reads may fail after broadcast. Preserve the
+      // receipt and leave the send screen so another tap cannot send again.
+      await refresh().catch(() => undefined);
+      if (result.transaction.status === "confirmed") announce(result.transaction);
       setPhase("idle");
-      reset("success", { transactionId: result.transaction.id });
+      reset(result.transaction.status === "confirmed" ? "success" : "transaction", { transactionId: result.transaction.id });
     } finally {
       inFlight.current = false;
       setPhase("idle");
     }
-  }, [balance, current.params.recipientId, keypad, payments, recipientById, refresh, announce, reset]);
+  }, [balance, current.key, current.params.recipientId, keypad, payments, recipientById, refresh, announce, reset]);
 
   /* ------------------------------------------------------------ requests */
 
@@ -972,6 +971,7 @@ export function PocketProvider({
     startSend,
     chooseRecipient,
     confirmSend,
+    refresh,
 
     addContact,
     resolveHandle,

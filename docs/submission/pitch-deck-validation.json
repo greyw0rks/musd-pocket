@@ -1,0 +1,58 @@
+{
+  "updatedAt": "2026-11-03T21:51:35.060Z",
+  "slides": 10,
+  "layout": [
+    {
+      "slide": 1,
+      "clipped": false,
+      "horizontalOverflow": false
+    },
+    {
+      "slide": 2,
+      "clipped": false,
+      "horizontalOverflow": false
+    },
+    {
+      "slide": 3,
+      "clipped": false,
+      "horizontalOverflow": false
+    },
+    {
+      "slide": 4,
+      "clipped": false,
+      "horizontalOverflow": false
+    },
+    {
+      "slide": 5,
+      "clipped": false,
+      "horizontalOverflow": false
+    },
+    {
+      "slide": 6,
+      "clipped": false,
+      "horizontalOverflow": false
+    },
+    {
+      "slide": 7,
+      "clipped": false,
+      "horizontalOverflow": false
+    },
+    {
+      "slide": 8,
+      "clipped": false,
+      "horizontalOverflow": false
+    },
+    {
+      "slide": 9,
+      "clipped": false,
+      "horizontalOverflow": false
+    },
+    {
+      "slide": 10,
+      "clipped": false,
+      "horizontalOverflow": false
+    }
+  ],
+  "mobileHorizontalOverflow": false,
+  "pdf": "pitch-deck.pdf"
+}

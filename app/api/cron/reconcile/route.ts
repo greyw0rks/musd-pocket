@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import type { NextRequest } from "next/server";
 import { hasVault } from "@/lib/mezo/vault";
 import { RECONCILE_GRACE_MS, reconcile } from "@/lib/settlement/reconcile";
+import { reconcileDirectPayments } from "@/lib/payments/direct";
 
 /**
  * POST-free reconciliation entry point for the scheduler.
@@ -45,33 +46,41 @@ export async function GET(req: NextRequest) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Without the vault there is no chain truth to read, so every row would hold
-  // forever and the run would be pure noise. Say so instead of churning.
-  if (!hasVault()) {
-    return Response.json(
-      { error: "Vault not configured (NEXT_PUBLIC_POCKET_VAULT_ADDRESS)" },
-      { status: 503 },
-    );
-  }
-
   const startedAt = Date.now();
   try {
-    const report = await reconcile();
+    const [direct, report] = await Promise.all([
+      reconcileDirectPayments(),
+      hasVault()
+        ? reconcile()
+        : Promise.resolve({
+            scanned: 0,
+            finalized: 0,
+            refunded: 0,
+            held: 0,
+            failed: 0,
+            actions: [],
+          }),
+    ]);
     return Response.json({
       ok: true,
       durationMs: Date.now() - startedAt,
       graceMs: RECONCILE_GRACE_MS,
-      scanned: report.scanned,
-      finalized: report.finalized,
+      scanned: report.scanned + direct.scanned,
+      finalized: report.finalized + direct.finalized,
       refunded: report.refunded,
-      held: report.held,
-      failed: report.failed,
+      held: report.held + direct.held,
+      failed: report.failed + direct.failed,
       actions: report.actions,
+      direct,
+      legacy: { ...report, configured: hasVault() },
     });
   } catch (err) {
     // Never leak the error itself — it can carry RPC URLs and connection
     // strings. The stack stays in the logs.
     console.error("[cron/reconcile] run failed", { error: String(err) });
-    return Response.json({ error: "Reconciliation run failed" }, { status: 500 });
+    return Response.json(
+      { error: "Reconciliation run failed" },
+      { status: 500 },
+    );
   }
 }

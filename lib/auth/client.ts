@@ -14,10 +14,12 @@ import { usePrivy } from "@privy-io/react-auth";
  */
 export class ApiError extends Error {
   readonly status: number;
-  constructor(message: string, status: number) {
+  readonly code?: string;
+  constructor(message: string, status: number, code?: string) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -53,6 +55,9 @@ export function useApi(): AuthedFetch {
         throw new ApiError(
           (data as { error?: string }).error || "Request failed",
           res.status,
+          typeof (data as { code?: unknown }).code === "string"
+            ? (data as { code: string }).code
+            : undefined,
         );
       }
       return data as T;

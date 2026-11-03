@@ -18,6 +18,7 @@ import { Button } from "@/components/pocket/ui/Button";
 import { ListGroup, ListRow } from "@/components/pocket/ui/ListRow";
 import { ScreenHeader } from "@/components/pocket/ui/ScreenHeader";
 import { Sheet } from "@/components/pocket/ui/Sheet";
+import { MerchantProfile } from "./MerchantProfile";
 import { ReceiptsSheet } from "@/components/pocket/profile/ReceiptsSheet";
 import { WALLET_COPY } from "@/components/pocket/profile/wallet-copy";
 import { RECEIPTS_CHANNEL_LABEL } from "@/features/session/session.types";
@@ -113,7 +114,7 @@ export function ProfileScreen({
             </span>
           }
           title={isMerchant ? "Business account" : "Personal account"}
-          subtitle="Set when you created your account."
+          subtitle="Change this in your payment profile below."
         />
         <ListRow
           as="div"
@@ -170,6 +171,8 @@ export function ProfileScreen({
           />
         ) : null}
       </ListGroup>
+
+      <MerchantProfile key={user?.id} />
 
       <ListGroup label="Wallet">
         <ListRow

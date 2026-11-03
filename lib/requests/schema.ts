@@ -1,18 +1,10 @@
 import { z } from "zod";
 import { isAddress } from "viem";
-import { MUSD_DECIMALS } from "@/lib/mezo/config";
+import { paymentAmountSchema } from "@/lib/payments/schema";
 
 const addressSchema = z
   .string()
   .refine((v) => isAddress(v), { message: "Invalid EVM address" });
-
-const amountSchema = z
-  .string()
-  .refine((v) => /^\d+(\.\d+)?$/.test(v), { message: "Invalid amount" })
-  .refine((v) => Number(v) > 0, { message: "Amount must be greater than 0" })
-  .refine((v) => (v.split(".")[1]?.length ?? 0) <= MUSD_DECIMALS, {
-    message: `Max ${MUSD_DECIMALS} decimals`,
-  });
 
 /**
  * Request creation, minus the creator.
@@ -22,12 +14,15 @@ const amountSchema = z
  * `creatorAddress` as a field, which let anyone create a request *as* somebody
  * else; the field is gone on purpose, not overlooked.
  */
-export const createRequestSchema = z.object({
-  recipientAddress: addressSchema,
-  amount: amountSchema,
-  description: z.string().trim().max(120).optional().nullable(),
-  expiry: z.enum(["never", "24h", "7d"]).default("never"),
-});
+export const createRequestSchema = z
+  .object({
+    intendedPayerAddress: addressSchema.optional(),
+    merchantName: z.string().trim().min(1).max(80).optional(),
+    amount: paymentAmountSchema,
+    description: z.string().trim().max(120).optional().nullable(),
+    expiry: z.enum(["never", "24h", "7d"]).default("never"),
+  })
+  .strict();
 
 export type CreateRequestInput = z.infer<typeof createRequestSchema>;
 
@@ -38,11 +33,9 @@ export function expiryToHours(expiry: "never" | "24h" | "7d"): number | null {
 }
 
 export const payRequestSchema = z.object({
-  txHash: z
-    .string()
-    .refine((v) => /^0x[0-9a-fA-F]{64}$/.test(v), {
-      message: "Invalid transaction hash",
-    }),
+  txHash: z.string().refine((v) => /^0x[0-9a-fA-F]{64}$/.test(v), {
+    message: "Invalid transaction hash",
+  }),
 });
 
 /**

@@ -1,0 +1,19 @@
+{
+  "capturedAt": "2026-11-03T21:49:38.893Z",
+  "chainId": 31611,
+  "campaign": "0xa78709beb3841aac1ed8fc3d8dedf74d55f62432",
+  "admin": "0xBA46d08B9E298E8E70096Fc238Da207139BCCAB7",
+  "authorizer": "0xBA46d08B9E298E8E70096Fc238Da207139BCCAB7",
+  "rewardMezo": "20",
+  "lockDurationSeconds": "1209600",
+  "approvedInventoryMezo": "100",
+  "currentInventoryMezo": "100",
+  "fundedClaims": 5,
+  "deploymentHash": "0x94b45c98d747b1c5c8a071f6dc7c5a66cd15e1839d546396aab7bb34c138883e",
+  "fundingHash": "0x7715444a058604c275bef42a2c5b3d0b94707369f732a8ead5ea5c0d01b703d6",
+  "actualBtcGas": "0.000000000200175198",
+  "signedBtcGasUpperBound": "0.000000000240210296",
+  "approvedBtcGasCap": "0.000001",
+  "explorerFallbackUsed": false,
+  "claimBroadcasts": 0
+}

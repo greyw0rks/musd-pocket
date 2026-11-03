@@ -74,7 +74,10 @@ export default function HomePage() {
         logout,
         getWalletAddress: () => walletRef.current,
       }),
-      requests: createApiRequestService({ fetchAuthed, payments }),
+      requests: createApiRequestService({
+        fetchAuthed,
+        getWalletAddress: () => walletRef.current,
+      }),
       contacts: createApiContactService(fetchAuthed),
       // `user` is guaranteed by AuthGate; the fallback exists so a race during
       // the gate's own transition cannot throw inside a component.

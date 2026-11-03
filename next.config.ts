@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 /**
- * The mobile app lives at `/home` and nowhere else.
+ * The mobile app lives at `/home`; shareable invoices live at `/pay/<id>`.
  *
  * These paths were the desktop app's routes — a sidebar with eight parallel
  * pages, each with its own URL — plus `/app`, which was the app's own address
@@ -31,7 +31,6 @@ const ALIASES = [
   // and an unhandled 404 is what it got instead. It is listed first because it
   // is the one people typed by habit, not because it is special.
   "/app",
-  "/pay",
   "/wallet",
   "/activity",
   "/deposit",
