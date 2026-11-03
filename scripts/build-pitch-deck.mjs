@@ -36,4 +36,3 @@ await copyFile(new URL("pitch-deck.pdf",directory),new URL("../public/pitch-deck
 await copyFile(new URL("pitch-deck.html",directory),new URL("../public/pitch-deck.html",import.meta.url));
 console.log(JSON.stringify({slides:layout.length,pdf:"docs/submission/pitch-deck.pdf",publicPdf:"/pitch-deck.pdf",layoutPassed:true,mobileOverflow:false}));
 } finally {await browser.close();}
-

@@ -39,4 +39,3 @@ The approved 20-MEZO campaign is deployed at `0xa78709beb3841aac1ed8fc3d8dedf74d
 Pending: live partial repayment with before/after debt/collateral; independent feedback and repeat use; one real new-campaign NFT claim; official Wave 2 deadline and submission confirmation.
 
 [Submission draft](submission.md) · [Pilot record](pilot-record.md) · [Testing guide](../mezo-testing-guide.md)
-

@@ -47,4 +47,3 @@ The inspected Notion hackathon tracker records Wave 1 won, Wave 2 Building and n
 6. Confirm the official Wave 2 requirements/deadline; submit the current repo, app, deck, updated demo and evidence, then retain confirmation.
 
 [Machine-readable review](evidence/wave-2-status-2026-11-03.json). [Existing feature guide](mezo-wealth.md). [Pilot testing guide](mezo-testing-guide.md).
-

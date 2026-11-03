@@ -48,4 +48,3 @@ repayment:{owner,existingStatus:TROVE_STATUS[status as keyof typeof TROVE_STATUS
 await writeFile("docs/evidence/wave-2-funding-preflight.json",JSON.stringify(report,null,2)+"\n");console.log(JSON.stringify(report,null,2));
 }
 main().catch(error=>{console.error(error.shortMessage??"Read-only preflight could not complete.");process.exitCode=1;});
-

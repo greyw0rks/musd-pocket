@@ -17,4 +17,3 @@ const result=await db.user.findUnique({where:{id:account.id},select:{username:tr
 const journal=await db.$queryRawUnsafe("SELECT to_regclass('public.welcome_reward_attempts') IS NOT NULL AS exists");
 console.log(JSON.stringify({capturedAt:new Date().toISOString(),applied:apply,merchant:result,rewardJournalExists:journal[0].exists,noInvoiceCreated:true,noFinancialBroadcasts:true},null,2));
 }finally{await db.$disconnect();}
-

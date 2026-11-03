@@ -33,4 +33,3 @@ const report={capturedAt:new Date().toISOString(),chainId:31611,hash,owner,block
 await writeFile("docs/evidence/wave-2-repayment-proof.json",JSON.stringify(report,null,2)+"\n");console.log(JSON.stringify(report,null,2));if(!passed)process.exitCode=1;
 }
 main().catch(error=>{console.error(error.shortMessage??error.message);process.exitCode=1;});
-

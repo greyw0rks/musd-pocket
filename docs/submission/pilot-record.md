@@ -31,4 +31,3 @@ The X page distributes links; Pocket signs payments. Own-wallet transfers are no
 | Return transaction | Pending |
 
 Keep private identity/contact details outside the public repo. Record missing and failed observations honestly. Separate customer demand from app tests.
-

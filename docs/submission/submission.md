@@ -26,4 +26,3 @@ Proposed disclosed merchant fees partly funding BTC gas sponsorship and operatio
 Two successful Savings claims and a liquidity addition have receipt evidence. Local checks total 177 assertions. Live partial repayment and independent merchant/customer use remain pending.
 
 Before submission: update pending deployment/activation/adoption statements with verified outcomes, add the current demo/pilot evidence, confirm the official deadline, and retain confirmation. Builder-operated accounts are not independent merchants; testnet payments are not revenue.
-

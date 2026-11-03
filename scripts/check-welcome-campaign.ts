@@ -28,4 +28,3 @@ const report={capturedAt:new Date().toISOString(),chainId:CHAIN_ID,block:String(
 await writeFile("docs/evidence/wave-2-welcome-campaign.json",JSON.stringify(report,null,2)+"\n");console.log(JSON.stringify(report,null,2));if(!valid)process.exitCode=1;
 }
 main().catch(error=>{console.error(error.shortMessage??error.message);process.exitCode=1;});
-
