@@ -1,0 +1,20 @@
+{
+  "capturedAt": "2026-11-03T22:08:54.136Z",
+  "applied": true,
+  "created": true,
+  "merchant": "Pocket",
+  "xHandle": "musd_pocket",
+  "merchantWallet": "0x0a5e59ca4f182561de80172c6da5db927091ea29",
+  "offer": "Pocket closed-mainnet waitlist (Mezo testnet pilot)",
+  "amountMusd": "100",
+  "chainId": 31611,
+  "invoice": {
+    "shortId": "89YAGVPYD8ZXYE6FJWZUK652",
+    "url": "https://mpocket.tech/pay/89YAGVPYD8ZXYE6FJWZUK652",
+    "status": "PENDING",
+    "expiresAt": null,
+    "txHash": null
+  },
+  "financialBroadcasts": 0,
+  "independentCustomerUseProved": false
+}

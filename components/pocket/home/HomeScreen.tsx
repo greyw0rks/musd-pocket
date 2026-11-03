@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { useMemo, useState } from "react";
 import { Avatar } from "@/components/pocket/Avatar";
 import { BalanceCards } from "@/components/pocket/home/BalanceCards";
+import type { TokenHolding } from "@/components/pocket/home/BalanceCards";
 import { FaucetSheet } from "@/components/pocket/home/FaucetSheet";
 import { RewardsSheet } from "@/components/pocket/home/RewardsSheet";
 import {
@@ -44,6 +45,8 @@ export function HomeScreen({
   balance,
   borrowedUnits = null,
   btc,
+  otherHoldings,
+  otherBalancesUnavailable,
   transactions,
   recipients,
   highlightId,
@@ -87,6 +90,8 @@ export function HomeScreen({
    * through; the card decides how to say what is not known about it.
    */
   btc?: { amount: string; valueUnits: bigint | null } | null;
+  otherHoldings?: readonly TokenHolding[];
+  otherBalancesUnavailable?: boolean;
   transactions: Transaction[];
   recipients: Recipient[];
   /** The payment the user just made, drawn lit until they look away. */
@@ -249,6 +254,8 @@ export function HomeScreen({
           walletUnits={balance}
           borrowedUnits={borrowedUnits}
           btc={btc}
+          otherHoldings={otherHoldings}
+          otherBalancesUnavailable={otherBalancesUnavailable}
           onRepay={onRepay}
         />
       </div>

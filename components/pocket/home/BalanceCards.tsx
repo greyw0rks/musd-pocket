@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatUnits } from "viem";
 import { formatMoney } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
@@ -95,6 +96,21 @@ export interface WalletHolding {
   valueUnits: bigint | null;
 }
 
+export interface TokenHolding {
+  label: string;
+  rawAmount: bigint;
+  decimals: number;
+  valueUnits: bigint | null;
+}
+
+function tokenAmount(holding: TokenHolding) {
+  const exact = formatUnits(holding.rawAmount, holding.decimals);
+  const [whole, fraction = ""] = exact.split(".");
+  const shown = fraction.slice(0, 6).replace(/0+$/, "");
+  if (whole === "0" && !shown && holding.rawAmount > 0n) return "<0.000001";
+  return shown ? `${whole}.${shown}` : whole;
+}
+
 /** `$3,500.00` → `3,500.00`. The detail rows print the bare figure. */
 function bare(units: bigint): string {
   return formatMoney(units).replace("$", "");
@@ -104,6 +120,8 @@ export function BalanceCards({
   walletUnits,
   borrowedUnits = null,
   btc = null,
+  otherHoldings = [],
+  otherBalancesUnavailable = false,
   onRepay,
 }: {
   /**
@@ -138,6 +156,8 @@ export function BalanceCards({
    * holding is worse than one that names what it could not price.
    */
   btc?: { amount: string; valueUnits: bigint | null } | null;
+  otherHoldings?: readonly TokenHolding[];
+  otherBalancesUnavailable?: boolean;
   /**
    * Opens the repay screen. Always given, because the button is always drawn —
    * disabled when there is nothing to settle, so that borrowing never looks
@@ -147,6 +167,9 @@ export function BalanceCards({
 }) {
   const [flipped, setFlipped] = useState(false);
   const flip = () => setFlipped((v) => !v);
+  const otherTokens = otherHoldings.filter(holding => holding.rawAmount > 0n && !["musd", "btc"].includes(holding.label.toLowerCase()));
+  const unpriced = otherTokens.some(holding => holding.valueUnits === null);
+  const extraHeight = otherTokens.length > 0 ? 54 + otherTokens.length * 28 : 0;
 
   /*
     Everything the wallet holds, once each holding can be valued. An unpriced
@@ -158,18 +181,18 @@ export function BalanceCards({
     out of a number nobody has read yet, and `$0.00` would be a claim.
   */
   const totalUnits =
-    walletUnits === null ? null : walletUnits + (btc?.valueUnits ?? 0n);
+    walletUnits === null ? null : walletUnits + (btc?.valueUnits ?? 0n) + otherTokens.reduce((sum, holding) => sum + (holding.valueUnits ?? 0n), 0n);
 
   const holdings: readonly WalletHolding[] = [
+    {
+      label: "mUSD",
+      amount: walletUnits === null ? null : bare(walletUnits),
+      valueUnits: walletUnits,
+    },
     {
       label: "BTC",
       amount: btc?.amount ?? null,
       valueUnits: btc?.valueUnits ?? null,
-    },
-    {
-      label: "musd",
-      amount: walletUnits === null ? null : bare(walletUnits),
-      valueUnits: walletUnits,
     },
   ];
 
@@ -238,11 +261,11 @@ export function BalanceCards({
   } as const;
 
   return (
-    <div className={cn("pk-cards", flipped && "pk-cards--flip")}>
+    <div className={cn("pk-cards", flipped && "pk-cards--flip")} style={{ height: 262 + (flipped ? extraHeight + (otherBalancesUnavailable ? 28 : 0) : 0) }}>
       {/* Yellow — the total, and what it is made of. */}
-      <div className="pk-cd pk-cd--back">
+      <div className="pk-cd pk-cd--back" style={{ height: 150 + (flipped ? extraHeight + (otherBalancesUnavailable ? 28 : 0) : 0) }}>
         <div className="pk-row pk-sp" style={{ gap: 8 }}>
-          <span style={{ fontSize: 13, opacity: 0.7 }}>Total balance</span>
+          <span style={{ fontSize: 13, opacity: 0.7 }}>Total balance{unpriced ? <small className="block text-[10px]">Priced assets</small> : null}</span>
           <b style={{ fontSize: 15 }}>
             {totalUnits === null ? "—" : formatMoney(totalUnits)}
           </b>
@@ -257,7 +280,7 @@ export function BalanceCards({
           {holdings.map((holding) => (
             <div key={holding.label}>
               <span>{holding.label}</span>
-              <b>{holding.amount ?? "—"}</b>
+              <b style={holding.label === "BTC" ? { fontSize: 16, letterSpacing: "-0.4px", whiteSpace: "nowrap" } : undefined}>{holding.amount ?? "—"}</b>
               <small>
                 {holding.amount === null
                   ? "Not connected"
@@ -268,6 +291,19 @@ export function BalanceCards({
             </div>
           ))}
         </div>
+
+        {otherTokens.length > 0 ? (
+          <div className="pk-other-tokens" aria-label="Other wallet tokens" aria-hidden={!flipped}>
+            <div className="pk-other-tokens-heading">Other tokens{unpriced ? " · includes unpriced" : ""}</div>
+            {otherTokens.map(holding => (
+              <div className="pk-other-token" key={holding.label}>
+                <span>{holding.label}</span>
+                <b title={formatUnits(holding.rawAmount, holding.decimals)}>{tokenAmount(holding)}</b>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {otherBalancesUnavailable ? <p className="pk-other-tokens-warning" aria-hidden={!flipped}>Some token balances unavailable</p> : null}
 
         <button
           type="button"
