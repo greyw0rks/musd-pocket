@@ -1,0 +1,52 @@
+{
+  "packageId": "tech.mpocket.testing",
+  "host": "mpocket.tech",
+  "name": "Pocket Test",
+  "launcherName": "Pocket Test",
+  "display": "standalone",
+  "themeColor": "#F4F4F6",
+  "themeColorDark": "#000000",
+  "navigationColor": "#000000",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
+  "backgroundColor": "#F4F4F6",
+  "enableNotifications": false,
+  "startUrl": "/home",
+  "iconUrl": "https://mpocket.tech/icons/512",
+  "maskableIconUrl": "https://mpocket.tech/icons/512",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": ".private/mpocket-testing.keystore",
+    "alias": "mpocket-testing"
+  },
+  "appVersionName": "0.1.0-test.1",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://mpocket.tech/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": false,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://mpocket.tech/",
+  "minSdkVersion": 23,
+  "orientation": "default",
+  "fingerprints": [
+    {
+      "name": "Pocket Android testing",
+      "value": "34:60:8C:CE:75:A2:E1:03:18:58:70:90:B7:CA:B6:AC:D5:AA:AC:3B:45:07:DD:09:C0:FC:D6:E7:60:56:B5:7C"
+    }
+  ],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
+  "displayOverride": [],
+  "appVersion": "0.1.0-test.1"
+}
