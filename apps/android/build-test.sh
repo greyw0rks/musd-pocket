@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 : "${JAVA_HOME:?Set JAVA_HOME to your JDK 17 installation}"
 : "${ANDROID_HOME:?Set ANDROID_HOME to your Android SDK installation}"
 sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-"$sdkmanager" --install "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+"$sdkmanager" --install "platform-tools" "platforms;android-36" "build-tools;35.0.0" "build-tools;36.0.0"
 
 if [[ ! -f .private/mpocket-testing.keystore || ! -f .private/keystore-password ]]; then
   echo "Missing the private testing keystore/password. Restore the original signing files before building an update." >&2

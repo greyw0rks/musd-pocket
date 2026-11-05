@@ -2,7 +2,7 @@
 
 An installable Android test app for https://mpocket.tech/home. It uses a Trusted Web Activity in Chrome, so Pocket's existing Privy sign-in, wallet, payments and finance screens use the same HTTPS origin and session as the website.
 
-The app's launcher name is **Pocket Test**, its package is `tech.mpocket.testing`, and the first build is `0.1.0-test.1` (version code 1). It requires Android 6 or later and an up-to-date Chrome browser. Pocket currently runs on Mezo testnet; the APK does not enable mainnet.
+The app's launcher name is **Pocket Test**, its package is `tech.mpocket.testing`, and the first build is `0.1.0-test.1` (version code 1). It requires Android 7 or later and an up-to-date Chrome browser. Pocket currently runs on Mezo testnet; the APK does not enable mainnet.
 
 ## Install and test
 
@@ -27,7 +27,7 @@ cd apps/android
 
 The script installs the required SDK packages when they are missing, builds the APK, and signs it using `.private/mpocket-testing.keystore`. The keystore and its password file are local and ignored by Git. Use the original signing files to rebuild updates for an already installed app; a different key requires a fresh installation and an updated website association.
 
-`twa-manifest.json` is the Bubblewrap configuration used to generate the project. The generated source uses Bubblewrap core 1.27.0, Gradle 8.11.1 and Android Gradle Plugin 8.9.1. Regeneration uses Bubblewrap CLI 1.23.0; custom build and documentation files are maintained separately.
+`twa-manifest.json` is the Bubblewrap configuration used to generate the project. The generated source uses Bubblewrap core 1.27.0, Gradle 8.11.1 and Android Gradle Plugin 8.9.1 and Android Browser Helper 2.7.4. Regeneration uses Bubblewrap CLI 1.23.0; custom build and documentation files are maintained separately.
 
 The public certificate fingerprint in `public/.well-known/assetlinks.json` connects this package to mpocket.tech. Chrome may initially show a toolbar until its domain verification completes. Other origins, including sign-in providers, use browser controls.
 
