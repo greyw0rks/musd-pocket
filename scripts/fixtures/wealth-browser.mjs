@@ -151,7 +151,7 @@ const rpc = {
         return equal(address, ESCROW)
           ? BigInt(locks.size)
           : POOLS.some((p) => equal(p.address, address))
-            ? 10n * unit
+            ? BigInt(window.fixtureLpBalance ?? 10n * unit)
             : 10000n * unit;
       case "decimals":
         return (

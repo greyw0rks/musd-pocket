@@ -9,11 +9,14 @@ const root = process.cwd();
 const cssFiles = (await readdir(".next/dev/static/chunks")).filter((file) =>
   /(app_globals|components_pocket_pocket).*\.css$/.test(file),
 );
-const css = (
-  await Promise.all(
-    cssFiles.map((file) => readFile(`.next/dev/static/chunks/${file}`, "utf8")),
-  )
-).join("\n");
+const css =
+  (
+    await Promise.all(
+      cssFiles.map((file) =>
+        readFile(`.next/dev/static/chunks/${file}`, "utf8"),
+      ),
+    )
+  ).join("\n") + (await readFile("components/pocket/pocket.css", "utf8"));
 const bundle = await build({
   stdin: {
     contents: `
@@ -107,6 +110,56 @@ try {
   };
   await page.getByRole("button", { name: /Lock Create/ }).click();
   await page.getByText("Permanent lock", { exact: true }).waitFor();
+  // Locks use the same finance layout in light/dark themes and on narrow phones.
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const theme of ["light", "dark"]) {
+      await page.locator(".pocket-root").evaluate((el, value) => {
+        el.dataset.theme = value;
+      }, theme);
+      assert.equal(
+        await page
+          .locator(".pk-scr")
+          .evaluate((el) => el.scrollWidth <= el.clientWidth),
+        true,
+      );
+      await page
+        .getByRole("button", { name: "Manage #43", exact: true })
+        .click();
+      assert.equal(
+        await page
+          .getByRole("button", { name: "Manage #43", exact: true })
+          .getAttribute("aria-expanded"),
+        "true",
+      );
+      await page.getByRole("button", { name: "Extend", exact: true }).click();
+      assert.equal(
+        await page
+          .getByRole("button", { name: "Extend", exact: true })
+          .getAttribute("aria-pressed"),
+        "true",
+      );
+      assert.equal(
+        await page.getByLabel("Lock duration", { exact: true }).count(),
+        2,
+      );
+      await page
+        .getByRole("button", { name: "Manage #43", exact: true })
+        .click();
+      await page.locator(".pk-scr").evaluate((el) => {
+        el.scrollTop = 0;
+      });
+      if (width === 390)
+        await page.screenshot({
+          path: `/tmp/mpocket-locks-${theme}.png`,
+          animations: "disabled",
+        });
+    }
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator(".pocket-root").evaluate((el) => {
+    el.dataset.theme = "light";
+  });
   assert.equal(await page.getByRole("link").count(), 0);
   await page.screenshot({
     path: "/tmp/pocket-locks-mobile.png",
@@ -345,6 +398,65 @@ try {
     await page.getByLabel("You pay (BTC)", { exact: true }).inputValue(),
     "",
   );
+  // Check both redesigned workspaces with each theme and narrow mobile gutters.
+  await page.evaluate(() => {
+    window.fixtureLpBalance = "713197400311319805";
+  });
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const theme of ["light", "dark"]) {
+      await page.locator(".pocket-root").evaluate((el, value) => {
+        el.dataset.theme = value;
+      }, theme);
+      await page.getByRole("button", { name: "Swap", exact: true }).click();
+      await page.getByLabel("Trading pair", { exact: true }).waitFor();
+      assert.equal(
+        await page
+          .locator(".pk-scr")
+          .evaluate((el) => el.scrollWidth <= el.clientWidth),
+        true,
+      );
+      if (width === 390) {
+        await page.waitForTimeout(450);
+        await page.screenshot({
+          path: `/tmp/mpocket-swap-${theme}.png`,
+          animations: "disabled",
+        });
+      }
+      await page.getByRole("button", { name: "Wealth", exact: true }).click();
+      await page.getByRole("button", { name: /Pools Add/ }).click();
+      await page.getByText("Your liquidity", { exact: true }).waitFor();
+      await page
+        .locator(".pk-finance-value")
+        .filter({ hasText: "0.713197 LP" })
+        .waitFor();
+      assert.equal(
+        await page.getByText("0.713197400311319805", { exact: false }).count(),
+        0,
+      );
+      assert.equal(
+        await page
+          .locator(".pk-scr")
+          .evaluate((el) => el.scrollWidth <= el.clientWidth),
+        true,
+      );
+      for (const name of ["Add", "Remove", "Fees"]) {
+        const box = await page
+          .getByRole("button", { name, exact: true })
+          .boundingBox();
+        assert.ok(
+          box && box.height >= 44 && box.x >= 0 && box.x + box.width <= width,
+        );
+      }
+      if (width === 390)
+        await page.screenshot({
+          path: `/tmp/mpocket-pools-${theme}.png`,
+          animations: "disabled",
+        });
+      await page.getByRole("button", { name: "Back", exact: true }).click();
+    }
+  }
+  await page.getByRole("button", { name: "Swap", exact: true }).click();
   await page.setViewportSize({ width: 320, height: 780 });
   const navBox = await page.locator(".pk-nav").boundingBox();
   assert.ok(

@@ -1,17 +1,15 @@
 "use client";
 
 import { motion } from "motion/react";
-import { BorrowIcon, InfoIcon } from "@/components/pocket/icons";
+import { ArrowRight, Bitcoin, Wallet, ShieldCheck } from "lucide-react";
+import { InfoIcon } from "@/components/pocket/icons";
 import { useBorrow, type BorrowView } from "@/hooks/use-borrow";
 import { SCREEN, UP } from "@/components/pocket/theme";
 import { Button } from "@/components/pocket/ui/Button";
 import { ListGroup, ListRow } from "@/components/pocket/ui/ListRow";
 import { ScreenHeader } from "@/components/pocket/ui/ScreenHeader";
-import {
-  EmptyState,
-  ErrorState,
-  ListSkeleton,
-} from "@/components/pocket/ui/States";
+import { FinanceIntro } from "@/components/pocket/ui/Finance";
+import { ErrorState, ListSkeleton } from "@/components/pocket/ui/States";
 import { MUSD_GAS_COMPENSATION } from "@/lib/mezo/borrow-write";
 import {
   formatBtc,
@@ -98,8 +96,11 @@ export function BorrowScreen({
   const { data, isPending, isError, error, refetch, isFetching } = useBorrow();
 
   return (
-    <div className={SCREEN}>
+    <div className={`${SCREEN} pk-finance pk-scr--plain`}>
       <ScreenHeader title="Borrow" onBack={onBack} />
+      <FinanceIntro title="Keep your Bitcoin. Unlock mUSD.">
+        Use BTC as collateral and manage your loan in one place.
+      </FinanceIntro>
 
       {isPending ? (
         <ListSkeleton rows={4} />
@@ -174,11 +175,10 @@ function Position({
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`${UP} pk-card`}
-        style={{ padding: "18px 20px" }}
+        className={`${UP} pk-finance-hero pk-finance-hero--soft`}
       >
         <div className="pk-row pk-sp">
-          <span className="pk-m font-semibold uppercase">Your position</span>
+          <span className="pk-eyebrow">Your position</span>
           {/*
             The pill is the verdict, and the only coloured thing on the screen.
             When the oracle is silent it goes neutral and says what is actually
@@ -194,8 +194,8 @@ function Position({
 
         <div style={{ marginTop: 12 }}>
           <p className="pk-m">Collateral</p>
-          <p className="pk-big" style={{ fontVariantNumeric: "tabular-nums" }}>
-            {formatBtc(collateral)} BTC
+          <p className="pk-finance-value">
+            {formatBtc(collateral)} <small>BTC</small>
           </p>
           <p className="pk-m">
             {collateralValue === null
@@ -212,8 +212,8 @@ function Position({
           }}
         >
           <p className="pk-m">Borrowed</p>
-          <p className="pk-big" style={{ fontVariantNumeric: "tabular-nums" }}>
-            {formatMusd(debt)} MUSD
+          <p className="pk-finance-value">
+            {formatMusd(debt)} <small>mUSD</small>
           </p>
           <p className="pk-m">
             Includes the {formatMusd(MUSD_GAS_COMPENSATION)} MUSD gas reserve.
@@ -232,7 +232,7 @@ function Position({
           : "The Bitcoin price feed did not answer, so the collateral ratio, the loan-to-value and the risk verdict are withheld. The collateral and debt above are read straight from the chain and are current."}
       </p>
 
-      <ListGroup label="Risk">
+      <ListGroup label="Position health" className="pk-finance-details">
         <ListRow
           as="div"
           title="Collateral ratio"
@@ -271,8 +271,9 @@ function Position({
 
       {onRepay ? (
         <div style={{ marginTop: 20 }}>
-          <Button full onClick={onRepay}>
-            Repay or close
+          <Button full className="pk-finance-submit" onClick={onRepay}>
+            <span>Repay or close</span>
+            <ArrowRight size={18} aria-hidden="true" />
           </Button>
           {/*
             Said plainly, because it is the surprising thing about a Mezo Trove
@@ -337,21 +338,56 @@ function NoPosition({
 
   return (
     <>
-      <EmptyState
-        icon={<BorrowIcon size={24} />}
-        title={ending ? "No open position" : "Borrow against your Bitcoin"}
-        description={
-          ending ??
-          "Lock BTC as collateral and draw MUSD against it. Your Bitcoin is not sold — it is held by the protocol — and the loan is repaid in MUSD whenever you like."
-        }
-        action={
-          onOpenTrove ? (
-            <Button variant="purple" onClick={onOpenTrove}>
-              Open a position
-            </Button>
-          ) : undefined
-        }
-      />
+      <div className="pk-finance-hero pk-finance-hero--soft pk-borrow-welcome">
+        <span className="pk-borrow-emblem">
+          <Bitcoin size={32} aria-hidden="true" />
+        </span>
+        <h2>{ending ? "No open position" : "Borrow against your Bitcoin"}</h2>
+        <p className="pk-m">
+          {ending ??
+            "Lock BTC as collateral to borrow mUSD. Your Bitcoin stays held by the protocol until you close your position."}
+        </p>
+      </div>
+      <div className="pk-borrow-steps">
+        <div>
+          <span>
+            <Bitcoin size={18} aria-hidden="true" />
+          </span>
+          <div>
+            <h3>Start with Bitcoin</h3>
+            <p className="pk-m">Choose how much BTC to lock as collateral.</p>
+          </div>
+        </div>
+        <div>
+          <span>
+            <Wallet size={18} aria-hidden="true" />
+          </span>
+          <div>
+            <h3>Receive mUSD</h3>
+            <p className="pk-m">Borrowed funds arrive in your Pocket wallet.</p>
+          </div>
+        </div>
+        <div>
+          <span>
+            <ShieldCheck size={18} aria-hidden="true" />
+          </span>
+          <div>
+            <h3>Watch your position</h3>
+            <p className="pk-m">
+              Monitor your ratio and repay to reduce your debt.
+            </p>
+          </div>
+        </div>
+      </div>
+      {onOpenTrove ? (
+        <Button full className="pk-finance-submit" onClick={onOpenTrove}>
+          <span>Open a position</span>
+          <ArrowRight size={18} aria-hidden="true" />
+        </Button>
+      ) : null}
+      <p className="pk-finance-note">
+        A falling Bitcoin price can put your collateral at risk of liquidation.
+      </p>
 
       {/*
         Who holds the position, said once, before anyone opens one. The rest of
@@ -359,7 +395,7 @@ function NoPosition({
         and borrowing is where that has consequences, because a liquidation is
         the user's to lose.
       */}
-      <div className="pk-card" style={{ padding: "16px 18px" }}>
+      <div className="pk-finance-explainer">
         <div className="pk-row" style={{ alignItems: "flex-start", gap: 10 }}>
           <span className="pk-ico" aria-hidden="true">
             <InfoIcon size={16} />

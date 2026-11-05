@@ -8,7 +8,8 @@ import { SCREEN, UP } from "@/components/pocket/theme";
 import { Button } from "@/components/pocket/ui/Button";
 import { ListGroup, ListRow } from "@/components/pocket/ui/ListRow";
 import { ScreenHeader } from "@/components/pocket/ui/ScreenHeader";
-import { TextField } from "@/components/pocket/ui/TextField";
+import { AmountField, FinanceIntro } from "@/components/pocket/ui/Finance";
+import { ArrowDown, ArrowRight } from "lucide-react";
 import { useBorrow } from "@/hooks/use-borrow";
 import { useBorrowActions } from "@/hooks/use-borrow-actions";
 import {
@@ -127,12 +128,18 @@ export function OpenTroveScreen({
       : null;
 
   const ratio =
-    collateralWei !== null && collateralWei > 0n && composite !== null && price !== null
+    collateralWei !== null &&
+    collateralWei > 0n &&
+    composite !== null &&
+    price !== null
       ? collateralRatio(collateralWei, composite, price)
       : null;
 
   const liquidation =
-    collateralWei !== null && collateralWei > 0n && composite !== null && mcr !== null
+    collateralWei !== null &&
+    collateralWei > 0n &&
+    composite !== null &&
+    mcr !== null
       ? liquidationPrice(collateralWei, composite, mcr)
       : null;
 
@@ -154,8 +161,10 @@ export function OpenTroveScreen({
     re-checks everything, and it is the one that decides.
   */
   const blocker = (() => {
-    if (collateralWei !== null && collateralWei <= 0n) return "Enter how much BTC to lock.";
-    if (drawWei !== null && drawWei <= 0n) return "Enter how much MUSD to borrow.";
+    if (collateralWei !== null && collateralWei <= 0n)
+      return "Enter how much BTC to lock.";
+    if (drawWei !== null && drawWei <= 0n)
+      return "Enter how much MUSD to borrow.";
 
     if (net !== null && liveTerms && net < liveTerms.minNetDebt) {
       return `The protocol requires at least ${formatMusd(liveTerms.minNetDebt)} MUSD of net debt. ${formatMusd(drawWei ?? 0n)} plus the fee comes to ${formatMusd(net)}. Borrow more.`;
@@ -165,7 +174,11 @@ export function OpenTroveScreen({
       return `That opens at a ${formatRatio(ratio)} collateral ratio, below the ${formatRatio(CCR)} this app requires. Lock more BTC or borrow less.`;
     }
 
-    if (collateralWei !== null && heldWei !== null && heldWei < collateralWei + OPEN_GAS_RESERVE) {
+    if (
+      collateralWei !== null &&
+      heldWei !== null &&
+      heldWei < collateralWei + OPEN_GAS_RESERVE
+    ) {
       return `Your wallet holds ${formatBtc(heldWei)} BTC — not enough to lock ${formatBtc(collateralWei)} and still pay the network fee.`;
     }
 
@@ -214,7 +227,7 @@ export function OpenTroveScreen({
 
   if (submitted) {
     return (
-      <div className={SCREEN}>
+      <div className={`${SCREEN} pk-finance pk-scr--plain`}>
         <ScreenHeader title="Position opened" onBack={onDone} />
         <motion.div
           initial={{ opacity: 0, y: 8 }}
@@ -222,7 +235,9 @@ export function OpenTroveScreen({
           className={`${UP} pk-card`}
           style={{ padding: "18px 20px" }}
         >
-          <p className="pk-m">Your Bitcoin is locked and the MUSD is on its way</p>
+          <p className="pk-m">
+            Your Bitcoin is locked and the MUSD is on its way
+          </p>
           <p style={{ marginTop: 6, wordBreak: "break-all" }} className="pk-m">
             {submitted.hash}
           </p>
@@ -241,51 +256,60 @@ export function OpenTroveScreen({
   }
 
   return (
-    <div className={SCREEN}>
+    <div className={`${SCREEN} pk-finance pk-scr--plain`}>
       <ScreenHeader
         title="Borrow"
         subtitle="Lock BTC, draw MUSD"
         onBack={onBack}
       />
+      <FinanceIntro title="Build your position">
+        Choose your collateral and the mUSD you want to receive.
+      </FinanceIntro>
 
-      <TextField
-        label="Bitcoin to lock"
-        inputMode="decimal"
-        autoComplete="off"
-        placeholder="0.01"
-        value={collateralText}
-        onChange={(event) => setCollateralText(event.target.value)}
-        hint={
-          maxCollateral !== null && maxCollateral > 0n ? (
-            <button
-              type="button"
-              onClick={() => setCollateralText(weiToDecimalInput(maxCollateral))}
-              className="font-semibold underline"
-            >
-              Use max ({formatBtc(maxCollateral)} BTC)
-            </button>
-          ) : (
-            "From the wallet on the Receive screen. It never leaves your custody."
-          )
-        }
-      />
+      <div className="pk-finance-workspace">
+        <AmountField
+          symbol="BTC"
+          disabled={busy}
+          label="Bitcoin to lock"
+          inputMode="decimal"
+          autoComplete="off"
+          placeholder="0.01"
+          value={collateralText}
+          onChange={(event) => setCollateralText(event.target.value)}
+          onMax={
+            maxCollateral !== null && maxCollateral > 0n
+              ? () => setCollateralText(weiToDecimalInput(maxCollateral))
+              : undefined
+          }
+          hint={
+            maxCollateral !== null
+              ? `${formatBtc(maxCollateral)} BTC available after reserving network fees`
+              : "Reading your Bitcoin balance…"
+          }
+        />
 
-      <TextField
-        label="MUSD to borrow"
-        inputMode="decimal"
-        autoComplete="off"
-        placeholder="1000"
-        value={drawText}
-        onChange={(event) => setDrawText(event.target.value)}
-        hint="Drawn into your wallet. It arrives as a debt against the Bitcoin above."
-      />
+        <span className="pk-form-connector" aria-hidden="true">
+          <ArrowDown size={18} />
+        </span>
+        <AmountField
+          symbol="mUSD"
+          disabled={busy}
+          label="MUSD to borrow"
+          inputMode="decimal"
+          autoComplete="off"
+          placeholder="1000"
+          value={drawText}
+          onChange={(event) => setDrawText(event.target.value)}
+          hint="Drawn into your wallet. It arrives as a debt against the Bitcoin above."
+        />
+      </div>
 
       {/*
         What the position would look like. Every figure is derived from the chain
         reads and the two fields, and any figure that cannot be derived is
         withheld with the reason rather than printed as a zero.
       */}
-      <ListGroup label="If you continue">
+      <ListGroup label="Position preview" className="pk-finance-details">
         <ListRow
           as="div"
           title="Borrowing fee"
@@ -320,7 +344,9 @@ export function OpenTroveScreen({
           }
           trailing={
             <b style={{ fontVariantNumeric: "tabular-nums" }}>
-              {collateralValue === null ? "—" : `≈ ${formatUsd(collateralValue)}`}
+              {collateralValue === null
+                ? "—"
+                : `≈ ${formatUsd(collateralValue)}`}
             </b>
           }
         />
@@ -354,9 +380,9 @@ export function OpenTroveScreen({
       {price === null ? (
         <p className="pk-m" style={{ marginTop: 12, lineHeight: 1.6 }}>
           The Bitcoin price feed is not answering, so the ratio, the valuation
-          and the liquidation price cannot be checked — and the protocol will not
-          accept a new position while its own price is stale either. The fee and
-          the total debt above are read from the contracts and are current.
+          and the liquidation price cannot be checked — and the protocol will
+          not accept a new position while its own price is stale either. The fee
+          and the total debt above are read from the contracts and are current.
         </p>
       ) : null}
 
@@ -396,12 +422,13 @@ export function OpenTroveScreen({
       <div style={{ marginTop: 20 }}>
         <Button
           full
-          variant="purple"
+          className="pk-finance-submit"
           disabled={!ready}
           loading={busy}
           onClick={() => void submit()}
         >
-          {busy ? "Opening" : "Open position"}
+          <span>{busy ? "Opening" : "Open position"}</span>
+          <ArrowRight size={18} aria-hidden="true" />
         </Button>
         <p
           className="pk-m"

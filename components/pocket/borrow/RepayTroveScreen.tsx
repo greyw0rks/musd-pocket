@@ -7,7 +7,8 @@ import { SCREEN, UP } from "@/components/pocket/theme";
 import { Button } from "@/components/pocket/ui/Button";
 import { ListGroup, ListRow } from "@/components/pocket/ui/ListRow";
 import { ScreenHeader } from "@/components/pocket/ui/ScreenHeader";
-import { TextField } from "@/components/pocket/ui/TextField";
+import { AmountField, FinanceIntro } from "@/components/pocket/ui/Finance";
+import { ArrowRight } from "lucide-react";
 import { ErrorState, ListSkeleton } from "@/components/pocket/ui/States";
 import { useBorrow } from "@/hooks/use-borrow";
 import { useBorrowActions } from "@/hooks/use-borrow-actions";
@@ -52,8 +53,13 @@ export function RepayTroveScreen({
 }) {
   const actions = useBorrowActions();
   const queryClient = useQueryClient();
-  const { data: position, isPending, isError, error: readError, refetch } =
-    useBorrow();
+  const {
+    data: position,
+    isPending,
+    isError,
+    error: readError,
+    refetch,
+  } = useBorrow();
 
   const [amountText, setAmountText] = useState("");
   const [busy, setBusy] = useState<null | "repay" | "close">(null);
@@ -78,7 +84,7 @@ export function RepayTroveScreen({
 
   if (isPending) {
     return (
-      <div className={SCREEN}>
+      <div className={`${SCREEN} pk-finance pk-scr--plain`}>
         <ScreenHeader title="Repay" onBack={onBack} />
         <ListSkeleton rows={3} />
       </div>
@@ -87,7 +93,7 @@ export function RepayTroveScreen({
 
   if (isError || !position) {
     return (
-      <div className={SCREEN}>
+      <div className={`${SCREEN} pk-finance pk-scr--plain`}>
         <ScreenHeader title="Repay" onBack={onBack} />
         <ErrorState
           title="Could not read your position"
@@ -104,7 +110,7 @@ export function RepayTroveScreen({
 
   if (submitted) {
     return (
-      <div className={SCREEN}>
+      <div className={`${SCREEN} pk-finance pk-scr--plain`}>
         <ScreenHeader
           title={submitted.what === "close" ? "Position closed" : "Repaid"}
           onBack={onDone}
@@ -157,7 +163,10 @@ export function RepayTroveScreen({
 
   const amountWei = parseDecimalToWei(amountText);
   const amountValid =
-    amountWei !== null && amountWei > 0n && ceiling !== null && amountWei <= ceiling;
+    amountWei !== null &&
+    amountWei > 0n &&
+    ceiling !== null &&
+    amountWei <= ceiling;
 
   /** What closing costs: the debt less the reserve the protocol burns for you. */
   const closeCost = debt - MUSD_GAS_COMPENSATION;
@@ -204,12 +213,15 @@ export function RepayTroveScreen({
   }
 
   return (
-    <div className={SCREEN}>
+    <div className={`${SCREEN} pk-finance pk-scr--plain`}>
       <ScreenHeader
         title="Repay or close"
         subtitle={`${formatMusd(debt)} MUSD owed`}
         onBack={onBack}
       />
+      <FinanceIntro title="Bring your debt down">
+        Make a partial repayment or close your position to get your BTC back.
+      </FinanceIntro>
 
       {/*
         The repayment half. The ceiling is stated as a figure because it is the
@@ -217,29 +229,30 @@ export function RepayTroveScreen({
         rather than remembered.
       */}
       {canRepay ? (
-        <>
-          <TextField
+        <div className="pk-finance-workspace">
+          <AmountField
+            symbol="mUSD"
+            disabled={busy !== null}
             label="MUSD to repay"
             inputMode="decimal"
             autoComplete="off"
             placeholder="0"
             value={amountText}
             onChange={(event) => setAmountText(event.target.value)}
+            onMax={
+              ceiling !== null
+                ? () => setAmountText(weiToDecimalInput(ceiling))
+                : undefined
+            }
             hint={
-              ceiling !== null ? (
-                <button
-                  type="button"
-                  onClick={() => setAmountText(weiToDecimalInput(ceiling))}
-                  className="font-semibold underline"
-                >
-                  Repay the most allowed ({formatMusd(ceiling)} MUSD)
-                </button>
-              ) : (
-                "The protocol's floor has not been read yet."
-              )
+              ceiling !== null
+                ? `Up to ${formatMusd(ceiling)} MUSD can be repaid`
+                : "The protocol's floor has not been read yet."
             }
             error={
-              amountWei !== null && amountWei > 0n && amountWei > (ceiling ?? 0n)
+              amountWei !== null &&
+              amountWei > 0n &&
+              amountWei > (ceiling ?? 0n)
                 ? `The most you can repay is ${formatMusd(ceiling ?? 0n)} MUSD.`
                 : undefined
             }
@@ -248,11 +261,13 @@ export function RepayTroveScreen({
           <div style={{ marginTop: 4 }}>
             <Button
               full
+              className="pk-finance-submit"
               disabled={!amountValid || busy !== null}
               loading={busy === "repay"}
               onClick={() => void run("repay")}
             >
-              {busy === "repay" ? "Repaying" : "Repay"}
+              <span>{busy === "repay" ? "Repaying" : "Repay"}</span>
+              <ArrowRight size={18} aria-hidden="true" />
             </Button>
             <p
               className="pk-m"
@@ -263,7 +278,7 @@ export function RepayTroveScreen({
               keeps every Trove at a minimum debt, which is why closing exists.
             </p>
           </div>
-        </>
+        </div>
       ) : (
         <ListGroup label="Repayment">
           <ListRow
@@ -276,7 +291,7 @@ export function RepayTroveScreen({
 
       {/* ------------------------------------------------------------ close */}
 
-      <div style={{ marginTop: 24 }}>
+      <div className="pk-close-position">
         <ListGroup label="Close the position">
           <ListRow
             as="div"
@@ -302,8 +317,8 @@ export function RepayTroveScreen({
 
         {closeBlockedByRecovery ? (
           <p className="pk-m" style={{ marginTop: 12, lineHeight: 1.6 }}>
-            The protocol is in recovery mode, and closing is not allowed while it
-            is. Repaying part of the debt still works, and closing will work
+            The protocol is in recovery mode, and closing is not allowed while
+            it is. Repaying part of the debt still works, and closing will work
             again once the system recovers.
           </p>
         ) : null}
@@ -312,6 +327,7 @@ export function RepayTroveScreen({
           <Button
             full
             variant="secondary"
+            className="pk-finance-secondary"
             disabled={busy !== null || closeBlockedByRecovery}
             loading={busy === "close"}
             onClick={() => void run("close")}
