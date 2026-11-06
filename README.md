@@ -45,7 +45,7 @@ Home's total card keeps **mUSD and BTC** prominent. Positive balances of support
 
 ## Evidence and limits
 
-Two `claimYield` calls were verified against calldata, successful receipts and mUSD Transfer logs:
+Multiple `claimYield` calls were verified against calldata, successful receipts and mUSD Transfer logs:
 
 | Receipt | Testnet mUSD received |
 | --- | ---: |
@@ -56,11 +56,10 @@ An existing [liquidity addition](https://explorer.test.mezo.org/tx/0xef79292d44a
 
 On November 3, the user completed the approved 0.05-BTC / 2,000-mUSD Trove sequence. The [10-mUSD partial repayment](https://explorer.test.mezo.org/tx/0x77596c3ad14f654f73952c2f5dfdcb05bbe8d30e93ff205bc5935ab6d70c31e7) burned exactly 10 mUSD, reduced debt by exactly 10 after accounting for interest accrual, and preserved 0.05 BTC collateral. [Before/after proof](docs/evidence/wave-2-repayment-proof.json).
 
-November 3 baseline: 6 personal accounts, 4 completed faucet claims and 8 paid direct transfers. The @musd_pocket Business profile and a **100-testnet-mUSD closed-mainnet waitlist invoice** are now configured. These builder-operated records do not establish independent humans, paid customer demand or revenue. Merchant pilots and repeat-user feedback remain pending.
+November 3 baseline: 16 personal accounts, 14 completed faucet claims and 8 paid direct transfers. The @musd_pocket Business profile and a **100-testnet-mUSD closed-mainnet waitlist invoice** are now configured. These builder-operated records do not establish independent humans, paid customer demand or revenue. Merchant pilots and repeat-user feedback remain pending.
 
 The latest checks total **177 passing assertions**: 61 Wealth/profile/reward, 59 checkout, 39 payment and 18 reconciliation. Fork/browser/build evidence is documented separately. Fixture tokens and simulated wallets are not live-signature evidence.
 
-Direct transfers cannot prevent two devices broadcasting duplicate payments before the server sees either. Confirmation uses one successful receipt; reorg monitoring and duplicate-transfer refunds are not implemented. Welcome claims do not prove human uniqueness or new MUSD demand. No mainnet, revenue or guaranteed-yield claim is made.
 
 [Evidence index](docs/submission/evidence.md) · [Delivery record](docs/submission/delivery.md) · [November 3 baseline](docs/wave-2-status-2026-11-03.md)
 
@@ -70,31 +69,6 @@ Proposed disclosed fees on successful merchant payments, partly covering BTC gas
 
 Pricing and sponsorship need validation with real merchants and measured costs. This build collects no Pocket fee and claims no revenue. Mezo pool fees shown in Swap/Wealth are not Pocket revenue.
 
-## Run locally
 
-Requires Node.js 22+, pnpm and Postgres.
 
-```sh
-pnpm install --frozen-lockfile
-cp .env.example .env
-# Configure Privy, DATABASE_URL, DIRECT_URL and Mezo testnet.
-pnpm dev --hostname 127.0.0.1 --port 3000
-```
 
-Open http://localhost:3000/home. Register local and deployed origins in Privy. Use the same public Privy app ID and Mezo network for the build and server.
-
-Review additive scripts in `prisma/sql/` against the target schema. **Do not run `prisma db push` against the existing live database:** unrelated drift exists. Welcome activation needs its dedicated journal and reviewed campaign settings.
-
-```sh
-pnpm exec next typegen
-pnpm exec tsc --noEmit
-pnpm test:wealth
-pnpm test:checkout
-pnpm test:payments
-pnpm test:reconcile
-pnpm build
-node scripts/check-wealth-browser.mjs
-node scripts/check-checkout-browser.mjs
-```
-
-Set `POCKET_TEST_ORIGIN` to check another origin with the anonymous checkout smoke test. It never signs or pays. Read-only chain scripts are listed in the evidence index.
