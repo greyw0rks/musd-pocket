@@ -13,27 +13,19 @@ import type { ResolveHandleResult } from "@/features/contacts/api-contact.adapte
 import type { Recipient } from "@/features/payments/payment.types";
 import { formatMoney } from "@/lib/formatters";
 import { parseCheckoutLink } from "@/lib/requests/links";
+import { hasNativeScanner, scanNativeQr } from "@/lib/native/client";
+import type { AddressRecipientResult } from "@/features/payments/address-recipient";
 
 /**
- * Scan to pay.
- *
- * There is no camera here, and the screen says so in its first sentence rather
- * than showing a viewfinder over a black rectangle. A fake scanner is the one
- * prop that cannot survive contact — it would look perfect and do nothing, and
- * the person pointing a phone at it would be the one to find out.
- *
- * What a scanner would fall back to when a code will not read is typing the
- * handle, so that is what this screen is: a real, working way in, labelled as
- * the fallback rather than dressed up as the feature. It resolves the handle
- * through the store, which in the real app is the same directory lookup the
- * add-contact flow uses — so a name that resolves here is a name that can
- * actually be paid, and one that does not is refused for that reason rather
- * than because it was absent from a list this screen happened to hold.
+ * Android reads QR codes with the native camera. Manual entry remains available.
+ * Codes use the existing checkout, directory and wallet-address validation paths;
+ * the user still enters/reviews an amount and confirms before any signature.
  */
 export function ScanScreen({
   onBack,
   onResolve,
   onResolved,
+  onAddress,
   onOpenReceive,
 }: {
   onBack: () => void;
@@ -41,28 +33,38 @@ export function ScanScreen({
   onResolve: (handle: string) => Promise<ResolveHandleResult>;
   /** Hands a resolved destination, and any amount the link carried, to the transfer flow. */
   onResolved: (recipientId: string, amountUnits?: bigint) => void;
+  /** Validates an address and opens the existing amount/review screen. Never signs. */
+  onAddress?: (address: string) => AddressRecipientResult;
   onOpenReceive: () => void;
 }) {
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [looking, setLooking] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const nativeCamera = hasNativeScanner();
   const [preview, setPreview] = useState<{
     recipient: Recipient;
     amountUnits?: bigint;
   } | null>(null);
 
-  async function resolve() {
+  async function resolve(input = text) {
     if (looking) return;
     setError(null);
     setPreview(null);
 
-    const checkout = parseCheckoutLink(text, window.location.origin);
+    if (input.trim().startsWith("0x") && onAddress) {
+      const result = onAddress(input.trim());
+      if (!result.ok) setError(result.error);
+      return;
+    }
+
+    const checkout = parseCheckoutLink(input, window.location.origin);
     if (checkout) {
       window.location.assign(checkout);
       return;
     }
 
-    const parsed = parsePayLink(text);
+    const parsed = parsePayLink(input);
     if (!parsed) {
       setError(
         "Paste a Pocket payment link from this site, or enter a username such as @someone.",
@@ -111,12 +113,19 @@ export function ScanScreen({
         <span className="pk-ico pk-ico--xl text-[var(--m)]">
           <QrIcon size={24} />
         </span>
-        <p className="mt-3 text-[14px] font-bold">This build has no camera</p>
+        <p className="mt-3 text-[14px] font-bold">{nativeCamera ? "Scan a payment code" : "Paste a payment link"}</p>
         <p className="pk-m mt-1.5 max-w-[34ch] leading-relaxed">
-          Nothing here can read a QR code, so there is no viewfinder to show
-          you. Pointing a phone at this screen would do nothing — the box below
-          is the way in, and it does work.
+          {nativeCamera ? "Open the camera and point it at a Pocket QR code. You’ll review the recipient and amount before paying." : "Enter a username or paste a Pocket payment link below."}
         </p>
+        {nativeCamera ? <Button full className="mt-4" disabled={scanning || looking} onClick={async () => {
+          setScanning(true);
+          setError(null);
+          try {
+            const code = await scanNativeQr();
+            if (code) { setText(code); await resolve(code); }
+          } catch (problem) { setError(problem instanceof Error ? problem.message : "Could not open the camera."); }
+          finally { setScanning(false); }
+        }}>{scanning ? "Camera open…" : "Open camera"}</Button> : null}
       </div>
 
       <div className="mt-4 space-y-3">
@@ -143,7 +152,7 @@ export function ScanScreen({
           size="lg"
           icon={<QrIcon size={16} />}
           disabled={text.trim().length === 0 || looking}
-          onClick={resolve}
+          onClick={() => void resolve()}
         >
           {looking ? "Looking it up…" : "Look it up"}
         </Button>

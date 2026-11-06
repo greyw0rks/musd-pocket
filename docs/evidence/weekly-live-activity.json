@@ -1,0 +1,55 @@
+{
+  "capturedAt": "2026-11-06T19:31:05.678Z",
+  "realChainReads": true,
+  "fixture": false,
+  "financialBroadcasts": 0,
+  "weekStart": "2026-11-02T00:00:00.000Z",
+  "resetsAt": "2026-11-09T00:00:00.000Z",
+  "syncing": false,
+  "tasks": [
+    {
+      "id": "send",
+      "progress": 0,
+      "target": 5,
+      "complete": false
+    },
+    {
+      "id": "invite",
+      "progress": 0,
+      "target": 3,
+      "complete": false
+    },
+    {
+      "id": "borrow",
+      "progress": 1,
+      "target": 1,
+      "complete": true
+    },
+    {
+      "id": "repay",
+      "progress": 1,
+      "target": 1,
+      "complete": true
+    },
+    {
+      "id": "pool",
+      "progress": 1,
+      "target": 1,
+      "complete": true
+    },
+    {
+      "id": "swap",
+      "progress": 1,
+      "target": 1,
+      "complete": true
+    },
+    {
+      "id": "lock",
+      "progress": 0,
+      "target": 1,
+      "complete": false
+    }
+  ],
+  "verifiedRows": 11,
+  "inviteCodeCreated": true
+}

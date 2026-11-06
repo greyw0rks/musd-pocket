@@ -5,6 +5,7 @@ import { Button } from "@/components/pocket/ui/Button";
 import { Sheet } from "@/components/pocket/ui/Sheet";
 import { useWelcomeReward } from "@/hooks/use-welcome-reward";
 import { EXPLORER_URL } from "@/lib/mezo/config";
+import { WeeklyTasks } from "./WeeklyTasks";
 
 /** One-time, Pocket-funded testnet welcome reward. */
 export function RewardsSheet({
@@ -156,6 +157,8 @@ export function RewardsSheet({
           Check again
         </Button>
       ) : null}
+
+      {claimed || data?.state === "wallet-claimed" ? <WeeklyTasks /> : null}
 
       <Button full size="lg" variant="ghost" className="mt-2" onClick={onClose}>
         Close

@@ -3,7 +3,7 @@
 import { useWalletHoldings } from "@/hooks/use-wallet-holdings";
 
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { AppShell } from "@/components/pocket/PhoneShell";
 import { BorrowScreen } from "@/components/pocket/borrow/BorrowScreen";
 import { OpenTroveScreen } from "@/components/pocket/borrow/OpenTroveScreen";
@@ -97,6 +97,16 @@ export function PocketApp({ services }: { services: PocketServices }) {
 
 function PocketHost() {
   const { ready, current, back, reset } = usePocket();
+
+  useEffect(() => {
+    const nativeWindow = window as Window & { __pocketAndroidBack?: () => boolean };
+    nativeWindow.__pocketAndroidBack = () => {
+      if (["home", "swap", "wealth", "welcome", "auth"].includes(current.id)) return false;
+      back();
+      return true;
+    };
+    return () => { delete nativeWindow.__pocketAndroidBack; };
+  }, [back, current.id]);
 
   /*
     The tour's own navigation.
@@ -492,6 +502,7 @@ function Screen({ id, onBack }: { id: ScreenId; onBack: () => void }) {
             transfer screen the same way.
           */
           onResolve={resolveHandle}
+          onAddress={payAddress}
           // The amount a link carried comes with the recipient, so a scanned
           // request lands on the keypad already filled in rather than asking
           // the payer to retype a figure the other side already stated.

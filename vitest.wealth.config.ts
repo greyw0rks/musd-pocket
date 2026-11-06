@@ -9,6 +9,7 @@ export default defineConfig({
       "lib/mezo/locks.test.ts",
       "lib/users/**/*.test.ts",
       "lib/rewards/**/*.test.ts",
+      "lib/merchants/**/*.test.ts",
     ],
     environment: "node",
   },

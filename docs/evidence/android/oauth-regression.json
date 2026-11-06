@@ -1,0 +1,13 @@
+{
+  "createdAt": "2026-11-06T19:03:50.831Z",
+  "checks": {
+    "homeCallbackRetainsPkceAndState": true,
+    "paymentCallbackRetainsCheckout": true,
+    "wrongStateRejected": true
+  },
+  "sdk": "actual bundled Privy",
+  "androidNavigationSimulated": true,
+  "providerEndpointsMocked": true,
+  "accountLoginPerformed": false,
+  "transactionSigningPerformed": false
+}

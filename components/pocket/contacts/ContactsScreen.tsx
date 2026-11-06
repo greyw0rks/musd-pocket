@@ -13,6 +13,7 @@ import { SearchField } from "@/components/pocket/ui/SearchField";
 import type { AddressRecipientResult } from "@/features/payments/address-recipient";
 import type { Recipient } from "@/features/payments/payment.types";
 import { normaliseHandle } from "@/features/session/handle";
+import { VerifiedMerchants } from "@/components/pocket/merchants/VerifiedMerchants";
 
 /**
  * Contacts — the first half of Send.
@@ -496,6 +497,8 @@ export function ContactsScreen({
           </motion.form>
         )}
       </AnimatePresence>
+
+      <VerifiedMerchants />
 
       <ListGroup label="Recent">
         {recent.length > 0 ? (

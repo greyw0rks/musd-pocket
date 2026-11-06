@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="theme-color" content="#f4f4f6" />
+    <title>mPocket</title>
+    <style>body{margin:0;background:#f4f4f6;color:#0b0b0d;font-family:system-ui,sans-serif}.boot{min-height:100dvh;display:grid;place-content:center;text-align:center;padding:0 24px}.boot button{padding:14px 24px;background:#0b0b0d;color:white;border:0;border-radius:14px;font:inherit}.boot a{display:block;margin-top:20px;color:#8a2fbb}</style>
+  </head>
+  <body>
+    <div id="root"><div class="boot"><h1>mPocket</h1><p id="boot-status">Opening your app…</p><div id="boot-recovery" hidden><button onclick="location.reload()">Try again</button><a href="https://mpocket.tech/home?browser=1">Open in browser</a></div></div></div>
+    <script>window.__pocketBoot=setTimeout(function(){var status=document.getElementById('boot-status');if(status){status.textContent='The app could not start. Try again or open Pocket in your browser.';document.getElementById('boot-recovery').hidden=false}},25000)</script>
+    <script type="module" src="/main.tsx"></script>
+  </body>
+</html>

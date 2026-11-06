@@ -1,0 +1,19 @@
+{
+  "createdAt": "2026-11-06T19:10:43.781Z",
+  "fixtureOnly": true,
+  "realAccountLogin": false,
+  "financialSigning": false,
+  "checks": {
+    "merchantCardsAndPersistentOffer": true,
+    "couponCopyAndMerchLink": true,
+    "noAutomaticCheckout": true,
+    "claimedWelcomeShowsWeeklyTasks": true,
+    "confirmedProgressOnly": true,
+    "inviteLink": true,
+    "mobileWidths": [
+      320,
+      390
+    ],
+    "pageErrors": []
+  }
+}

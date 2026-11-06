@@ -1,0 +1,12 @@
+@import "../../app/globals.css";
+@import "../../components/pocket/pocket.css";
+@source "../../components";
+@source "../../app";
+@font-face{font-family:Poppins;src:url('./fonts/poppins-400.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:Poppins;src:url('./fonts/poppins-500.ttf') format('truetype');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:Poppins;src:url('./fonts/poppins-600.ttf') format('truetype');font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:Poppins;src:url('./fonts/poppins-700.ttf') format('truetype');font-weight:700;font-style:normal;font-display:swap}
+:root{--font-poppins:Poppins;--font-inter:system-ui;--font-jetbrains-mono:monospace}
+html,body,#root{min-height:100%;width:100%;overscroll-behavior:none}
+.connection-status{position:fixed;bottom:0;left:0;right:0;z-index:1000;padding:12px 20px;background:#fff4d5;color:#0b0b0d;text-align:center;font-size:12px}
+.connection-status[hidden]{display:none}

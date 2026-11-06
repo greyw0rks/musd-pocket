@@ -1,0 +1,16 @@
+{
+  "createdAt": "2026-11-06T19:32:21.078Z",
+  "checks": {
+    "bundledSignInRenders": true,
+    "layoutStylesBundled": true,
+    "noInstallGate": true,
+    "livePrivyLoginDialog": true,
+    "offlineNotice": true,
+    "reconnectClearsNotice": true,
+    "invalidDeepLinkRejectedBeforeAuth": true,
+    "pageErrors": []
+  },
+  "androidWebViewUserAgentSimulated": true,
+  "accountLoginPerformed": false,
+  "transactionSigningPerformed": false
+}

@@ -1,34 +1,42 @@
-# Pocket Test for Android
+# mPocket for Android
 
-An installable Android test app for https://mpocket.tech/home. It uses a Trusted Web Activity in Chrome, so Pocket's existing Privy sign-in, wallet, payments and finance screens use the same HTTPS origin and session as the website.
+mPocket 0.2.1 bundles the actual React interface, styles, fonts, wallet adapters and transaction recovery code in the APK. The previous 0.1.0 build was a Trusted Web Activity that launched Chrome. This version runs in Android System WebView and does not need Chrome to start.
 
-The app's launcher name is **Pocket Test**, its package is `tech.mpocket.testing`, and the first build is `0.1.0-test.1` (version code 1). It requires Android 7 or later and an up-to-date Chrome browser. Pocket currently runs on Mezo testnet; the APK does not enable mainnet.
+Home, payments, contacts, requests, activity, Swap, Vault, Borrow, Pools, Locks and Settings reuse the web app’s real components. Android adds a QR camera scanner, the native share sheet, hardware Back navigation, payment-link handling, Twitter authentication return and startup recovery. API responses, balances, prices and transaction receipts always come from the live backend or chain. An internet connection is required for sign-in and financial operations.
 
-## Install and test
+## Install
 
-1. Download `mpocket-test-0.1.0.apk` from the repository's Android testing release on your phone.
-2. Open the download. If Android asks, allow this browser to install unknown apps, then install Pocket Test.
-3. Open Pocket Test and sign in with your existing Pocket account.
-4. Check Swap, Vault, Borrow, Pools and Locks in both themes. Pool balances should show at most six decimal places, for example `0.713197 LP`.
-5. Check that approvals and final actions each show a review, and that reopening a pending transaction checks its existing receipt. Confirm financial actions only when you intend to perform them with your testnet wallet.
+Install **mpocket-0.2.1.apk** over Pocket Test. The package remains `tech.mpocket.testing`, with the original certificate, so this is an update rather than a different wallet app. The launcher now reads **mPocket**. Android 7.0 or newer is required. Keep Android System WebView updated.
 
-The app requires an internet connection. The website's service worker keeps wallet and API reads on the network. Existing website accounts and Chrome sessions are reused; the APK contains no backend credentials or wallet keys.
+Sign in using the same linked email, X or Telegram identity as your existing account. The app has its own stored session; it does not import Chrome’s session. Using a different identity can create a different account. mPocket remains on the configured Mezo testnet; this build does not enable mainnet.
 
-Website updates appear in the Android app without reinstalling. A new APK is needed for changes to its Android package, launcher metadata or native configuration. Keep the same private signing key for future APK updates and increase the version code.
+Camera access is requested only when you tap Open camera. Scanning resolves the payment code and opens a review; it never sends money automatically. Denying camera permission leaves the manual payment-link entry available. Passkeys use Android WebView’s Credential Manager integration when supported, with the app’s certificate verified against the HTTPS origin’s assetlinks.json.
 
-## Rebuild
+## Build
 
-The generated Android project is committed, including its Gradle wrapper. Install JDK 17 and Android SDK command-line tools, set `JAVA_HOME` and `ANDROID_HOME`, and run:
+Install JDK 17, Android SDK platform 36 and build-tools 36.0.0. Set `JAVA_HOME` and `ANDROID_HOME` (the build script also recognizes the local mpocket-build tool directory). Install the repository’s locked pnpm dependencies and set the public settings from `.env.example`, including `NEXT_PUBLIC_PRIVY_APP_ID`.
 
 ```sh
-cd apps/android
-./build-test.sh
+pnpm install --frozen-lockfile
+pnpm run build:android
 ```
 
-The script installs the required SDK packages when they are missing, builds the APK, and signs it using `.private/mpocket-testing.keystore`. The keystore and its password file are local and ignored by Git. Use the original signing files to rebuild updates for an already installed app; a different key requires a fresh installation and an updated website association.
+The build first compiles `apps/mobile-client` into Android assets, then runs the release build and Android lint, aligns the APK, signs it and verifies its signature. Only the explicitly allowlisted `NEXT_PUBLIC_*` settings enter the bundle. Private backend settings and wallet keys are never bundled.
 
-`twa-manifest.json` is the Bubblewrap configuration used to generate the project. The generated source uses Bubblewrap core 1.27.0, Gradle 8.11.1 and Android Gradle Plugin 8.9.1 and Android Browser Helper 2.7.4. Regeneration uses Bubblewrap CLI 1.23.0; custom build and documentation files are maintained separately.
+Restore `.private/mpocket-testing.keystore` and `.private/keystore-password` to sign an update. These files are ignored by Git. Keep the same key and increment versionCode for subsequent releases. Output: `apps/android/mpocket-0.2.1.apk` and its SHA-256 checksum. This APK contains no ABI-specific native library and is suitable for ARM and x86 Android devices.
 
-The public certificate fingerprint in `public/.well-known/assetlinks.json` connects this package to mpocket.tech. Chrome may initially show a toolbar until its domain verification completes. Other origins, including sign-in providers, use browser controls.
+## Architecture
 
-Build and signature verification are checked before publishing a testing APK. Sign-in and signing on an actual Android phone remain device acceptance checks.
+`apps/mobile-client/main.tsx` mounts the existing Providers, AuthGate and HomePage, with local handling for `/pay/<id>`. Vite packages only the client graph. LauncherActivity serves these files through Android’s HTTPS asset loader at `https://mpocket.tech`; it never proxies or caches `/api/*`. Keeping the same HTTPS origin preserves API and Privy origin rules. Mobile Twitter OAuth stays in the same WebView through X and Privy, preserving its PKCE verifier and returning to bundled Home or payment checkout. HTTPS /home callbacks also reopen the app and retain every query parameter. OAuth popups retain their opener and shared cookies, load the bundled callback, display a close control, and receive no native bridge.
+
+The small WebMessage bridge permits camera and text sharing only from the main Pocket origin. There is no native signing API or wallet-key access. APK updates carry new interface versions; backend changes remain online. The old `twa-manifest.json` records the previous Chrome-based build and is not used by the new build script.
+
+The local, unpublished mainnet-pilot waitlist button is shown only when its POST endpoint exists on the live backend. A read-only GET probe detects availability; it never creates or pays an invoice. This keeps the Android release from offering a checkout that currently returns 404, while preserving the existing local web work.
+
+## Acceptance
+
+See `docs/evidence/android-0.2.0-validation.json` for performed checks and their limits. A phone acceptance run should confirm existing-account sign-in, any enrolled passkey, camera permission/scan/cancel, sharing, and an intended testnet payment with a confirmed receipt. Emulator and fixture checks do not prove real account access or successful financial transactions.
+
+## 0.2.1 features
+
+Send includes verified merchant offers: a fixed random 10–30% Greylabs merch discount per account and the existing Pocket mainnet-pilot waitlist checkout. The welcome Rewards sheet shows a seven-task weekly checklist after claiming. Progress comes from verified Mezo receipts and new Pocket accounts attributed through an invite link; weeks reset Monday at 00:00 UTC. No additional financial reward is promised by this checklist. The new additive database tables and endpoints must be deployed with the app update.
