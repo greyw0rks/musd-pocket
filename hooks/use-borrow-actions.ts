@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo, useRef } from "react";
-import { useWalletClient } from "wagmi";
-import type { WalletClient } from "viem";
+import { useMemo } from "react";
+import { useSessionWallet } from "@/hooks/use-session-wallet";
 import { createBorrowActions } from "@/lib/mezo/borrow-actions";
 
 /**
@@ -29,13 +28,10 @@ import { createBorrowActions } from "@/lib/mezo/borrow-actions";
  * object identity on every keystroke.
  */
 export function useBorrowActions() {
-  const { data } = useWalletClient();
-
-  const walletRef = useRef<WalletClient | null>(null);
-  walletRef.current = (data as WalletClient | undefined) ?? null;
+  const { getWalletClient } = useSessionWallet();
 
   return useMemo(
-    () => createBorrowActions({ getWalletClient: () => walletRef.current }),
-    [],
+    () => createBorrowActions({ getWalletClient }),
+    [getWalletClient],
   );
 }

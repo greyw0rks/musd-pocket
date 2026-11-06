@@ -102,7 +102,7 @@ export function Button({
       {...props}
     >
       {loading ? (
-        <Spinner className="!size-4 !border-2" />
+        <Spinner size="small" />
       ) : (
         icon
       )}

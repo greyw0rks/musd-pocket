@@ -1,0 +1,14 @@
+{
+  "versionName": "0.2.4",
+  "versionCode": 6,
+  "apkBytes": 3135667,
+  "sha256": "27c26f4ced5a2604669f7e5aaa1ed3b07b1fa5294752bf7e071533f13f7e2949",
+  "webAssetCount": 253,
+  "allPackagedAssetsMatchViteBuild": true,
+  "lintErrors": [],
+  "lintWarnings": 18,
+  "signingCertificateSha256": "34608cce75a2e10318587090b7cab6acd5aaac3b4507dd09c0fcd6e76056b57c",
+  "signatureV2V3Verified": true,
+  "zipAlignment16KiBVerified": true,
+  "minimumAndroidApi": 24
+}

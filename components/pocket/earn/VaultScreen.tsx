@@ -18,6 +18,7 @@ import {
 import { PageHeading, ScreenHeader } from "@/components/pocket/ui/ScreenHeader";
 import { ErrorState, ListSkeleton } from "@/components/pocket/ui/States";
 import { formatMusd } from "@/lib/mezo/borrow-format";
+import { formatMusd as exactMusd } from "@/lib/mezo/musd";
 import { parseDecimalToWei, weiToDecimalInput } from "@/lib/mezo/borrow-math";
 
 /**
@@ -107,6 +108,7 @@ function Vault({ view, refreshing }: { view: EarnView; refreshing: boolean }) {
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [claimedWei, setClaimedWei] = useState<bigint | null>(null);
   const [hash, setHash] = useState<string | null>(() =>
     actions.pendingClaimHash(),
   );
@@ -136,6 +138,7 @@ function Vault({ view, refreshing }: { view: EarnView; refreshing: boolean }) {
     setBusy(true);
     setError(null);
     setHash(null);
+    setClaimedWei(null);
 
     const result =
       mode === "save"
@@ -170,6 +173,7 @@ function Vault({ view, refreshing }: { view: EarnView; refreshing: boolean }) {
     setBusy(true);
     setError(null);
     setHash(null);
+    setClaimedWei(null);
     const result = await actions.claim();
     setPendingClaimHash(actions.pendingClaimHash());
     if (result.hash) setHash(result.hash);
@@ -179,6 +183,7 @@ function Vault({ view, refreshing }: { view: EarnView; refreshing: boolean }) {
       return;
     }
     setHash(result.hash);
+    setClaimedWei(result.claimedWei ?? null);
     queryClient.invalidateQueries({ queryKey: ["earn"] });
     void wallet.refetch();
   }
@@ -249,7 +254,7 @@ function Vault({ view, refreshing }: { view: EarnView; refreshing: boolean }) {
           </div>
         </div>
         <p className="pk-interest-value">
-          {claimable === null ? "—" : `${formatMusd(claimable)} MUSD`}
+          {claimable === null ? "—" : `${exactMusd(claimable)} MUSD`}
         </p>
 
         {pendingClaimHash || (claimable !== null && claimable > 0n) ? (
@@ -266,6 +271,12 @@ function Vault({ view, refreshing }: { view: EarnView; refreshing: boolean }) {
           </div>
         ) : null}
       </div>
+
+      {claimedWei !== null ? (
+        <p className="pk-m" role="status" style={{ marginTop: 12, overflowWrap: "anywhere" }}>
+          {exactMusd(claimedWei)} mUSD interest confirmed in your wallet.
+        </p>
+      ) : null}
 
       <div className="pk-finance-workspace">
         <FinanceTabs
@@ -362,7 +373,7 @@ function Vault({ view, refreshing }: { view: EarnView; refreshing: boolean }) {
           style={{ marginTop: 12, lineHeight: 1.6, overflowWrap: "anywhere" }}
         >
           {error
-            ? `Broadcast as ${hash} — this screen will catch up when it confirms.`
+            ? `Transaction: ${hash}. Check its confirmation before repeating the action.`
             : `Done. ${hash}`}
         </p>
       ) : null}

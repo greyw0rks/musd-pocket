@@ -4,7 +4,7 @@ Send, request and receive mUSD from your own embedded wallet. Borrow against BTC
 
 **App:** [mpocket.tech](https://mpocket.tech/home) · **Network:** Mezo testnet (31611)
 
-**Android:** [mPocket 0.2.3 APK](https://mpocket.tech/downloads/mpocket-0.2.3.apk) · [Release notes](docs/android-0.2.3-handoff.md). Install over the existing app. Sign-out opens Privy; Telegram has been removed from login. Private receipt preferences persist, with Google account linking. Send → Verified merchants unlocks one random 10–30% Greylabs code after any confirmed positive mUSD payment to `@grey_labs`; merchandise previews stay inside the app. Weekly tasks are confirmed from activity.
+**Android:** [mPocket 0.2.4 APK](https://mpocket.tech/downloads/mpocket-0.2.4.apk) · [Release notes](docs/android-0.2.4-handoff.md). Install over the existing app. The floating dock is restored; Vault, Borrow and Swap use the session wallet on Mezo, interest claims verify the actual payout, and button loading rings stay at 16px. Sign-out opens Privy; Telegram has been removed from login. Private receipt preferences persist, with Google account linking. Send → Verified merchants unlocks one random 10–30% Greylabs code after any confirmed positive mUSD payment to `@grey_labs`; merchandise previews stay inside the app. Weekly tasks are confirmed from activity.
 
 **Track:** Track 2 — Access and Distribution for MUSD/MEZO
 
@@ -35,7 +35,7 @@ Mezo gas is paid in **BTC**. Payers pay gas from their own wallets for payments,
 - **Merchant checkout:** save a Business payment profile, create a payment link or QR and receive mUSD directly. Checkout retains its invoice URL during sign-in, shows the exact recipient and amount, and verifies payment before showing paid. Each invoice keeps its merchant-name snapshot. Business names are self-declared.
 - **Recovery:** hashes survive reloads; retries verify the existing transfer. Proof reuse across invoices is blocked, late transfers are shown as late paid, and direct sends stay isolated from legacy refunds.
 - **Borrow:** open, inspect, partially repay or close a BTC-backed Trove with the owning wallet. Minimum debt, fees and health are read from Mezo.
-- **Savings:** deposit, withdraw and claim yield. Claimable interest includes stored yield and uncheckpointed global-index accrual; unavailable reads stay unknown.
+- **Savings:** deposit, withdraw and claim yield. Claimable interest includes stored yield and uncheckpointed global-index accrual; unavailable reads stay unknown. Claims report the actual mUSD payout verified from the receipt and preserve unverified pending hashes to prevent another signature.
 - **Swap:** exchange mUSD with BTC, mUSDC or mUSDT through verified testnet pools, with fees, minimum received, slippage and deadline shown.
 - **Wealth:** manage Vault, MEZO locks and pools in Pocket. Lock creation, top-up, extension, expired withdrawal and permanent-lock lifecycle; pool liquidity add/remove and fee claims.
 - **Welcome:** **20 testnet MEZO** per account and wallet, locked into a user-owned veMEZO NFT for two weekly epochs (7–14 days after rounding). The first claim is verified: NFT #941, 20 MEZO, recipient ownership, and `AlreadyClaimed` on a read-only replay. The campaign retains 80 MEZO for four claims.
@@ -61,7 +61,7 @@ On November 3, the user completed the approved 0.05-BTC / 2,000-mUSD Trove seque
 
 November 3 baseline: 6 personal accounts, 4 completed faucet claims and 8 paid direct transfers. The @musd_pocket Business profile and a **100-testnet-mUSD closed-mainnet waitlist invoice** are now configured. These builder-operated records do not establish independent humans, paid customer demand or revenue. Merchant pilots and repeat-user feedback remain pending.
 
-The latest checks total **177 passing assertions**: 61 Wealth/profile/reward, 59 checkout, 39 payment and 18 reconciliation. Fork/browser/build evidence is documented separately. Fixture tokens and simulated wallets are not live-signature evidence.
+Android 0.2.4 checks include **145 passing assertions**: 106 Savings/Wealth/profile/merchant/reward and 39 payment/recovery. Browser checks cover 29 screens at three widths, wallet/network/cache changes, the floating dock and claim loading states. Build and historical receipt evidence is documented separately. Fixture tokens and simulated wallets are not live-signature evidence.
 
 Direct transfers cannot prevent two devices broadcasting duplicate payments before the server sees either. Confirmation uses one successful receipt; reorg monitoring and duplicate-transfer refunds are not implemented. Welcome claims do not prove human uniqueness or new MUSD demand. No mainnet, revenue or guaranteed-yield claim is made.
 

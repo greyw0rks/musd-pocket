@@ -4,9 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useSession } from "@/lib/auth/session";
 import { useApi } from "@/lib/auth/client";
 import type { TroveHealth } from "@/lib/mezo/borrow-math";
+import { CHAIN_ID } from "@/lib/mezo/config";
 
 /**
- * Shared read of the signed-in user's Mezo Borrow position, keyed `["borrow"]`
+ * Shared read of the signed-in user's Mezo Borrow position, keyed by wallet
+ * and chain, with the `["borrow"]` invalidation prefix,
  * so every borrow view stays in lockstep: an open or a repay that mines
  * invalidates this one key and every view refetches the same server-computed
  * snapshot.
@@ -36,12 +38,12 @@ export type BorrowView = {
 };
 
 export function useBorrow() {
-  const { user } = useSession();
+  const { user, walletAddress } = useSession();
   const api = useApi();
 
   return useQuery({
-    queryKey: ["borrow"],
-    enabled: Boolean(user),
+    queryKey: ["borrow", CHAIN_ID, walletAddress],
+    enabled: Boolean(user && walletAddress),
     queryFn: () =>
       api<{ borrow: BorrowView }>("/api/borrow").then((r) => r.borrow),
     refetchInterval: 15_000,

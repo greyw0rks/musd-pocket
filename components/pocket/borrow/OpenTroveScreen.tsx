@@ -2,7 +2,10 @@
 
 import { motion } from "motion/react";
 import { useState } from "react";
-import { useBalance, useAccount } from "wagmi";
+import { useBalance } from "wagmi";
+import { useSession } from "@/lib/auth/session";
+import { CHAIN_ID } from "@/lib/mezo/config";
+import type { Address } from "viem";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { SCREEN, UP } from "@/components/pocket/theme";
 import { Button } from "@/components/pocket/ui/Button";
@@ -67,9 +70,11 @@ export function OpenTroveScreen({
 }) {
   const actions = useBorrowActions();
   const queryClient = useQueryClient();
-  const { address } = useAccount();
+  const { walletAddress } = useSession();
+  const address = (walletAddress ?? undefined) as Address | undefined;
   const { data: native } = useBalance({
     address,
+    chainId: CHAIN_ID,
     query: { enabled: Boolean(address) },
   });
   const { data: position } = useBorrow();

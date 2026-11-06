@@ -5,6 +5,7 @@ export default defineConfig({
   test: {
     include: [
       "lib/mezo/earn.test.ts",
+      "lib/wallet/session-wallet.test.ts",
       "lib/mezo/wealth/**/*.test.ts",
       "lib/mezo/locks.test.ts",
       "lib/users/**/*.test.ts",

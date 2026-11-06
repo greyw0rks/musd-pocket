@@ -1,4 +1,5 @@
 import { isAddress, type WalletClient } from "viem";
+import { assertCurrentSigner } from "@/lib/wallet/session-wallet";
 import { getPublicClient } from "./musd";
 import { CHAIN_ID } from "./config";
 import { formatBtc } from "./borrow-format";
@@ -122,7 +123,7 @@ export function createBtcActions(deps: {
    * transfer signed on the wrong chain moves that chain's gas token to the same
    * address, which looks like it worked and is not the money the user meant.
    */
-  function signer(): { wallet: WalletClient } | { error: string } {
+  async function signer(): Promise<{ wallet: WalletClient } | { error: string }> {
     const wallet = getWalletClient();
     if (!wallet?.account) {
       return { error: "Your wallet is not ready yet. Try again in a moment." };
@@ -130,6 +131,8 @@ export function createBtcActions(deps: {
     if (wallet.chain && wallet.chain.id !== CHAIN_ID) {
       return { error: "Switch to Mezo to send BTC." };
     }
+    try { await assertCurrentSigner(wallet, getWalletClient, rpc()); }
+    catch (e) { return { error: e instanceof Error ? e.message : "Could not verify your Pocket wallet. Try again." }; }
     return { wallet };
   }
 
@@ -197,7 +200,7 @@ export function createBtcActions(deps: {
     async maxSendable(): Promise<
       { wei: bigint; feeWei: bigint; from: `0x${string}` } | { error: string }
     > {
-      const signed = signer();
+      const signed = await signer();
       if ("error" in signed) return { error: signed.error };
 
       const from = signed.wallet.account!.address as `0x${string}`;
@@ -251,7 +254,7 @@ export function createBtcActions(deps: {
       }
       const to = input.to as `0x${string}`;
 
-      const signed = signer();
+      const signed = await signer();
       if ("error" in signed) return { ok: false, error: signed.error };
 
       const wallet = signed.wallet;
@@ -350,6 +353,8 @@ export function createBtcActions(deps: {
 
       // 1. Sign and broadcast. Nothing has moved if this throws.
       let hash: `0x${string}`;
+      try { await assertCurrentSigner(wallet, getWalletClient, rpc()); }
+      catch (e) { return { ok: false, error: e instanceof Error ? e.message : "Could not verify your Pocket wallet. Nothing was signed." }; }
       try {
         hash = await wallet.sendTransaction({
           account: wallet.account!,

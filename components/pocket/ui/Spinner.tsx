@@ -15,12 +15,12 @@ import { cn } from "@/lib/utils";
  * static ring, which reads as a broken control rather than as a calm one.
  * Sensing progress is the one case where the animation is the information.
  */
-export function Spinner({ className }: { className?: string }) {
+export function Spinner({ className, size = "large" }: { className?: string; size?: "small" | "large" }) {
   return (
     <span
       role="status"
       aria-label="Loading"
-      className={cn("pk-spin", className)}
+      className={cn("pk-spin", size === "small" && "pk-spin--small", className)}
     />
   );
 }

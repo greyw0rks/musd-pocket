@@ -1,0 +1,15 @@
+{
+  "createdAt": "2026-11-06T21:42:39.210Z",
+  "chainId": 31611,
+  "historicalClaims": [
+    {
+      "hash": "0x43149c59ae2cafafdc764a234ba6df7050a3981218cebd83ca633caaa608cfdf",
+      "confirmedMusd": "187.366117347141378"
+    },
+    {
+      "hash": "0x5271739bb3e06a0f1233efc0ac85df7d9b79e47126242236b28d29a4ecb7a3af",
+      "confirmedMusd": "0.00228183663115"
+    }
+  ],
+  "signingPerformed": false
+}

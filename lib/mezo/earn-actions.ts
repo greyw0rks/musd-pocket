@@ -1,5 +1,6 @@
 import { pendingClaim, rememberClaim } from "./claim-journal";
-import type { WalletClient } from "viem";
+import { decodeEventLog, type WalletClient, type TransactionReceipt } from "viem";
+import { assertCurrentSigner } from "@/lib/wallet/session-wallet";
 import { getPublicClient, MUSD_ABI } from "./musd";
 import { MUSD_ADDRESS, CHAIN_ID } from "./config";
 import { SAVINGS_VAULT_ABI, activeEarn, readClaimableYield } from "./earn";
@@ -77,7 +78,7 @@ export const MUSD_ALLOWANCE_ABI = [
 ] as const;
 
 export type EarnWriteResult =
-  | { ok: true; hash: `0x${string}` }
+  | { ok: true; hash: `0x${string}`; claimedWei?: bigint }
   | { ok: false; error: string; hash?: `0x${string}` };
 
 const claimsInFlight = new Map<string, Promise<EarnWriteResult>>();
@@ -126,7 +127,7 @@ export function createEarnActions(deps: {
    * The chain check is separate from the wallet check because depositing to the
    * wrong chain's vault is the one mistake here that cannot be walked back.
    */
-  function signer(): { wallet: WalletClient } | { error: string } {
+  async function signer(): Promise<{ wallet: WalletClient } | { error: string }> {
     const wallet = getWalletClient();
     if (!wallet?.account) {
       return { error: "Your wallet is not ready yet. Try again in a moment." };
@@ -134,6 +135,8 @@ export function createEarnActions(deps: {
     if (wallet.chain && wallet.chain.id !== CHAIN_ID) {
       return { error: "Switch to Mezo to save." };
     }
+    try { await assertCurrentSigner(wallet, getWalletClient, rpc()); }
+    catch (e) { return { error: e instanceof Error ? e.message : "Could not verify your Pocket wallet. Try again." }; }
     return { wallet };
   }
 
@@ -154,6 +157,8 @@ export function createEarnActions(deps: {
     trackClaim = false,
   ): Promise<EarnWriteResult> {
     let hash: `0x${string}`;
+    try { await assertCurrentSigner(wallet, getWalletClient, rpc()); }
+    catch (e) { return { ok: false, error: e instanceof Error ? e.message : "Could not verify your Pocket wallet. Nothing was signed." }; }
     try {
       hash = await send();
     } catch (e) {
@@ -175,7 +180,7 @@ export function createEarnActions(deps: {
         hash,
         timeout: RECEIPT_TIMEOUT_MS,
       });
-      if (trackClaim) rememberClaim(wallet.account!.address, null);
+      if (trackClaim) return await verifyClaim(wallet, hash, receipt);
       if (receipt.status === "reverted") {
         return {
           ok: false,
@@ -199,6 +204,37 @@ export function createEarnActions(deps: {
         error: `${done} was signed and broadcast, but this app could not read the receipt yet. Do not repeat it — ${hash} can be checked on the explorer.`,
       };
     }
+  }
+
+  async function verifyClaim(wallet: WalletClient, hash: `0x${string}`, receipt: TransactionReceipt): Promise<EarnWriteResult> {
+    const owner = wallet.account!.address;
+    const tx = await rpc().getTransaction({ hash });
+    if (tx.from.toLowerCase() !== owner.toLowerCase() ||
+        tx.to?.toLowerCase() !== activeEarn.savingsVault.toLowerCase() ||
+        tx.input !== "0x406cf229" || tx.value !== 0n ||
+        receipt.transactionHash !== hash ||
+        receipt.from.toLowerCase() !== owner.toLowerCase() ||
+        receipt.to?.toLowerCase() !== activeEarn.savingsVault.toLowerCase()) {
+      return { ok: false, hash, error: "The saved claim could not be verified. Check its transaction before trying again." };
+    }
+    if (receipt.status === "reverted") {
+      rememberClaim(owner, null);
+      return { ok: false, hash, error: "The claim reverted. You can try again." };
+    }
+    let claimedWei = 0n;
+    for (const log of receipt.logs) {
+      if (log.address.toLowerCase() !== MUSD_ADDRESS.toLowerCase()) continue;
+      try {
+        const decoded = decodeEventLog({ abi: MUSD_ABI, data: log.data, topics: log.topics, strict: true });
+        if (decoded.eventName === "Transfer" && decoded.args.from.toLowerCase() === activeEarn.savingsVault.toLowerCase() && decoded.args.to.toLowerCase() === owner.toLowerCase())
+          claimedWei += decoded.args.value;
+      } catch { /* Other mUSD events are unrelated to the payout. */ }
+    }
+    if (claimedWei <= 0n) {
+      return { ok: false, hash, error: "The claim confirmed, but its mUSD payout could not be verified. Check the transaction before claiming again." };
+    }
+    rememberClaim(owner, null);
+    return { ok: true, hash, claimedWei };
   }
 
   /**
@@ -245,10 +281,7 @@ export function createEarnActions(deps: {
         };
       }
       const receipt = await rpc().getTransactionReceipt({ hash });
-      rememberClaim(wallet.account!.address, null);
-      return receipt.status === "success"
-        ? { ok: true, hash }
-        : { ok: false, hash, error: "The claim reverted. You can try again." };
+      return await verifyClaim(wallet, hash, receipt);
     } catch {
       return {
         ok: false,
@@ -260,7 +293,7 @@ export function createEarnActions(deps: {
   }
 
   async function performClaim(): Promise<EarnWriteResult> {
-    const signed = signer();
+    const signed = await signer();
     if ("error" in signed) return { ok: false, error: signed.error };
     const from = signed.wallet.account!.address;
     const vault = activeEarn.savingsVault;
@@ -340,7 +373,7 @@ export function createEarnActions(deps: {
         return { ok: false, error: "Enter how much to save." };
       }
 
-      const signed = signer();
+      const signed = await signer();
       if ("error" in signed) return { ok: false, error: signed.error };
       const from = signed.wallet.account!.address;
       const vault = activeEarn.savingsVault;
@@ -453,7 +486,7 @@ export function createEarnActions(deps: {
         return { ok: false, error: "Enter how much to take out." };
       }
 
-      const signed = signer();
+      const signed = await signer();
       if ("error" in signed) return { ok: false, error: signed.error };
       const from = signed.wallet.account!.address;
       const vault = activeEarn.savingsVault;

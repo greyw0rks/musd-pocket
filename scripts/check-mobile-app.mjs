@@ -25,6 +25,7 @@ const errors = [];
 page.on("pageerror", error => errors.push(error.message));
 await page.route("https://mpocket-app.test/**", route => route.fulfill({ contentType: "text/html", body: `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}body{margin:0}</style><div id="root"></div>` }));
 await page.route("**/*", route => route.request().url().startsWith("https://mpocket-app.test/") ? route.fallback() : route.abort());
+await page.route("**/*.ttf", async route => route.fulfill({ contentType: "font/ttf", body: await readFile(`${assets}/${route.request().url().split('/').pop()}`) }));
 const open = async (query = '') => { await page.goto("https://mpocket-app.test/home" + query); await page.addScriptTag({ content: bundle.outputFiles[0].text }); await page.waitForFunction(() => window.fixturePocket?.ready); };
 const navigate = async id => { await page.evaluate(id => window.fixturePocket.reset(id), id); await page.waitForFunction(id => document.querySelector(`[data-screen="${id}"]`), id); await page.waitForTimeout(180); };
 const checks = {};
@@ -47,6 +48,7 @@ try {
   await navigate("home");
   assert.equal(await page.getByText("Pocket mainnet access", { exact: true }).count(), 0);
   await navigate("contacts");
+  await page.getByText("Pocket mainnet access", { exact: true }).waitFor();
   assert.equal(await page.getByText("Pocket mainnet access", { exact: true }).count(), 1);
   checks.waitlistOnlyUnderVerifiedMerchants = true;
   await navigate("profile");

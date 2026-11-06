@@ -524,6 +524,7 @@
   border-radius: 12px;
 }
 .pk-interest-value {
+  overflow-wrap: anywhere;
   font-size: 23px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -1655,33 +1656,34 @@
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0;
-  width: 100%;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  width: fit-content;
+  max-width: calc(100% - 24px);
+  margin-inline: auto;
   z-index: 40;
   display: flex;
-  gap: 6px;
-  padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px));
-  border-top: 1px solid var(--line);
-  background: var(--s);
+  gap: 4px;
+  padding: 6px;
+  border-radius: 30px;
+  background: #0b0b0d;
+  box-shadow: 0 8px 24px #0005;
 }
 
 .pk-nav > button {
-  flex: 1;
-  height: 58px;
+  height: 46px;
   min-width: 46px;
   padding: 0 clamp(8px, 2.5vw, 14px);
   border: 0;
-  border-radius: 16px;
+  border-radius: 23px;
   background: none;
-  color: var(--m);
+  color: #fff;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 8px;
   cursor: pointer;
   font:
-    600 11px var(--font-poppins),
+    600 14px var(--font-poppins),
     ui-sans-serif,
     system-ui,
     sans-serif;
@@ -1689,8 +1691,8 @@
 }
 
 .pk-nav > button[aria-current="page"] {
-  background: var(--bg);
-  color: var(--t);
+  background: #fff;
+  color: #000;
 }
 
 .pk-nav > button > span {
@@ -1711,12 +1713,22 @@
 }
 
 .pk-spin {
+  display: inline-block;
+  box-sizing: border-box;
   width: 70px;
   height: 70px;
   border-radius: 50%;
   border: 5px solid var(--s2);
   border-top-color: var(--p);
   animation: pk-rot 0.8s linear infinite;
+}
+
+.pk-spin.pk-spin--small {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
 }
 
 .pk-toast {

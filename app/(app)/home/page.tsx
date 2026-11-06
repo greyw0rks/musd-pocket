@@ -1,8 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { useWalletClient } from "wagmi";
-import type { WalletClient } from "viem";
+import { useState } from "react";
+import { useSessionWallet } from "@/hooks/use-session-wallet";
 import { PocketApp } from "@/components/pocket/PocketApp";
 import type { PocketServices } from "@/components/pocket/store";
 import { createApiContactService } from "@/features/contacts/api-contact.adapter";
@@ -42,29 +41,13 @@ import { useSession } from "@/lib/auth/session";
 export default function HomePage() {
   const fetchAuthed = useApi();
   const { user, walletAddress, login, logout } = useSession();
-  const { data: walletClient } = useWalletClient();
-
-  /*
-    The services are built once, for the lifetime of the mount, so anything
-    they close over is frozen at that moment. Neither the wallet address nor the
-    wallet client is — Privy can mint the wallet after this page mounts, and the
-    client only appears once `EmbeddedWalletActivator` has made it the active
-    wallet. Both are read through refs that every render refreshes; reading the
-    variables directly would pin the first render's values, which are `null` for
-    a user whose wallet has not landed yet. A send signed with a frozen `null`
-    client could not happen at all.
-  */
-  const walletRef = useRef<string | null>(walletAddress);
-  walletRef.current = walletAddress;
-
-  const walletClientRef = useRef<WalletClient | null>(null);
-  walletClientRef.current = (walletClient as WalletClient | undefined) ?? null;
+  const { getWalletClient, getWalletAddress } = useSessionWallet();
 
   const [services] = useState<PocketServices>(() => {
     const payments = createChainPaymentService({
       fetchAuthed,
-      getWalletClient: () => walletClientRef.current,
-      getWalletAddress: () => walletRef.current,
+      getWalletClient,
+      getWalletAddress,
     });
     return {
       payments,
@@ -72,11 +55,11 @@ export default function HomePage() {
         fetchAuthed,
         login,
         logout,
-        getWalletAddress: () => walletRef.current,
+        getWalletAddress,
       }),
       requests: createApiRequestService({
         fetchAuthed,
-        getWalletAddress: () => walletRef.current,
+        getWalletAddress,
       }),
       contacts: createApiContactService(fetchAuthed),
       // `user` is guaranteed by AuthGate; the fallback exists so a race during
