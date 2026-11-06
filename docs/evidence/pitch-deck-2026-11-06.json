@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-11-06T22:28:14.439Z",
+  "deploymentId": "dpl_ESGTTJ9DQXDwZTKJaf2513WSmoGP",
+  "sourceCommit": "cb31b87",
+  "checks": [
+    {
+      "url": "https://mpocket.tech/pitch-deck.pdf",
+      "bytes": 325614,
+      "sha256": "e7d11f374e9393d2f1fc5f3183c9164f59cb918d498eb20ca2baf5e90b37056b",
+      "matchesLocal": true,
+      "pages": 10
+    },
+    {
+      "url": "https://mpocket.tech/pitch-deck.html",
+      "bytes": 244650,
+      "sha256": "106fa6cbca211fe5dc8293b1a3422d146f0db68f4df99d6c92d59c216d06dc88",
+      "matchesLocal": true,
+      "hasCurrentHeadline": true
+    }
+  ]
+}
