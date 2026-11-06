@@ -12,6 +12,7 @@ import { SCREEN } from "@/components/pocket/theme";
 import { PageHeading, ScreenHeader } from "@/components/pocket/ui/ScreenHeader";
 import { ListGroup, ListRow } from "@/components/pocket/ui/ListRow";
 import { LocksPanel } from "./LocksPanel";
+import { FinanceIntro } from "@/components/pocket/ui/Finance";
 export { PoolsScreen } from "./PoolsScreen";
 
 export function WealthScreen({
@@ -76,12 +77,11 @@ function WealthRow({
 
 export function LockScreen({ onBack }: { onBack: () => void }) {
   return (
-    <div className={SCREEN}>
-      <ScreenHeader
-        title="Locks"
-        subtitle="Your veMEZO positions"
-        onBack={onBack}
-      />
+    <div className={`${SCREEN} pk-finance pk-scr--plain`}>
+      <ScreenHeader title="Locks" subtitle="Mezo testnet" onBack={onBack} />
+      <FinanceIntro title="Make your MEZO count">
+        Create a lock, add tokens, and manage your veMEZO positions.
+      </FinanceIntro>
       <LocksPanel open />
     </div>
   );

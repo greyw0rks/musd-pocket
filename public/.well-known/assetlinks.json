@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "tech.mpocket.testing",
+      "sha256_cert_fingerprints": [
+        "34:60:8C:CE:75:A2:E1:03:18:58:70:90:B7:CA:B6:AC:D5:AA:AC:3B:45:07:DD:09:C0:FC:D6:E7:60:56:B5:7C"
+      ]
+    }
+  }
+]

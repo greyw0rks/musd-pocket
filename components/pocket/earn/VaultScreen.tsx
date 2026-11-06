@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "motion/react";
+import { ArrowRight, Sprout, Vault as VaultIcon } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { InfoIcon } from "@/components/pocket/icons";
 import { useEarn, type EarnView } from "@/hooks/use-earn";
@@ -9,10 +10,12 @@ import { useEarnActions } from "@/hooks/use-earn-actions";
 import { useMusdBalance } from "@/hooks/use-musd";
 import { SCREEN, UP } from "@/components/pocket/theme";
 import { Button } from "@/components/pocket/ui/Button";
-import { Chip, ChipRow } from "@/components/pocket/ui/Chip";
-import { ListGroup, ListRow } from "@/components/pocket/ui/ListRow";
+import {
+  AmountField,
+  FinanceIntro,
+  FinanceTabs,
+} from "@/components/pocket/ui/Finance";
 import { PageHeading, ScreenHeader } from "@/components/pocket/ui/ScreenHeader";
-import { TextField } from "@/components/pocket/ui/TextField";
 import { ErrorState, ListSkeleton } from "@/components/pocket/ui/States";
 import { formatMusd } from "@/lib/mezo/borrow-format";
 import { parseDecimalToWei, weiToDecimalInput } from "@/lib/mezo/borrow-math";
@@ -20,9 +23,7 @@ import { parseDecimalToWei, weiToDecimalInput } from "@/lib/mezo/borrow-math";
 /**
  * Vault — MUSD deposited into Mezo's Savings Vault, earning.
  *
- * One of the app's three places, so it wears `PageHeading` rather than a back
- * arrow: you arrive from the dock and you leave by the dock, and there is
- * nothing behind it to go back to.
+ * Reached from Wealth, with an optional back control for standalone callers.
  *
  * ## The figure that is not computed
  *
@@ -64,12 +65,15 @@ export function VaultScreen({ onBack }: { onBack?: () => void }) {
   const { data, isPending, isError, error, refetch, isFetching } = useEarn();
 
   return (
-    <div className={SCREEN}>
+    <div className={`${SCREEN} pk-finance ${onBack ? "pk-scr--plain" : ""}`}>
       {onBack ? (
         <ScreenHeader title="Vault" onBack={onBack} />
       ) : (
         <PageHeading title="Vault" />
       )}
+      <FinanceIntro title="A little saved. A little earned.">
+        Save mUSD in Mezo&apos;s vault and manage your interest here.
+      </FinanceIntro>
 
       {isPending ? (
         <ListSkeleton rows={3} />
@@ -184,19 +188,14 @@ function Vault({ view, refreshing }: { view: EarnView; refreshing: boolean }) {
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`${UP} pk-card`}
-        style={{ padding: "18px 20px" }}
+        className={`${UP} pk-finance-hero pk-finance-hero--yellow`}
       >
-        <p className="pk-m font-semibold uppercase">Saved</p>
-        <p
-          className="pk-big"
-          style={{
-            fontSize: 30,
-            letterSpacing: "-1px",
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
-          {formatMusd(principal)}
+        <div className="pk-finance-hero-top">
+          <p className="pk-eyebrow">Saved</p>
+          <VaultIcon size={22} aria-hidden="true" />
+        </div>
+        <p className="pk-finance-value">
+          {formatMusd(principal)} <small>mUSD</small>
         </p>
         <p className="pk-m">
           {view.hasPosition
@@ -233,98 +232,112 @@ function Vault({ view, refreshing }: { view: EarnView; refreshing: boolean }) {
         </p>
       ) : null}
 
-      <ListGroup label="Interest">
-        <ListRow
-          as="div"
-          title="Claimable"
-          subtitle={
-            claimable === null
-              ? "The vault did not answer, so this is withheld"
-              : claimable === 0n
-                ? "Nothing has accrued yet"
-                : "Earned so far — claiming moves it to your wallet"
-          }
-          trailing={
-            <b style={{ fontVariantNumeric: "tabular-nums" }}>
-              {claimable === null ? "—" : `${formatMusd(claimable)} MUSD`}
-            </b>
-          }
-        />
-      </ListGroup>
-
-      {pendingClaimHash || (claimable !== null && claimable > 0n) ? (
-        <div style={{ marginTop: 12 }}>
-          <Button full variant="secondary" loading={busy} onClick={claim}>
-            {pendingClaimHash ? "Check claim confirmation" : "Claim interest"}
-          </Button>
+      <div className="pk-interest-card">
+        <div className="pk-interest-heading">
+          <span className="pk-interest-icon">
+            <Sprout size={19} aria-hidden="true" />
+          </span>
+          <div>
+            <h3>Claimable interest</h3>
+            <p className="pk-m">
+              {claimable === null
+                ? "The vault did not answer, so this is withheld"
+                : claimable === 0n
+                  ? "Nothing has accrued yet"
+                  : "Earned so far — claiming moves it to your wallet"}
+            </p>
+          </div>
         </div>
-      ) : null}
+        <p className="pk-interest-value">
+          {claimable === null ? "—" : `${formatMusd(claimable)} MUSD`}
+        </p>
 
-      <ChipRow className="mt-5">
-        <Chip selected={mode === "save"} onClick={() => setMode("save")}>
-          Save
-        </Chip>
-        <Chip selected={mode === "out"} onClick={() => setMode("out")}>
-          Take out
-        </Chip>
-      </ChipRow>
+        {pendingClaimHash || (claimable !== null && claimable > 0n) ? (
+          <div style={{ marginTop: 12 }}>
+            <Button
+              full
+              variant="secondary"
+              className="pk-finance-secondary"
+              loading={busy}
+              onClick={claim}
+            >
+              {pendingClaimHash ? "Check claim confirmation" : "Claim interest"}
+            </Button>
+          </div>
+        ) : null}
+      </div>
 
-      <div style={{ marginTop: 12 }}>
-        <TextField
-          label={mode === "save" ? "Amount to save" : "Amount to take out"}
-          inputMode="decimal"
-          placeholder="0.00"
-          value={amount}
-          onChange={(e) => {
-            setAmount(e.target.value);
+      <div className="pk-finance-workspace">
+        <FinanceTabs
+          label="Vault action"
+          options={[
+            { value: "save", label: "Save" },
+            { value: "out", label: "Take out" },
+          ]}
+          value={mode}
+          onChange={(value) => {
+            setMode(value);
+            setAmount("");
             setError(null);
           }}
-          /*
+          disabled={busy}
+        />
+
+        <div style={{ marginTop: 12 }}>
+          <AmountField
+            symbol="mUSD"
+            disabled={busy}
+            label={mode === "save" ? "Amount to save" : "Amount to take out"}
+            inputMode="decimal"
+            placeholder="0.00"
+            value={amount}
+            onChange={(e) => {
+              setAmount(e.target.value);
+              setError(null);
+            }}
+            /*
             The ceiling is stated, not enforced by silently truncating the field
             — a number that rewrites itself as you type is how someone saves a
             different amount than they meant to.
           */
-          error={
-            overCeiling
-              ? mode === "save"
-                ? "That is more MUSD than this wallet holds."
-                : "That is more than is saved in this wallet."
-              : undefined
-          }
-          hint={
-            ceiling === null
-              ? mode === "save"
-                ? "Reading your wallet…"
-                : "Reading the vault…"
-              : mode === "save"
-                ? `Available: ${formatMusd(ceiling)} MUSD`
-                : `Saved: ${formatMusd(ceiling)} MUSD`
-          }
-        />
-      </div>
-
-      {ceiling !== null && ceiling > 0n ? (
-        <div className="-mt-1 mb-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setAmount(weiToDecimalInput(ceiling))}
-          >
-            Use the maximum
-          </Button>
+            error={
+              overCeiling
+                ? mode === "save"
+                  ? "That is more MUSD than this wallet holds."
+                  : "That is more than is saved in this wallet."
+                : undefined
+            }
+            hint={
+              ceiling === null
+                ? mode === "save"
+                  ? "Reading your wallet…"
+                  : "Reading the vault…"
+                : mode === "save"
+                  ? `Available: ${formatMusd(ceiling)} MUSD`
+                  : `Saved: ${formatMusd(ceiling)} MUSD`
+            }
+            onMax={
+              ceiling !== null && ceiling > 0n
+                ? () => setAmount(weiToDecimalInput(ceiling))
+                : undefined
+            }
+            maxLabel="Use the maximum"
+          />
         </div>
-      ) : null}
 
-      <Button
-        full
-        loading={busy}
-        disabled={
-          (view.vaultAcceptsMusd === false && mode === "save") || !canSubmit
-        }
-        onClick={run}
-      >
-        {mode === "save" ? "Save MUSD" : "Take out MUSD"}
-      </Button>
+        <Button
+          full
+          className="pk-finance-submit"
+          loading={busy}
+          disabled={
+            (view.vaultAcceptsMusd === false && mode === "save") || !canSubmit
+          }
+          onClick={run}
+        >
+          <span>{mode === "save" ? "Save MUSD" : "Take out MUSD"}</span>
+          <ArrowRight size={18} aria-hidden="true" />
+        </Button>
+      </div>
 
       {error ? (
         <p
@@ -354,7 +367,7 @@ function Vault({ view, refreshing }: { view: EarnView; refreshing: boolean }) {
         </p>
       ) : null}
 
-      <div className="pk-card" style={{ marginTop: 20, padding: "16px 18px" }}>
+      <div className="pk-finance-explainer">
         <div className="pk-row" style={{ alignItems: "flex-start", gap: 10 }}>
           <span className="pk-ico" aria-hidden="true">
             <InfoIcon size={16} />

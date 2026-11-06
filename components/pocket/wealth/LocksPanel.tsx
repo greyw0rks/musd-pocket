@@ -1,19 +1,25 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { formatUnits, type Address } from "viem";
+import { formatUnits, parseUnits, type Address } from "viem";
+import { ArrowRight, LockKeyhole, Clock3, CalendarDays } from "lucide-react";
 import { useMezoLocks } from "@/hooks/use-mezo-locks";
 import { useWealthAction } from "@/hooks/use-wealth-action";
 import { useSession } from "@/lib/auth/session";
 import { timeToUnlock } from "@/lib/mezo/locks";
 import { ACTIVE_ENV, CHAIN_ID } from "@/lib/mezo/config";
+import { formatTokenBalance } from "@/lib/mezo/wealth/format";
 import {
   quoteLock,
   readLockAccount,
   type LockIntent,
 } from "@/lib/mezo/wealth/lock-actions";
 import { Button } from "@/components/pocket/ui/Button";
-import { TextField } from "@/components/pocket/ui/TextField";
+import {
+  AmountField,
+  FinanceSelect,
+  FinanceTabs,
+} from "@/components/pocket/ui/Finance";
 import { ActionReview } from "./ActionReview";
 
 const DURATIONS = [1, 2, 4, 13, 26, 52, 104, 208];
@@ -27,22 +33,19 @@ function Duration({
   disabled: boolean;
 }) {
   return (
-    <label className="pk-m mt-3 block">
-      Time from today
-      <select
-        aria-label="Lock duration"
-        className="mt-1 w-full rounded-xl bg-[var(--s2)] p-3 text-[14px] text-[var(--t)]"
-        value={value}
-        disabled={disabled}
-        onChange={(event) => onChange(Number(event.target.value))}
-      >
-        {DURATIONS.map((weeks) => (
-          <option key={weeks} value={weeks}>
-            {weeks} {weeks === 1 ? "week" : "weeks"}
-          </option>
-        ))}
-      </select>
-    </label>
+    <FinanceSelect
+      label="Time from today"
+      aria-label="Lock duration"
+      value={value}
+      disabled={disabled}
+      onChange={(event) => onChange(Number(event.target.value))}
+    >
+      {DURATIONS.map((weeks) => (
+        <option key={weeks} value={weeks}>
+          {weeks} {weeks === 1 ? "week" : "weeks"}
+        </option>
+      ))}
+    </FinanceSelect>
   );
 }
 export function LocksPanel({ open }: { open: boolean }) {
@@ -88,44 +91,72 @@ function WalletLocks({ open, owner }: { open: boolean; owner: Address }) {
   const review = (intent: LockIntent) =>
     void action.review(() => quoteLock(owner, intent));
   return (
-    <section className="mt-5" aria-label="Your MEZO locks">
-      <div className="pk-card">
-        <h3 className="text-[16px] font-semibold">Create a lock</h3>
-        <p className="pk-m mt-1">
-          Lock MEZO in a veMEZO position owned by your wallet.
+    <section className="pk-locks" aria-label="Your MEZO locks">
+      <div className="pk-finance-hero pk-finance-hero--soft pk-lock-wallet">
+        <div className="pk-finance-hero-top">
+          <span className="pk-eyebrow">Available to lock</span>
+          <LockKeyhole size={22} aria-hidden="true" />
+        </div>
+        <p className="pk-finance-value">
+          {account.data ? formatTokenBalance(account.data.balance, 18) : "—"}{" "}
+          <small>MEZO</small>
         </p>
-        <TextField
-          className="mt-4"
+        <p className="pk-m">
+          {account.isError
+            ? "Could not read your MEZO balance"
+            : account.data
+              ? "In your Pocket wallet"
+              : "Reading your wallet…"}
+        </p>
+      </div>
+      <div className="pk-finance-workspace">
+        <div className="pk-lock-form-heading">
+          <h3>Create a lock</h3>
+          <span className="pk-pill">veMEZO</span>
+        </div>
+        <AmountField
+          symbol="MEZO"
           label="MEZO amount"
           inputMode="decimal"
           value={amount}
           disabled={action.busy}
           onChange={(event) => setAmount(event.target.value)}
           placeholder="0.00"
+          onMax={
+            account.data && account.data.balance > 0n
+              ? () => setAmount(formatUnits(account.data.balance, 18))
+              : undefined
+          }
           hint={
             account.data
-              ? `${formatUnits(account.data.balance, 18)} MEZO available`
+              ? `${formatTokenBalance(account.data.balance, 18)} MEZO available`
               : account.isError
                 ? "Could not read your MEZO balance"
                 : "Reading balance…"
           }
         />
         <Duration value={weeks} onChange={setWeeks} disabled={action.busy} />
-        <p className="pk-m mt-2">
+        <p className="pk-finance-note">
           Unlock dates round down to a weekly boundary. Review the exact date
           before signing.
         </p>
         <Button
           full
-          className="mt-4"
+          className="pk-finance-submit"
           disabled={!amount || !account.data || action.busy}
           onClick={() => review({ kind: "create", amount, weeks })}
         >
-          Review new lock
+          <span>Review new lock</span>
+          <ArrowRight size={18} aria-hidden="true" />
         </Button>
       </div>
       <ActionReview action={action} />
-      <h3 className="mt-6 text-[16px] font-semibold">Your positions</h3>
+      <div className="pk-lock-section-heading">
+        <h3>Your positions</h3>
+        {query.data ? (
+          <span className="pk-pill">{query.data.totalCount}</span>
+        ) : null}
+      </div>
       {query.isPending ? (
         <p className="pk-m mt-4" role="status">
           Loading your locks…
@@ -146,58 +177,70 @@ function WalletLocks({ open, owner }: { open: boolean; owner: Address }) {
       {query.data?.locks.length === 0 ? (
         <p className="pk-m mt-4">No locks on this page.</p>
       ) : null}
-      <ul className="mt-3 space-y-3">
+      <ul className="pk-lock-list">
         {query.data?.locks.map((lock) => {
           const expired =
             !lock.permanent &&
             lock.unlockAt !== null &&
             new Date(lock.unlockAt).getTime() <= now;
           return (
-            <li key={lock.tokenId} className="pk-card">
-              <div className="flex items-baseline justify-between gap-3">
-                <b className="min-w-0 break-all text-[16px] tabular-nums">
-                  {lock.amount} MEZO
-                </b>
-                <span className="pk-m">#{lock.tokenId}</span>
+            <li key={lock.tokenId} className="pk-lock-position">
+              <div className="pk-lock-position-heading">
+                <span className="pk-m">Position #{lock.tokenId}</span>
+                <span
+                  className={`pk-pill ${expired ? "pk-pill--ok" : lock.permanent ? "pk-pill--info" : ""}`}
+                >
+                  {expired
+                    ? "Unlocked"
+                    : lock.permanent
+                      ? "Permanent"
+                      : "Active"}
+                </span>
               </div>
-              <p className="mt-2 text-[14px] font-semibold">
+              <p className="pk-lock-amount">
+                {formatTokenBalance(parseUnits(lock.amount, 18), 18)}{" "}
+                <small>MEZO</small>
+              </p>
+              <p className="pk-lock-countdown">
+                <Clock3 size={15} aria-hidden="true" />
                 {timeToUnlock(lock.unlockAt, now)}
               </p>
               {lock.unlockAt ? (
-                <p className="pk-m mt-1">
+                <p className="pk-lock-date">
+                  <CalendarDays size={14} aria-hidden="true" />
                   {new Date(lock.unlockAt).toLocaleString(undefined, {
                     dateStyle: "medium",
                     timeStyle: "short",
                   })}
                 </p>
               ) : (
-                <p className="pk-m mt-1">
+                <p className="pk-lock-date">
                   Start an unlock to begin the 208-week countdown.
                 </p>
               )}
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="pk-lock-actions">
                 {!expired ? (
                   <Button
-                    style={{
-                      width: "auto",
-                      flex: "1 1 auto",
-                      padding: "0 12px",
-                    }}
+                    className="pk-finance-secondary"
                     variant="secondary"
                     disabled={action.busy}
+                    aria-expanded={selected === lock.tokenId}
                     onClick={() => {
                       setSelected(
                         selected === lock.tokenId ? null : lock.tokenId,
                       );
                       setMode("increase");
+                      setExtra("");
                     }}
                   >
                     Manage #{lock.tokenId}
                   </Button>
                 ) : null}
                 <Button
-                  style={{ width: "auto", flex: "1 1 auto", padding: "0 12px" }}
-                  variant="secondary"
+                  className={
+                    expired ? "pk-finance-submit" : "pk-finance-secondary"
+                  }
+                  variant={expired ? "primary" : "secondary"}
                   disabled={!expired || action.busy}
                   onClick={() =>
                     review({ kind: "withdraw", tokenId: lock.tokenId })
@@ -207,11 +250,7 @@ function WalletLocks({ open, owner }: { open: boolean; owner: Address }) {
                 </Button>
                 {lock.permanent ? (
                   <Button
-                    style={{
-                      width: "auto",
-                      flex: "1 1 auto",
-                      padding: "0 12px",
-                    }}
+                    className="pk-finance-secondary pk-lock-start-unlock"
                     variant="secondary"
                     disabled={action.busy}
                     onClick={() =>
@@ -223,41 +262,34 @@ function WalletLocks({ open, owner }: { open: boolean; owner: Address }) {
                 ) : null}
               </div>
               {selected === lock.tokenId && !expired ? (
-                <div className="mt-4 border-t border-[var(--s2)] pt-4">
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      style={{
-                        width: "auto",
-                        flex: "1 1 auto",
-                        padding: "0 12px",
-                      }}
-                      variant={mode === "increase" ? "primary" : "ghost"}
-                      onClick={() => setMode("increase")}
-                    >
-                      Add MEZO
-                    </Button>
-                    {!lock.permanent ? (
-                      <Button
-                        style={{
-                          width: "auto",
-                          flex: "1 1 auto",
-                          padding: "0 12px",
-                        }}
-                        variant={mode === "extend" ? "primary" : "ghost"}
-                        onClick={() => setMode("extend")}
-                      >
-                        Extend
-                      </Button>
-                    ) : null}
-                  </div>
+                <div className="pk-lock-management">
+                  <FinanceTabs
+                    label={`Manage position #${lock.tokenId}`}
+                    value={mode}
+                    disabled={action.busy}
+                    options={
+                      lock.permanent
+                        ? [{ value: "increase", label: "Add MEZO" }]
+                        : [
+                            { value: "increase", label: "Add MEZO" },
+                            { value: "extend", label: "Extend" },
+                          ]
+                    }
+                    onChange={setMode}
+                  />
                   {mode === "increase" ? (
-                    <TextField
-                      className="mt-3"
+                    <AmountField
+                      symbol="MEZO"
                       label={`MEZO to add to #${lock.tokenId}`}
                       inputMode="decimal"
                       value={extra}
                       disabled={action.busy}
                       onChange={(event) => setExtra(event.target.value)}
+                      hint={
+                        account.data
+                          ? `${formatTokenBalance(account.data.balance, 18)} MEZO available`
+                          : "Reading balance…"
+                      }
                     />
                   ) : (
                     <Duration
@@ -268,7 +300,7 @@ function WalletLocks({ open, owner }: { open: boolean; owner: Address }) {
                   )}
                   <Button
                     full
-                    className="mt-4"
+                    className="pk-finance-submit"
                     disabled={action.busy || (mode === "increase" && !extra)}
                     onClick={() =>
                       review(
@@ -286,13 +318,16 @@ function WalletLocks({ open, owner }: { open: boolean; owner: Address }) {
                       )
                     }
                   >
-                    Review {mode === "increase" ? "added MEZO" : "extension"}
+                    <span>
+                      Review {mode === "increase" ? "added MEZO" : "extension"}
+                    </span>
+                    <ArrowRight size={18} aria-hidden="true" />
                   </Button>
                   {!lock.permanent ? (
                     <Button
                       full
-                      variant="ghost"
-                      className="mt-2"
+                      variant="secondary"
+                      className="pk-finance-secondary mt-2"
                       disabled={action.busy}
                       onClick={() =>
                         review({ kind: "permanent", tokenId: lock.tokenId })
@@ -308,9 +343,9 @@ function WalletLocks({ open, owner }: { open: boolean; owner: Address }) {
         })}
       </ul>
       {page > 0 || query.data?.hasNext ? (
-        <div className="mt-3 flex justify-between gap-3">
+        <div className="pk-lock-pagination">
           <Button
-            style={{ width: "auto" }}
+            className="pk-finance-secondary"
             variant="secondary"
             disabled={page === 0 || action.busy}
             onClick={() => {
@@ -321,7 +356,7 @@ function WalletLocks({ open, owner }: { open: boolean; owner: Address }) {
             Previous
           </Button>
           <Button
-            style={{ width: "auto" }}
+            className="pk-finance-secondary"
             variant="secondary"
             disabled={!query.data?.hasNext || action.busy}
             onClick={() => {
