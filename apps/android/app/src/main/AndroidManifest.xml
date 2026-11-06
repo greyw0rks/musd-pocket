@@ -3,6 +3,10 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <queries>
+        <intent><action android:name="android.support.customtabs.action.CustomTabsService" /></intent>
+        <intent><action android:name="android.intent.action.VIEW" /><data android:scheme="https" /></intent>
+    </queries>
     <application android:allowBackup="false" android:usesCleartextTraffic="false"
         android:icon="@mipmap/ic_launcher" android:label="mPocket"
         android:supportsRtl="true" android:theme="@style/AppTheme">
@@ -24,6 +28,12 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="mpocket.tech" android:path="/home" />
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="mpocket.tech" android:path="/auth/android" />
             </intent-filter>
         </activity>
         <activity android:name="com.journeyapps.barcodescanner.CaptureActivity"

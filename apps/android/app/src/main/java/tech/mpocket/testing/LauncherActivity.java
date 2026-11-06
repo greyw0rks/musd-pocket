@@ -3,6 +3,7 @@ package tech.mpocket.testing;
 import android.app.Dialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
@@ -18,9 +19,12 @@ import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.browser.customtabs.CustomTabsClient;
+import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.webkit.JavaScriptReplyProxy;
@@ -42,6 +46,9 @@ public class LauncherActivity extends AppCompatActivity {
     private LinearLayout container;
     private JavaScriptReplyProxy scanReply;
     private int scanId;
+    private PocketOAuth oauth;
+    private boolean browserOpen;
+    private boolean browserPaused;
     private final ActivityResultLauncher<ScanOptions> scanner = registerForActivityResult(new ScanContract(), result -> {
         if (scanReply != null) reply(scanReply, scanId, result.getContents(), null);
         scanReply = null;
@@ -49,6 +56,7 @@ public class LauncherActivity extends AppCompatActivity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        restoreOAuth();
         container = new LinearLayout(this);
         container.setOrientation(LinearLayout.VERTICAL);
         container.setBackgroundColor(Color.rgb(244, 244, 246));
@@ -73,11 +81,25 @@ public class LauncherActivity extends AppCompatActivity {
 
     private String intentUrl(Intent intent) {
         Uri data = intent.getData();
+        if (data != null && PocketOAuth.isCallback(data.toString())) {
+            String destination = acceptOAuth(data.toString());
+            return destination == null ? (oauth == null ? HOME : oauth.returnUrl) : destination;
+        }
+        // Restore the original payment route if Android recreated us during sign-in.
+        if (data == null && oauth != null) return oauth.returnUrl;
         return PocketNavigation.intentUrl(data == null ? null : data.toString());
     }
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        Uri data = intent.getData();
+        if (data != null && PocketOAuth.isCallback(data.toString())) {
+            String destination = acceptOAuth(data.toString());
+            if (destination != null) {
+                if (web != null) web.loadUrl(destination); else openApp(destination);
+            } else notice("This sign-in return is invalid or expired. Try signing in again.");
+            return;
+        }
         if (web != null) web.loadUrl(intentUrl(intent));
     }
     private boolean isPocket(Uri uri) {
@@ -121,6 +143,19 @@ public class LauncherActivity extends AppCompatActivity {
                                     .setPrompt("Scan a Pocket payment code").setBeepEnabled(false).setOrientationLocked(false);
                                 try { scanner.launch(options); }
                                 catch (RuntimeException error) { scanReply = null; reply(response, id, null, "The camera could not open. Paste the payment link instead."); }
+                            } else if ("prepareOAuth".equals(action)) {
+                                JSONObject value = new JSONObject(data.getString("value"));
+                                try {
+                                    PocketOAuth next = new PocketOAuth(value.getString("authorizationUrl"), value.getString("state"), value.getString("returnUrl"), System.currentTimeMillis());
+                                    if (!PocketNavigation.isBundledRoute(view.getUrl())) throw new IllegalArgumentException();
+                                    String browser = CustomTabsClient.getPackageName(LauncherActivity.this, Collections.emptyList());
+                                    if (browser == null) { reply(response, id, null, "Install or enable a browser to sign in with X."); return; }
+                                    if (!oauthPreferences().edit().putString("pending", value.put("createdAt", next.createdAt).toString()).commit()) {
+                                        reply(response, id, null, "Sign-in could not be saved. Please try again."); return;
+                                    }
+                                    oauth = next;
+                                    reply(response, id, "ready", null);
+                                } catch (IllegalArgumentException error) { reply(response, id, null, "Invalid sign-in request. Please try again."); }
                             } else if ("share".equals(action)) {
                                 String text = data.optString("value");
                                 if (text.length() > 8192) { reply(response, id, null, "This link is too long to share."); return; }
@@ -149,6 +184,7 @@ public class LauncherActivity extends AppCompatActivity {
                 @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                     Uri uri = request.getUrl();
                     if (!request.isForMainFrame()) return false;
+                    if (handleOAuth(uri.toString())) return true;
                     if (isPocket(uri) && uri.getQueryParameter("browser") == null) return false;
                     if (PocketNavigation.isOAuthHost(uri.toString())) return false;
                     external(uri);
@@ -195,6 +231,7 @@ public class LauncherActivity extends AppCompatActivity {
                         return assets.shouldInterceptRequest(uri);
                     }
                     @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest request) {
+                        if (request.isForMainFrame() && handleOAuth(request.getUrl().toString())) { dialog.dismiss(); return true; }
                         if ("https".equals(request.getUrl().getScheme())) return false;
                         external(request.getUrl());
                         return true;
@@ -229,6 +266,49 @@ public class LauncherActivity extends AppCompatActivity {
             response.postMessage(data.toString());
         } catch (JSONException ignored) { }
     }
+    private SharedPreferences oauthPreferences() { return getSharedPreferences("pocket-oauth", MODE_PRIVATE); }
+    private void restoreOAuth() {
+        try {
+            JSONObject data = new JSONObject(oauthPreferences().getString("pending", ""));
+            PocketOAuth candidate = new PocketOAuth(data.getString("authorizationUrl"), data.getString("state"), data.getString("returnUrl"), data.getLong("createdAt"));
+            if (candidate.active(System.currentTimeMillis())) oauth = candidate;
+            else oauthPreferences().edit().remove("pending").apply();
+        } catch (JSONException | IllegalArgumentException ignored) { oauthPreferences().edit().remove("pending").apply(); }
+    }
+    private String acceptOAuth(String url) {
+        String destination = oauth == null ? null : oauth.accept(url, System.currentTimeMillis());
+        if (destination != null) {
+            // Consume before loading the client, including a return after process death.
+            if (!oauthPreferences().edit().remove("pending").commit()) return null;
+            oauth = null;
+            browserOpen = false;
+            browserPaused = false;
+        }
+        return destination;
+    }
+    private boolean handleOAuth(String url) {
+        if (PocketOAuth.isCallback(url)) {
+            String destination = acceptOAuth(url);
+            if (destination != null && web != null) web.loadUrl(destination);
+            else notice("This sign-in return is invalid or expired. Try signing in again.");
+            return true;
+        }
+        if (oauth == null || !oauth.matchesAuthorization(url, System.currentTimeMillis())) return false;
+        if (browserOpen) return true;
+        String browser = CustomTabsClient.getPackageName(this, Collections.emptyList());
+        if (browser == null) { notice("Install or enable a browser to sign in with X."); web.loadUrl(oauth.returnUrl); return true; }
+        CustomTabsIntent tab = new CustomTabsIntent.Builder().setShowTitle(true).build();
+        tab.intent.setPackage(browser);
+        browserOpen = true;
+        try { tab.launchUrl(this, Uri.parse(url)); }
+        catch (ActivityNotFoundException error) {
+            browserOpen = false;
+            notice("The browser could not open. Please try signing in again.");
+            web.loadUrl(oauth.returnUrl);
+        }
+        return true;
+    }
+    private void notice(String message) { Toast.makeText(this, message, Toast.LENGTH_LONG).show(); }
     private void external(Uri uri) {
         if (!"https".equals(uri.getScheme()) && !"mailto".equals(uri.getScheme())) return;
         try { startActivity(new Intent(Intent.ACTION_VIEW, uri)); }
@@ -253,12 +333,25 @@ public class LauncherActivity extends AppCompatActivity {
     }
     @Override protected void onPause() {
         super.onPause();
+        if (browserOpen) browserPaused = true;
         CookieManager.getInstance().flush();
         if (web != null) web.onPause();
     }
     @Override protected void onResume() {
         super.onResume();
         if (web != null) web.onResume();
+        if (browserOpen && browserPaused && web != null) {
+            browserOpen = false;
+            browserPaused = false;
+            // A callback intent can arrive just after resume. Keep pending state for
+            // that return, but reset the loading screen so cancellation is retryable.
+            web.postDelayed(() -> {
+                if (oauth != null && !browserOpen && web != null) {
+                    web.loadUrl(oauth.returnUrl);
+                    notice("Sign-in wasn’t completed. You can try again.");
+                }
+            }, 600);
+        }
     }
     @Override protected void onDestroy() {
         if (web != null) { container.removeView(web); web.destroy(); web = null; }

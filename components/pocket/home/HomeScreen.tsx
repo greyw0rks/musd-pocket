@@ -7,7 +7,6 @@ import { BalanceCards } from "@/components/pocket/home/BalanceCards";
 import type { TokenHolding } from "@/components/pocket/home/BalanceCards";
 import { FaucetSheet } from "@/components/pocket/home/FaucetSheet";
 import { RewardsSheet } from "@/components/pocket/home/RewardsSheet";
-import { WaitlistCheckout } from "@/components/checkout/WaitlistCheckout";
 import {
   BellIcon,
   BorrowIcon,
@@ -288,7 +287,6 @@ export function HomeScreen({
         ))}
       </div>
 
-      <WaitlistCheckout />
 
       <div data-tour="activity">
         <div className="pk-row pk-sp" style={{ margin: "20px 0 4px" }}>

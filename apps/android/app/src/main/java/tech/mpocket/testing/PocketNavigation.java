@@ -33,8 +33,8 @@ final class PocketNavigation {
     static boolean isOAuthHost(String value) {
         URI uri = parse(value);
         if (!https(uri) || uri.getHost() == null) return false;
-        // Privy redirects the mobile window itself. Keep its identity-provider
-        // journey in the same WebView so the PKCE verifier and session survive.
+        // Non-browser OAuth journeys and legacy clients stay in the WebView.
+        // LauncherActivity intercepts the prepared Twitter URL before this rule.
         switch (uri.getHost().toLowerCase(Locale.ROOT)) {
             case "x.com":
             case "twitter.com":

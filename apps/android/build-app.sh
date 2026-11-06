@@ -23,7 +23,7 @@ signer="$ANDROID_HOME/build-tools/36.0.0/apksigner"
 aligner="$ANDROID_HOME/build-tools/36.0.0/zipalign"
 unsigned_apk="app/build/outputs/apk/release/app-release-unsigned.apk"
 aligned_apk="app/build/outputs/apk/release/mpocket-aligned.apk"
-signed_apk="mpocket-0.2.1.apk"
+signed_apk="mpocket-0.2.2.apk"
 "$aligner" -f -P 16 4 "$unsigned_apk" "$aligned_apk"
 "$signer" sign --ks .private/mpocket-testing.keystore --ks-key-alias mpocket-testing \
   --ks-pass file:.private/keystore-password --out "$signed_apk" "$aligned_apk"
