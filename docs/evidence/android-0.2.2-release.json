@@ -1,0 +1,23 @@
+{
+  "createdAt": "2026-11-06T20:22:50.979Z",
+  "sourceCommit": "5e76922",
+  "downloadUrl": "https://mpocket.tech/downloads/mpocket-0.2.2.apk",
+  "deploymentId": "dpl_AEanh675VceJRM49diQr6ejiqFnX",
+  "versionName": "0.2.2",
+  "versionCode": 4,
+  "apkBytes": 3135667,
+  "sha256": "7b903107622868480802e68764ba8ce19341499cd947d16a7035e2cc7c3aa84a",
+  "checks": {
+    "liveDownloadMatchesSignedApk": true,
+    "signingCertificateAssociationPresent": true,
+    "callbackPageReturnsToAndroidPackage": true,
+    "callbackStripsQueryFromHistory": true,
+    "callbackHasNoManifest": true,
+    "incompleteCallbackExplained": true,
+    "webHomeHasNoInstallGate": true
+  },
+  "productionBrowserTransport": "Node HTTP forwards actual production bytes into Chromium",
+  "actualAndroidDeviceTested": false,
+  "accountLoginPerformed": false,
+  "transactionSigningPerformed": false
+}
