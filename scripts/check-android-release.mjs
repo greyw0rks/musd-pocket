@@ -44,13 +44,13 @@ try {
   assert.ok((await page.getByRole("link", { name: "Return to mPocket" }).getAttribute("href")).includes("package=tech.mpocket.testing"));
   assert.equal(new URL(page.url()).search, "");
   assert.equal(await page.locator('link[rel="manifest"]').count(), 0);
-  await page.goto("https://mpocket.tech/auth/android?privy_oauth_code=fixture-code&privy_oauth_state=fixture-state&privy_oauth_provider=google");
+  await page.goto("https://mpocket.tech/auth/android?privy_oauth_code=fixture-code&privy_oauth_state=fixture-state&privy_oauth_provider=google", { waitUntil: "commit" });
   await page.getByRole("link", { name: "Return to mPocket" }).waitFor();
-  await page.goto("https://mpocket.tech/auth/android?privy_oauth_code=fixture-code&privy_oauth_state=fixture-state&privy_oauth_provider=telegram");
+  await page.goto("https://mpocket.tech/auth/android?privy_oauth_code=fixture-code&privy_oauth_state=fixture-state&privy_oauth_provider=telegram", { waitUntil: "commit" });
   await page.getByText(/Sign-in wasn’t completed/).waitFor();
-  await page.goto("https://mpocket.tech/auth/android");
+  await page.goto("https://mpocket.tech/auth/android", { waitUntil: "commit" });
   await page.getByText(/Sign-in wasn’t completed/).waitFor();
-  await page.goto("https://mpocket.tech/home");
+  await page.goto("https://mpocket.tech/home", { waitUntil: "commit" });
   await page.getByPlaceholder(/email/i).waitFor({ timeout: 60_000 });
   assert.equal(await page.getByRole("button", { name: /telegram/i }).count(), 0);
   assert.equal(await page.getByText(/Add Pocket to your home screen|install.*chrome/i).count(), 0);

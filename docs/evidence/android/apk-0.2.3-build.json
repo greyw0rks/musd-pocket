@@ -11,7 +11,7 @@
   "signatureV2V3Verified": true,
   "zipAlignment16KiBVerified": true,
   "backendTests": {
-    "merchantsUsersRewards": 57,
+    "merchantsUsersRewards": 59,
     "paymentsRecovery": 39
   },
   "typescriptPassed": true,

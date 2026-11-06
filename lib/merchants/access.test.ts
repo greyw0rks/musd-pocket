@@ -8,10 +8,11 @@ vi.mock("@/lib/merchants/coupons", () => ({ issueGreylabsCoupon: f.issue }));
 import { greylabsAccess } from "./access";
 import { CHAIN_ID, MUSD_ADDRESS } from "@/lib/mezo/config";
 import { GET, POST } from "@/app/api/merchants/greylabs/coupon/route";
+import { GET as verifyCoupon } from "@/app/api/merchants/greylabs/coupon/[code]/route";
 import { AuthError } from "@/lib/auth/request";
 const wallet = "0x1111111111111111111111111111111111111111";
 const merchant = { id: "merchant", username: "grey_labs", role: "MERCHANT", walletAddress: wallet };
-const coupon = { id: "greylabs:buyer", code: "GREY-ABCDEF1234567890", percent: 27, createdAt: new Date("2026-11-06T00:00:00Z") };
+const coupon = { id: "greylabs:buyer", merchant: "greylabs", userId: "buyer", code: "GREY-ABCDEF1234567890", percent: 27, createdAt: new Date("2026-11-06T00:00:00Z") };
 const confirmed = { senderId: "buyer", recipientAddress: wallet, mode: "DIRECT", status: "PAID", chainId: CHAIN_ID, token: MUSD_ADDRESS.toLowerCase(), amount: 0.000001, payoutTxHash: "0xconfirmed", paidAt: new Date() };
 function recordedPayment(row: Record<string, unknown> | null) {
   f.payment.mockImplementation(async ({ where }) => row && Object.entries(where).every(([key, value]) => {
@@ -76,5 +77,25 @@ describe("payment-gated Greylabs offer", () => {
     expect((await GET(req)).status).toBe(401);
     expect((await POST(req)).status).toBe(401);
     expect(f.issue).not.toHaveBeenCalled();
+  });
+  it("public code verification requires the owner's payment and never exposes their identity", async () => {
+    const req = new Request("https://mpocket.tech/api/merchants/greylabs/coupon/" + coupon.code);
+    const params = { params: Promise.resolve({ code: coupon.code }) };
+    recordedPayment(null);
+    const blocked = await verifyCoupon(req, params);
+    expect(blocked.status).toBe(404);
+    expect(await blocked.json()).toEqual({ valid: false });
+    recordedPayment(confirmed);
+    const valid = await verifyCoupon(req, params);
+    expect(valid.headers.get("cache-control")).toBe("no-store");
+    expect(await valid.json()).toEqual({ valid: true, merchant: "Greylabs", percent: 27 });
+  });
+  it("rejects malformed and nonexistent public codes", async () => {
+    const req = new Request("https://mpocket.tech/api/merchants/greylabs/coupon/invalid");
+    expect((await verifyCoupon(req, { params: Promise.resolve({ code: "invalid" }) })).status).toBe(404);
+    expect(f.coupon).not.toHaveBeenCalled();
+    f.coupon.mockResolvedValue(null);
+    expect((await verifyCoupon(req, { params: Promise.resolve({ code: coupon.code }) })).status).toBe(404);
+    expect(f.payment).not.toHaveBeenCalled();
   });
 });
