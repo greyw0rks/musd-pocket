@@ -4,6 +4,7 @@ import { Loader2, AlertCircle } from "lucide-react";
 import { useSession } from "@/lib/auth/session";
 import { Button } from "@/components/ui/button";
 import { Wordmark } from "@/components/wordmark";
+import { PrivySignIn } from "@/components/auth/PrivySignIn";
 
 /**
  * Gate for the authenticated app. Shows a login screen until the user signs in
@@ -23,7 +24,6 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     authenticated,
     user,
     error,
-    login,
     logout,
     refresh,
     walletMissing,
@@ -34,7 +34,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (!ready) return <Centered>{<Spinner />}</Centered>;
 
-  if (!authenticated) return <LoginScreen onLogin={login} />;
+  if (!authenticated) return <PrivySignIn />;
 
   /*
     Before the sync branches, because there is nothing to sync: this account has
@@ -83,48 +83,6 @@ function Spinner({ label }: { label?: string }) {
       <Loader2 className="size-6 animate-spin text-primary" />
       {label && <p className="text-sm">{label}</p>}
     </div>
-  );
-}
-
-function LoginScreen({ onLogin }: { onLogin: () => void }) {
-  return (
-    <Centered>
-      <div className="w-full max-w-sm text-center">
-        <Wordmark className="justify-center text-2xl" />
-        {/*
-          This copy is the app's first sentence and it was written for the
-          desktop build, when Pocket moved the money and could therefore promise
-          to make the chain disappear. Phase 2 inverted that: the wallet the user
-          signs in with *is* the money, it signs its own transfers, and gas is
-          paid in BTC. "Pocket handles the chain" is now the opposite of true, so
-          the two claims that carried it — no gas, no bridging — are gone rather
-          than softened.
-        */}
-        <h1 className="mt-8 text-2xl font-semibold tracking-tight text-foreground">
-          Send MUSD.
-          <br />
-          Your wallet signs it.
-        </h1>
-        <p className="mt-3 text-[15px] text-muted">
-          Signing in creates a wallet only you control. A send is a real MUSD
-          transfer from it to whoever you are paying.
-        </p>
-        <Button
-          size="lg"
-          fullWidth
-          onClick={onLogin}
-          className="mt-8"
-        >
-          {/* Not "Continue with X": the modal this opens offers X, Telegram and
-              email, and naming one of the three misdescribes the choice. */}
-          Continue
-        </Button>
-        <p className="mt-4 text-[13px] text-muted">
-          This runs on Mezo&rsquo;s testnet. What you hold there is real on that
-          chain and worth nothing off it.
-        </p>
-      </div>
-    </Centered>
   );
 }
 

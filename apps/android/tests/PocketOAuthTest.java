@@ -22,10 +22,15 @@ public final class PocketOAuthTest {
             expect(pending.accept(callback, start + PocketOAuth.MAX_AGE_MS + 1) == null, "Expired auth rejected");
             expect(pending.accept(callback, start - 1) == null, "Invalid clock range rejected");
         }
-        for (String url : new String[] { "https://x.com.evil.test/authorize", "https://user@x.com/authorize", "https://x.com:444/authorize", "https://oauth.telegram.org/auth", "javascript:alert(1)" }) {
+        for (String url : new String[] { "https://x.com.evil.test/authorize", "https://user@x.com/authorize", "https://x.com:444/authorize", "javascript:alert(1)" }) {
             try { new PocketOAuth(url, "fixture-state", PocketNavigation.HOME, start); throw new AssertionError("Bad authorization accepted"); }
             catch (IllegalArgumentException expected) { }
         }
+        PocketOAuth google = new PocketOAuth("https://accounts.google.com/o/oauth2/auth", "fixture-state", PocketNavigation.HOME, start, "google");
+        expect(google.accept(callback.replace("provider=twitter", "provider=google"), start + 100) != null, "Google callback returns to bundled app");
+        expect(google.accept(callback, start + 100) == null, "Google flow cannot consume a Twitter callback");
+        try { new PocketOAuth("https://oauth.telegram.org/auth", "fixture-state", PocketNavigation.HOME, start, "telegram"); throw new AssertionError("Removed login provider accepted"); }
+        catch (IllegalArgumentException expected) { }
         System.out.println("PASS: pending OAuth validation, Home/payment context, cold return, expiry and wrong-state rejection");
     }
 }

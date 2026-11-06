@@ -1,0 +1,23 @@
+{
+  "createdAt": "2026-11-06T21:08:50.635Z",
+  "checks": {
+    "appScreenLayouts": {
+      "count": 29,
+      "widths": [
+        320,
+        390,
+        640
+      ]
+    },
+    "waitlistOnlyUnderVerifiedMerchants": true,
+    "enteredEmailPersistsAfterReloadAndFailedSaveIsRetryable": true,
+    "googleLinkSavesActualAccountAddress": true,
+    "smallViewportAndNativeBackCloseSheet": true,
+    "receiptPreferenceCanBeRemoved": true,
+    "signoutOpensPrivyOnceAndDismissedChooserCanReopen": true,
+    "signoutAfterOAuthReturnOpensPrivy": true
+  },
+  "sessionAndWalletReadsMocked": true,
+  "accountLoginPerformed": false,
+  "transactionSigningPerformed": false
+}

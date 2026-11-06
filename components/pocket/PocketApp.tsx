@@ -28,10 +28,9 @@ import {
 } from "@/components/pocket/navigation/screens";
 import { NotificationsScreen } from "@/components/pocket/notifications/NotificationsScreen";
 import { AccountTypeScreen } from "@/components/pocket/onboarding/AccountTypeScreen";
-import { AuthScreen } from "@/components/pocket/onboarding/AuthScreen";
 import { OnboardingDoneScreen } from "@/components/pocket/onboarding/OnboardingDoneScreen";
 import { ProfileSetupScreen } from "@/components/pocket/onboarding/ProfileSetupScreen";
-import { WelcomeScreen } from "@/components/pocket/onboarding/WelcomeScreen";
+import { PrivySignIn } from "@/components/auth/PrivySignIn";
 import { AccountOverviewScreen } from "@/components/pocket/profile/AccountOverviewScreen";
 import { ProfileScreen } from "@/components/pocket/profile/ProfileScreen";
 import { SettingsScreen } from "@/components/pocket/profile/SettingsScreen";
@@ -67,6 +66,7 @@ import {
   useLiveWallet,
 } from "@/hooks/use-live-wallet";
 import { hasPrivy } from "@/lib/wallet/privy";
+import { registerScreenBack } from "@/lib/native/back";
 
 /**
  * Pocket.
@@ -99,13 +99,11 @@ function PocketHost() {
   const { ready, current, back, reset } = usePocket();
 
   useEffect(() => {
-    const nativeWindow = window as Window & { __pocketAndroidBack?: () => boolean };
-    nativeWindow.__pocketAndroidBack = () => {
+    return registerScreenBack(() => {
       if (["home", "swap", "wealth", "welcome", "auth"].includes(current.id)) return false;
       back();
       return true;
-    };
-    return () => { delete nativeWindow.__pocketAndroidBack; };
+    });
   }, [back, current.id]);
 
   /*
@@ -149,7 +147,7 @@ function PocketHost() {
   }, [current.id]);
 
   return (
-    <AppShell screen={current.id}>
+    <AppShell screen={current.id} hasDock={Boolean(dockForScreen(current.id))}>
       {/*
         Makes the Privy embedded wallet the account wagmi reads from. Rendered
         only when Privy is configured — the hook it needs lives under
@@ -329,9 +327,8 @@ function Screen({ id, onBack }: { id: ScreenId; onBack: () => void }) {
 
   switch (id) {
     case "welcome":
-      return <WelcomeScreen />;
     case "auth":
-      return <AuthScreen />;
+      return <PrivySignIn />;
     case "account-type":
       return <AccountTypeScreen />;
     case "profile-setup":

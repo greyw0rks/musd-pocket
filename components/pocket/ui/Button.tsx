@@ -52,7 +52,7 @@ const SHAPE = {
 } as const;
 
 const SIZES = {
-  sm: "h-9 min-h-0 px-4 text-[12px]",
+  sm: "h-11 min-h-11 px-4 text-[12px]",
   md: "h-11 min-h-0 px-5 text-[13px]",
   lg: "",
 } as const;

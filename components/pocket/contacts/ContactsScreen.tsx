@@ -498,7 +498,7 @@ export function ContactsScreen({
         )}
       </AnimatePresence>
 
-      <VerifiedMerchants />
+      <VerifiedMerchants onPayMerchant={onSelect} />
 
       <ListGroup label="Recent">
         {recent.length > 0 ? (

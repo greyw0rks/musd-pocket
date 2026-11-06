@@ -1,4 +1,5 @@
 import type { ChainKey } from "@prisma/client";
+import type { ReceiptsLink } from "@/features/session/session.types";
 
 /** Client-safe view of a Pocket user (balances as decimal strings). */
 export type PocketUser = {
@@ -15,4 +16,6 @@ export type PocketUser = {
   availableBalance: string;
   frozenBalance: string;
   createdAt: string;
+  /** Returned only on the authenticated account endpoint. */
+  receipts?: ReceiptsLink | null;
 };

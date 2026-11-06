@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { usePrivy, useLinkAccount } from "@privy-io/react-auth";
+import { RECEIPT_GOOGLE_PENDING, RECEIPT_GOOGLE_RESULT } from "@/lib/receipts/google-events";
 import { MailIcon } from "@/components/pocket/icons";
 import { usePocket } from "@/components/pocket/store";
 import { Button } from "@/components/pocket/ui/Button";
@@ -17,9 +19,8 @@ import { RECEIPTS_CHANNEL_LABEL } from "@/features/session/session.types";
  * it revocable: an identity you cannot sign out of is a trap, and a delivery
  * address you cannot remove is the same trap wearing a smaller hat.
  *
- * Nothing is emailed, and `setReceipts` stores nothing — there is no
- * receipt-address column on the server — so the sheet says so rather than
- * letting a connected-looking row imply otherwise.
+ * Google confirms its address through Privy. Entered email addresses are saved
+ * as preferences; automatic email delivery is not enabled yet.
  *
  * It lives in its own module because both a personal Profile and a merchant's
  * Business settings open it. The delivery address is the same fact about the
@@ -39,6 +40,51 @@ export function ReceiptsSheet({
   const [address, setAddress] = useState("");
   const [busy, setBusy] = useState<"google" | "email" | "remove" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { user: privyUser } = usePrivy();
+  const { linkGoogle } = useLinkAccount({ onError: () => {
+    localStorage.removeItem(RECEIPT_GOOGLE_PENDING);
+    setBusy(null);
+    setError("Google could not connect. Try again or enter an email address below.");
+  } });
+
+  useEffect(() => {
+    const result = (event: Event) => {
+      const detail = (event as CustomEvent<{ saved?: boolean; error?: string }>).detail;
+      setBusy(null);
+      if (detail.saved) onClose(); else setError(detail.error ?? "The address could not be saved.");
+    };
+    window.addEventListener(RECEIPT_GOOGLE_RESULT, result);
+    return () => window.removeEventListener(RECEIPT_GOOGLE_RESULT, result);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (busy !== "google") return;
+    const timer = window.setTimeout(() => {
+      setBusy(null);
+      setError("Google connection wasn’t completed. Try again or enter an email address.");
+    }, 60_000);
+    return () => window.clearTimeout(timer);
+  }, [busy]);
+
+  async function connectGoogle() {
+    if (busy) return;
+    setError(null);
+    setBusy("google");
+    try {
+      if (privyUser?.google?.email) {
+        await setReceipts({ channel: "google", address: privyUser.google.email });
+        onClose();
+        setBusy(null);
+      } else {
+        if (!privyUser) throw new Error("Sign in again before connecting Google.");
+        localStorage.setItem(RECEIPT_GOOGLE_PENDING, JSON.stringify({ userId: privyUser.id, createdAt: Date.now() }));
+        linkGoogle();
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Google could not connect.");
+      setBusy(null);
+    }
+  }
 
   async function connect(channel: "google" | "email", value: string) {
     if (busy) return;
@@ -53,25 +99,26 @@ export function ReceiptsSheet({
     }
 
     setBusy(channel);
-    await setReceipts({ channel, address: value.trim() });
-    setBusy(null);
-    setAddress("");
-    onClose();
+    try {
+      await setReceipts({ channel, address: value.trim() });
+      setAddress("");
+      onClose();
+    } catch (error) { setError(error instanceof Error ? error.message : "The address could not be saved. Try again."); }
+    finally { setBusy(null); }
   }
 
   async function remove() {
     if (busy) return;
     setBusy("remove");
-    await setReceipts(null);
-    setBusy(null);
-    onClose();
+    try { await setReceipts(null); onClose(); }
+    catch (error) { setError(error instanceof Error ? error.message : "The address could not be removed. Try again."); }
+    finally { setBusy(null); }
   }
 
   return (
     <Sheet open={open} onClose={onClose} title="Receipts">
       <p className="pk-m text-center leading-relaxed">
-        Where a copy of each payment goes. Signing in with X does not share an
-        address, so this is connected separately and can be removed again.
+        Save an address for receipt copies. You can change or remove it anytime.
       </p>
 
       {current ? (
@@ -92,7 +139,7 @@ export function ReceiptsSheet({
           loading={busy === "google"}
           disabled={busy !== null}
           icon={<MailIcon size={15} />}
-          onClick={() => void connect("google", "alex.morgan@gmail.com")}
+          onClick={() => void connectGoogle()}
         >
           Connect Google
         </Button>
@@ -139,9 +186,8 @@ export function ReceiptsSheet({
       </div>
 
       <p className="pk-m mt-5 leading-relaxed">
-        Receipt copies are not sent yet, and there is nowhere on the server to
-        keep this address — connecting it will not stay. The panel is here so
-        the shape is ready when delivery is.
+        Your address stays saved to your account. Automatic receipt emails are
+        not enabled yet. Connecting Google confirms its address and links it to your account.
       </p>
     </Sheet>
   );

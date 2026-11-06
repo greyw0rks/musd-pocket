@@ -41,6 +41,7 @@ final class PocketNavigation {
             case "api.x.com":
             case "api.twitter.com":
             case "auth.privy.io":
+            case "accounts.google.com":
             case "oauth.telegram.org":
                 return true;
             default:

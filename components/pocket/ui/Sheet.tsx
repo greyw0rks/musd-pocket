@@ -2,8 +2,14 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
+import { registerOverlayBack } from "@/lib/native/back";
 import { cn } from "@/lib/utils";
+
+const subscribeRoot = () => () => {};
+const getModalRoot = () => document.querySelector(".pk-app") ?? document.body;
+const getServerRoot = () => null;
 
 /**
  * A modal sheet.
@@ -32,6 +38,14 @@ export function Sheet({
   footer?: ReactNode;
   className?: string;
 }) {
+  const panel = useRef<HTMLDivElement>(null);
+  // Keep overlays outside screen scrollers. Focusing a field must scroll the
+  // sheet's content, not move the entire sheet with the underlying screen.
+  const modalRoot = useSyncExternalStore(subscribeRoot, getModalRoot, getServerRoot);
+  useEffect(() => {
+    if (!open) return;
+    return registerOverlayBack(() => { onClose(); return true; });
+  }, [open, onClose]);
   // Freeze the page behind. Without this a drag inside the sheet scrolls the
   // screen underneath on touch devices.
   useEffect(() => {
@@ -45,14 +59,24 @@ export function Sheet({
 
   useEffect(() => {
     if (!open) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const frame = requestAnimationFrame(() => panel.current?.focus());
     const onKey = (event: KeyboardEvent) => {
+      if (document.querySelector('[role="dialog"][aria-modal="true"]:not(.pk-sheet)')) return;
       if (event.key === "Escape") onClose();
+      if (event.key === "Tab") {
+        const controls = Array.from(panel.current?.querySelectorAll<HTMLElement>('button:not([disabled]),input:not([disabled]),a[href],select,textarea,[tabindex="0"]') ?? []);
+        const first = controls[0], last = controls.at(-1);
+        if (!first || !last) return;
+        if (event.shiftKey && (document.activeElement === first || document.activeElement === panel.current)) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && (document.activeElement === last || document.activeElement === panel.current)) { event.preventDefault(); first.focus(); }
+      }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => { cancelAnimationFrame(frame); window.removeEventListener("keydown", onKey); previousFocus?.focus(); };
   }, [open, onClose]);
 
-  return (
+  return modalRoot ? createPortal(
     <AnimatePresence>
       {open ? (
         <motion.div
@@ -70,6 +94,8 @@ export function Sheet({
 
           <motion.div
             role="dialog"
+            ref={panel}
+            tabIndex={-1}
             aria-modal="true"
             aria-label={title}
             initial={{ y: "100%" }}
@@ -82,11 +108,14 @@ export function Sheet({
               className,
             )}
           >
-            <div className="pk-sheet-handle" aria-hidden="true" />
-
-            {title ? (
-              <h2 className="pk-h2 mb-4 text-center">{title}</h2>
-            ) : null}
+            <motion.div className="pk-sheet-grip" drag="y" dragConstraints={{ top: 0, bottom: 0 }} dragElastic={0.25}
+              onDragEnd={(_, info) => { if (info.offset.y > 70 || info.velocity.y > 600) onClose(); }}>
+              <div className="pk-sheet-handle" aria-hidden="true" />
+            </motion.div>
+            <div className="pk-sheet-title">
+              {title ? <h2 className="pk-h2">{title}</h2> : <span />}
+              <button type="button" aria-label="Dismiss sheet" onClick={onClose} className="pk-ib">×</button>
+            </div>
 
             {children}
 
@@ -94,6 +123,7 @@ export function Sheet({
           </motion.div>
         </motion.div>
       ) : null}
-    </AnimatePresence>
-  );
+    </AnimatePresence>,
+    modalRoot,
+  ) : null;
 }

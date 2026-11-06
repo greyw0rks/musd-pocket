@@ -7,7 +7,7 @@ let installed = false;
 export const ANDROID_OAUTH_CALLBACK = "https://mpocket.tech/auth/android";
 
 /** Keep Privy's PKCE verifier in this WebView; only authorization uses the browser. */
-function installTwitterBrowserAuth(): void {
+function installBrowserAuth(): void {
   const originalFetch = window.fetch.bind(window);
   window.fetch = async (input, options) => {
     const url = input instanceof Request ? input.url : String(input);
@@ -19,17 +19,17 @@ function installTwitterBrowserAuth(): void {
     if (typeof body !== "string") return originalFetch(input, options);
     let data: Record<string, unknown>;
     try { data = JSON.parse(body); } catch { return originalFetch(input, options); }
-    if (data.provider !== "twitter") return originalFetch(input, options);
+    if (!["twitter", "google"].includes(String(data.provider))) return originalFetch(input, options);
     const returnUrl = new URL(window.location.href);
     if (returnUrl.origin !== "https://mpocket.tech" ||
       !(returnUrl.pathname === "/home" || returnUrl.pathname.startsWith("/pay/"))) {
-      throw new Error("Open mPocket before signing in with X.");
+      throw new Error("Open mPocket before signing in.");
     }
     for (const key of ["privy_oauth_code", "privy_oauth_state", "privy_oauth_provider"]) returnUrl.searchParams.delete(key);
     const response = await originalFetch(input, { ...options, body: JSON.stringify({ ...data, redirect_to: ANDROID_OAUTH_CALLBACK }) });
     if (response.ok) {
       const result = await response.clone().json();
-      await request("prepareOAuth", JSON.stringify({ authorizationUrl: result.url, state: data.state_code, returnUrl: returnUrl.href }));
+      await request("prepareOAuth", JSON.stringify({ authorizationUrl: result.url, state: data.state_code, provider: data.provider, returnUrl: returnUrl.href }));
     }
     return response;
   };
@@ -59,6 +59,7 @@ export function installNativeAdapters(): void {
   const bridge = port();
   if (!bridge || installed) return;
   installed = true;
+  document.documentElement.dataset.pocketRuntime = "android";
   bridge.onmessage = ({ data }) => {
     let reply: NativeReply;
     try { reply = JSON.parse(data); } catch { return; }
@@ -69,7 +70,7 @@ export function installNativeAdapters(): void {
     if (reply.error) item.reject(new Error(reply.error));
     else item.resolve(reply.result ?? null);
   };
-  installTwitterBrowserAuth();
+  installBrowserAuth();
   // The Android share sheet is available even on WebViews without Web Share.
   Object.defineProperty(navigator, "share", { configurable: true, value: async (data: ShareData) => {
     if (data.files?.length) throw new Error("Share a payment link rather than a file.");

@@ -6,17 +6,21 @@ import { chromium } from "@playwright/test";
 const require = createRequire(import.meta.url);
 const { build } = createRequire(require.resolve("tsx/package.json"))("esbuild");
 const root = process.cwd();
-const files = await readdir(".next/static/chunks");
-const css = (await Promise.all(files.filter(f => f.endsWith(".css")).map(f => readFile(`.next/static/chunks/${f}`, "utf8")))).join("\n");
+const assets = "apps/android/app/src/main/assets/web/assets";
+const files = await readdir(assets);
+const css = (await Promise.all(files.filter(f => f.endsWith(".css")).map(f => readFile(`${assets}/${f}`, "utf8")))).join("\n");
 const fixture = `
   import {createElement} from 'react';
   import {WEEKLY_TASKS,weekWindow} from '@/lib/rewards/weekly';
   export default function Link(props){return createElement('a',props)}
   export class ApiError extends Error {}
-  window.fixtureCalls=[]; window.fixtureComplete=false; window.fixtureCopied='';
+  window.fixtureCalls=[]; window.fixtureComplete=false; window.fixtureCopied=''; window.fixturePaid=false; window.fixtureCoupon=null;
   const api=async(path,init)=>{
     window.fixtureCalls.push({path,method:init?.method??'GET'});
-    if(path==='/api/merchants/greylabs/coupon') return {code:'GREY-ABCDEF1234567890',percent:27,merchant:'Greylabs',createdAt:new Date().toISOString()};
+    if(path==='/api/merchants/greylabs/coupon') {
+      if(init?.method==='POST') {if(!window.fixturePaid) throw Error('Payment required');return window.fixtureCoupon={code:'GREY-ABCDEF1234567890',percent:27,merchant:'Greylabs',createdAt:new Date().toISOString()};}
+      return {eligible:window.fixturePaid,recipient:{id:'grey-merchant',name:'Greylabs',handle:'@grey_labs',address:'0xdcc4fae63a8a7f01f49d8fd8a0438935283e7c11',verified:true},coupon:window.fixturePaid?window.fixtureCoupon:null};
+    }
     if(path==='/api/rewards/weekly') {const week=weekWindow();return {weekStart:week.start.toISOString(),resetsAt:week.end.toISOString(),syncing:false,inviteUrl:'https://mpocket.tech/home?ref='+ 'a'.repeat(24),tasks:WEEKLY_TASKS.map(t=>({...t,progress:window.fixtureComplete?t.target:0,complete:window.fixtureComplete}))};}
     if(path==='/api/waitlist/checkout') throw Error('Fixture stops before payment');
     throw Error('Unexpected fixture API '+path);
@@ -37,7 +41,7 @@ const bundle = await build({
     import {ContactsScreen} from '@/components/pocket/contacts/ContactsScreen';
     import {RewardsSheet} from '@/components/pocket/home/RewardsSheet';
     function App(){const[open,setOpen]=useState(false);return <QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><div className="pocket-root" data-theme="light"><div className="pk-app" style={{height:'100dvh',position:'relative',width:'100%',maxWidth:480,margin:'auto',overflowY:'auto'}}>
-    <button onClick={()=>setOpen(true)}>Open rewards</button><ContactsScreen recipients={[]} recent={[]} user={{name:'Test builder',handle:'@builder'}} onSelect={()=>{}} onSearchPeople={async()=>[]} onAdd={async()=>({ok:true})} onPayAddress={()=>({ok:false,error:'Fixture'})} onScan={()=>{}} onBack={()=>{}}/>
+    <button onClick={()=>setOpen(true)}>Open rewards</button><ContactsScreen recipients={[]} recent={[]} user={{name:'Test builder',handle:'@builder'}} onSelect={recipient=>{window.fixtureRecipient=recipient}} onSearchPeople={async()=>[]} onAdd={async()=>({ok:true})} onPayAddress={()=>({ok:false,error:'Fixture'})} onScan={()=>{}} onBack={()=>{}}/>
     <RewardsSheet open={open} onClose={()=>setOpen(false)} onManageLocks={()=>{}}/>
     </div></div></QueryClientProvider>};createRoot(document.getElementById('root')).render(<App/>);
   `, loader: "tsx", resolveDir: root }, bundle: true, write: false, format: "iife", jsx: "automatic",
@@ -60,16 +64,33 @@ try {
   assert.deepEqual(await page.evaluate(()=>window.fixtureCalls),[]);
   await page.getByRole('button',{name:'Get discount',exact:true}).click();
   const coupon=page.getByRole('dialog',{name:'Your Greylabs discount',exact:true});
+  await coupon.getByRole('button',{name:'Pay @grey_labs',exact:true}).click();
+  await coupon.waitFor({state:'hidden'});
+  assert.deepEqual(await page.evaluate(()=>window.fixtureRecipient),{id:'grey-merchant',name:'Greylabs',handle:'@grey_labs',address:'0xdcc4fae63a8a7f01f49d8fd8a0438935283e7c11',verified:true});
+  assert.equal(await page.evaluate(()=>window.fixtureCalls.filter(c=>c.method==='POST').length),0);
+  await page.getByRole('button',{name:'Get discount',exact:true}).click();
+  await coupon.getByRole('button',{name:'Check payment',exact:true}).waitFor();
+  assert.equal(await coupon.getByRole('button',{name:'Reveal discount',exact:true}).count(),0);
+  await page.evaluate(()=>{window.fixturePaid=true});
+  await coupon.getByRole('button',{name:'Check payment',exact:true}).click();
+  await coupon.getByRole('button',{name:'Reveal discount',exact:true}).click();
   await coupon.getByText('27% off',{exact:true}).waitFor();
   await coupon.getByRole('button',{name:'Copy code',exact:true}).click();
   assert.equal(await page.evaluate(()=>window.fixtureCopied),'GREY-ABCDEF1234567890');
-  const shop=await coupon.getByRole('link',{name:'Explore Greylabs merch'}).getAttribute('href');
-  assert.equal(new URL(shop).pathname,'/merchants/greylabs');
+  await coupon.getByRole('button',{name:'Explore Greylabs merch'}).click();
+  const merch=page.getByRole('dialog',{name:'Greylabs merch',exact:true});
+  await merch.getByRole('heading',{name:'Studio tee'}).waitFor();
+  assert.equal(await merch.getByRole('link',{name:'Ask about this piece'}).count(),3);
+  const enquiry=new URL(await merch.getByRole('link',{name:'Ask about this piece'}).first().getAttribute('href'));
+  assert.ok(enquiry.searchParams.get('body').includes('GREY-ABCDEF1234567890 (27% off)'));
+  assert.equal(new URL(page.url()).pathname,'/home');
+  await merch.getByRole('button',{name:'← Your discount'}).click();
   await coupon.getByRole('button',{name:'Close',exact:true}).click();await coupon.waitFor({state:'hidden'});
   await page.getByRole('button',{name:'Get discount',exact:true}).click();await coupon.getByText('27% off',{exact:true}).waitFor();
-  assert.equal(await page.evaluate(()=>window.fixtureCalls.filter(c=>c.path.includes('coupon')).length),1);
+  assert.equal(await page.evaluate(()=>window.fixtureCalls.filter(c=>c.path.includes('coupon')&&c.method==='POST').length),1);
   await coupon.getByRole('button',{name:'Close',exact:true}).click();await coupon.waitFor({state:'hidden'});
-  checks.merchantCardsAndPersistentOffer=true;checks.couponCopyAndMerchLink=true;checks.noAutomaticCheckout=true;
+  checks.merchantCardsAndPersistentOffer=true;checks.couponCopyAndInAppMerch=true;checks.noAutomaticCheckout=true;
+  checks.confirmedMerchantPaymentRequired=true;checks.payUsesVerifiedMerchantRecipient=true;
   await mkdir('docs/evidence/android',{recursive:true});
   await page.getByRole('heading',{name:'Verified merchants'}).scrollIntoViewIfNeeded();
   await page.screenshot({path:'docs/evidence/android/send-merchants.png'});

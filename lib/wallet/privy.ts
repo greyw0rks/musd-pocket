@@ -4,7 +4,7 @@ import type { PrivyClientConfig } from "@privy-io/react-auth";
 import { MEZO, activeChain, RPC_URL } from "@/lib/mezo/config";
 
 /**
- * Privy is Pocket's everyday wallet: social login (X / Telegram / email) mints a
+ * Privy is Pocket's everyday wallet: X or email login mints a
  * non-custodial embedded EOA on Mezo. External wallets stay a funding rail only.
  *
  * Gated by NEXT_PUBLIC_PRIVY_APP_ID: when unset, the app falls back to the plain
@@ -18,8 +18,7 @@ export function hasPrivy(): boolean {
 
 /** PrivyProvider config. Embedded wallet auto-created for social-login users. */
 export const privyConfig: PrivyClientConfig = {
-  // X (twitter) + Telegram are the social rails; email as a fallback.
-  loginMethods: ["twitter", "telegram", "email"],
+  loginMethods: ["twitter", "email"],
   // Embedded wallet defaults to this chain; both Mezo envs are supported.
   defaultChain: activeChain,
   supportedChains: [MEZO.testnet.chain, MEZO.mainnet.chain],

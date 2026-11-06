@@ -14,6 +14,7 @@ import {
   serializeUser,
 } from "@/lib/users/service";
 import { profileUpdateSchema, profileData } from "@/lib/users/profile";
+import { getReceiptPreference } from "@/lib/users/receipts";
 
 /**
  * POST /api/users/me — sync-on-login. Verifies the Privy token, resolves the
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
   try {
     const identity = await requireIdentity(req);
     const user = await upsertUserFromIdentity(identity);
-    return Response.json(serializeUser(user));
+    return Response.json({ ...serializeUser(user), receipts: await getReceiptPreference(identity.walletAddress) }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (e) {
     return errorResponse(e);
   }
@@ -40,7 +41,7 @@ export async function GET(req: NextRequest) {
     if (!user) {
       throw new AuthError("User not found — sync first", 404);
     }
-    return Response.json(serializeUser(user));
+    return Response.json({ ...serializeUser(user), receipts: await getReceiptPreference(identity.walletAddress) }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (e) {
     return errorResponse(e);
   }
@@ -80,7 +81,7 @@ export async function PATCH(req: NextRequest) {
       where: { id: user.id },
       data,
     });
-    return Response.json(serializeUser(updated));
+    return Response.json({ ...serializeUser(updated), receipts: await getReceiptPreference(identity.walletAddress) }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (e) {
     if (
       e instanceof Prisma.PrismaClientKnownRequestError &&

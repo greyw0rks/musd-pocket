@@ -3,9 +3,12 @@ import assert from "node:assert/strict";
 import { readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { chromium } from "@playwright/test";
+import { execFileSync } from "node:child_process";
 
-const downloadUrl = "https://mpocket.tech/downloads/mpocket-0.2.2.apk";
-const expected = await readFile("public/downloads/mpocket-0.2.2.apk");
+const versionName = process.env.MPOCKET_VERSION ?? "0.2.3";
+assert.match(versionName, /^\d+\.\d+\.\d+$/);
+const downloadUrl = `https://mpocket.tech/downloads/mpocket-${versionName}.apk`;
+const expected = await readFile(`public/downloads/mpocket-${versionName}.apk`);
 const download = await fetch(downloadUrl);
 assert.equal(download.status, 200);
 const received = Buffer.from(await download.arrayBuffer());
@@ -29,6 +32,11 @@ await page.route("https://mpocket.tech/**", async route => {
 const errors = [];
 page.on("pageerror", error => errors.push(error.message));
 try {
+  for (const method of ["GET", "PUT", "DELETE"]) {
+    const response = await fetch("https://mpocket.tech/api/users/me/receipts", { method, ...(method === "PUT" ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ channel: "email", address: "fixture@example.com" }) } : {}) });
+    assert.equal(response.status, 401, "Receipt preferences require authentication");
+  }
+  for (const method of ["GET", "POST"]) assert.equal((await fetch("https://mpocket.tech/api/merchants/greylabs/coupon", { method })).status, 401);
   const callback = await page.goto("https://mpocket.tech/auth/android?privy_oauth_code=fixture-code&privy_oauth_state=fixture-state&privy_oauth_provider=twitter", { waitUntil: "commit" });
   assert.equal(callback.status(), 200);
   assert.equal(callback.headers()["cache-control"], "no-store");
@@ -36,22 +44,29 @@ try {
   assert.ok((await page.getByRole("link", { name: "Return to mPocket" }).getAttribute("href")).includes("package=tech.mpocket.testing"));
   assert.equal(new URL(page.url()).search, "");
   assert.equal(await page.locator('link[rel="manifest"]').count(), 0);
+  await page.goto("https://mpocket.tech/auth/android?privy_oauth_code=fixture-code&privy_oauth_state=fixture-state&privy_oauth_provider=google");
+  await page.getByRole("link", { name: "Return to mPocket" }).waitFor();
+  await page.goto("https://mpocket.tech/auth/android?privy_oauth_code=fixture-code&privy_oauth_state=fixture-state&privy_oauth_provider=telegram");
+  await page.getByText(/Sign-in wasn’t completed/).waitFor();
   await page.goto("https://mpocket.tech/auth/android");
   await page.getByText(/Sign-in wasn’t completed/).waitFor();
   await page.goto("https://mpocket.tech/home");
-  await page.getByRole("button", { name: "Continue", exact: true }).waitFor({ timeout: 60_000 });
+  await page.getByPlaceholder(/email/i).waitFor({ timeout: 60_000 });
+  assert.equal(await page.getByRole("button", { name: /telegram/i }).count(), 0);
   assert.equal(await page.getByText(/Add Pocket to your home screen|install.*chrome/i).count(), 0);
   assert.deepEqual(errors, []);
   const result = {
-    createdAt: new Date().toISOString(), sourceCommit: "5e76922", downloadUrl,
+    createdAt: new Date().toISOString(), sourceCommit: execFileSync("/home/greyw0rks/ubuntu-to-debian-migration/bin/rtk", ["proxy", "git", "rev-parse", "HEAD"], { encoding: "utf8" }).trim(), downloadUrl,
     deploymentId: process.env.MPOCKET_DEPLOYMENT_ID ?? null,
-    versionName: "0.2.2", versionCode: 4, apkBytes: received.length, sha256,
+    versionName, versionCode: Number(process.env.MPOCKET_VERSION_CODE ?? 5), apkBytes: received.length, sha256,
     checks: { liveDownloadMatchesSignedApk: true, signingCertificateAssociationPresent: true,
       callbackPageReturnsToAndroidPackage: true, callbackStripsQueryFromHistory: true,
-      callbackHasNoManifest: true, incompleteCallbackExplained: true, webHomeHasNoInstallGate: true },
+      callbackHasNoManifest: true, incompleteCallbackExplained: true, webHomeHasNoInstallGate: true,
+      googleCallbackReturnsToApp: true, telegramRemovedFromLogin: true,
+      receiptPreferencesRequireAuthentication: true, couponEndpointsRequireAuthentication: true },
     productionBrowserTransport: "Node HTTP forwards actual production bytes into Chromium",
     actualAndroidDeviceTested: false, accountLoginPerformed: false, transactionSigningPerformed: false,
   };
-  await writeFile("docs/evidence/android-0.2.2-release.json", JSON.stringify(result, null, 2) + "\n");
+  await writeFile(`docs/evidence/android-${versionName}-release.json`, JSON.stringify(result, null, 2) + "\n");
   console.log(JSON.stringify(result, null, 2));
 } finally { await browser.close(); }

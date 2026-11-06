@@ -1,0 +1,19 @@
+{
+  "versionName": "0.2.3",
+  "versionCode": 5,
+  "apkBytes": 3135667,
+  "sha256": "100e4ef655bce07da5365ff9ee39e4d9d65ff73b0da0a8ba78414c12c5d71fd8",
+  "webAssetCount": 253,
+  "allPackagedAssetsMatchViteBuild": true,
+  "lintErrors": [],
+  "lintWarnings": 18,
+  "signingCertificateSha256": "34608cce75a2e10318587090b7cab6acd5aaac3b4507dd09c0fcd6e76056b57c",
+  "signatureV2V3Verified": true,
+  "zipAlignment16KiBVerified": true,
+  "backendTests": {
+    "merchantsUsersRewards": 57,
+    "paymentsRecovery": 39
+  },
+  "typescriptPassed": true,
+  "scopedEslintErrors": 0
+}

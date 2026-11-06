@@ -130,20 +130,17 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  width: min(100%, 400px);
+  width: min(100%, 480px);
   height: 100vh;
   height: 100dvh;
-  min-height: 100svh;
+  min-height: 0;
   overflow: hidden;
   background: var(--bg);
 }
 
-@media (min-width: 420px) {
-  .pk-app {
-    min-height: min(100dvh, 820px);
-    height: min(100dvh, 820px);
-    border-radius: 44px;
-  }
+[data-pocket-runtime="android"] .pk-app {
+  width: 100%;
+  border-radius: 0;
 }
 
 /*
@@ -167,11 +164,15 @@
   display: flex;
   flex-direction: column;
   padding: max(16px, env(safe-area-inset-top, 0px)) 20px
-    calc(110px + env(safe-area-inset-bottom, 0px));
+    calc(96px + env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: none;
   background: var(--bg);
+}
+
+.pocket-root[data-dock="false"] .pk-scr {
+  padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
 }
 
 .pk-scr::-webkit-scrollbar {
@@ -838,6 +839,24 @@
   background: var(--ph);
 }
 
+.pk-sheet-grip {
+  padding: 8px 0;
+  touch-action: none;
+  cursor: grab;
+}
+.pk-sheet-title {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  background: var(--s);
+}
+.pk-sheet-title .pk-h2 { min-width: 0; }
+
 /*
   The shell contract, kept from the previous pass because it is still load-
   bearing: a screen inside the absolutely positioned motion layer has to be
@@ -899,6 +918,10 @@
 }
 
 .pk-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1632,43 +1655,42 @@
   position: absolute;
   left: 0;
   right: 0;
-  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
-  width: fit-content;
-  max-width: calc(100% - 24px);
-  margin-inline: auto;
+  bottom: 0;
+  width: 100%;
   z-index: 40;
   display: flex;
-  gap: 4px;
-  padding: 6px;
-  border-radius: 30px;
-  background: #0b0b0d;
-  box-shadow: 0 8px 24px #0005;
+  gap: 6px;
+  padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--line);
+  background: var(--s);
 }
 
 .pk-nav > button {
-  height: 46px;
+  flex: 1;
+  height: 58px;
   min-width: 46px;
   padding: 0 clamp(8px, 2.5vw, 14px);
   border: 0;
-  border-radius: 23px;
+  border-radius: 16px;
   background: none;
-  color: #fff;
+  color: var(--m);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 5px;
   cursor: pointer;
   font:
-    600 14px var(--font-poppins),
+    600 11px var(--font-poppins),
     ui-sans-serif,
     system-ui,
     sans-serif;
-  transition: all 0.35s;
+  transition: background 0.15s, color 0.15s;
 }
 
 .pk-nav > button[aria-current="page"] {
-  background: #fff;
-  color: #000;
+  background: var(--bg);
+  color: var(--t);
 }
 
 .pk-nav > button > span {

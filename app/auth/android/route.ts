@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 export function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const query = new URLSearchParams();
-  let valid = params.get("privy_oauth_provider") === "twitter";
+  let valid = ["twitter", "google"].includes(params.get("privy_oauth_provider") ?? "");
   for (const key of ["privy_oauth_code", "privy_oauth_state", "privy_oauth_provider"]) {
     const values = params.getAll(key);
     const value = values[0] ?? "";

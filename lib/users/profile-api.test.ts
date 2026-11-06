@@ -13,6 +13,7 @@ vi.mock("@/lib/auth/request", async (importOriginal) => ({
   requireIdentity: f.requireIdentity,
 }));
 vi.mock("@/lib/db", () => ({ prisma: { user: { update: f.update } } }));
+vi.mock("@/lib/users/receipts", () => ({ getReceiptPreference: async () => null }));
 vi.mock("@/lib/users/service", () => ({
   getUserByWallet: f.getUserByWallet,
   getUserByUsername: f.getUserByUsername,

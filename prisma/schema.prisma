@@ -72,6 +72,16 @@ enum AccountRole {
 
 // <!-- APPEND-MARKER -->
 
+/// Private receipt preference, separate from the public user directory.
+model ReceiptPreference {
+  walletAddress String @id
+  channel       String @db.VarChar(10)
+  address       String @db.VarChar(254)
+  updatedAt     DateTime @updatedAt
+
+  @@map("receipt_preferences")
+}
+
 /// A marketing-site waitlist signup. Deliberately NOT a User — these are
 /// anonymous emails captured before launch, with no wallet or identity.
 model Waitlist {

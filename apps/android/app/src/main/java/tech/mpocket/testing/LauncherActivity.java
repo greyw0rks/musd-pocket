@@ -146,7 +146,7 @@ public class LauncherActivity extends AppCompatActivity {
                             } else if ("prepareOAuth".equals(action)) {
                                 JSONObject value = new JSONObject(data.getString("value"));
                                 try {
-                                    PocketOAuth next = new PocketOAuth(value.getString("authorizationUrl"), value.getString("state"), value.getString("returnUrl"), System.currentTimeMillis());
+                                    PocketOAuth next = new PocketOAuth(value.getString("authorizationUrl"), value.getString("state"), value.getString("returnUrl"), System.currentTimeMillis(), value.getString("provider"));
                                     if (!PocketNavigation.isBundledRoute(view.getUrl())) throw new IllegalArgumentException();
                                     String browser = CustomTabsClient.getPackageName(LauncherActivity.this, Collections.emptyList());
                                     if (browser == null) { reply(response, id, null, "Install or enable a browser to sign in with X."); return; }
@@ -270,7 +270,7 @@ public class LauncherActivity extends AppCompatActivity {
     private void restoreOAuth() {
         try {
             JSONObject data = new JSONObject(oauthPreferences().getString("pending", ""));
-            PocketOAuth candidate = new PocketOAuth(data.getString("authorizationUrl"), data.getString("state"), data.getString("returnUrl"), data.getLong("createdAt"));
+            PocketOAuth candidate = new PocketOAuth(data.getString("authorizationUrl"), data.getString("state"), data.getString("returnUrl"), data.getLong("createdAt"), data.optString("provider", "twitter"));
             if (candidate.active(System.currentTimeMillis())) oauth = candidate;
             else oauthPreferences().edit().remove("pending").apply();
         } catch (JSONException | IllegalArgumentException ignored) { oauthPreferences().edit().remove("pending").apply(); }
@@ -296,7 +296,7 @@ public class LauncherActivity extends AppCompatActivity {
         if (oauth == null || !oauth.matchesAuthorization(url, System.currentTimeMillis())) return false;
         if (browserOpen) return true;
         String browser = CustomTabsClient.getPackageName(this, Collections.emptyList());
-        if (browser == null) { notice("Install or enable a browser to sign in with X."); web.loadUrl(oauth.returnUrl); return true; }
+        if (browser == null) { notice("Install or enable a browser to sign in."); web.loadUrl(oauth.returnUrl); return true; }
         CustomTabsIntent tab = new CustomTabsIntent.Builder().setShowTitle(true).build();
         tab.intent.setPackage(browser);
         browserOpen = true;

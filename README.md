@@ -4,13 +4,15 @@ Send, request and receive mUSD from your own embedded wallet. Borrow against BTC
 
 **App:** [mpocket.tech](https://mpocket.tech/home) · **Network:** Mezo testnet (31611)
 
+**Android:** [mPocket 0.2.3 APK](https://mpocket.tech/downloads/mpocket-0.2.3.apk) · [Release notes](docs/android-0.2.3-handoff.md). Install over the existing app. Sign-out opens Privy; Telegram has been removed from login. Private receipt preferences persist, with Google account linking. Send → Verified merchants unlocks one random 10–30% Greylabs code after any confirmed positive mUSD payment to `@grey_labs`; merchandise previews stay inside the app. Weekly tasks are confirmed from activity.
+
 **Track:** Track 2 — Access and Distribution for MUSD/MEZO
 
 **Pitch:** [PDF](docs/submission/pitch-deck.pdf) · [editable slides](docs/submission/pitch-deck.json) · [HTML](docs/submission/pitch-deck.html)
 
 ## How payments work
 
-Sign in with X, Telegram or email through Privy. Your embedded wallet holds the spendable mUSD and BTC. Pocket stores profiles, payment requests and Activity in Postgres.
+Sign in with X or email through Privy. Your embedded wallet holds the spendable mUSD and BTC. Pocket stores profiles, payment requests and Activity in Postgres.
 
 The payer reviews the recipient and amount, then signs a direct ERC-20 `transfer`. Pocket verifies the network, sender, token, recipient, exact amount, successful receipt and matching Transfer log before recording the outcome. A saved transaction hash recovers a pending or unrecorded payment without signing another transfer.
 
@@ -29,6 +31,7 @@ Mezo gas is paid in **BTC**. Payers pay gas from their own wallets for payments,
 
 ## Wave 2 product
 
+- **Mainnet waitlist:** Send → Verified merchants → Pocket mainnet access opens the 100-testnet-mUSD closed-mainnet pilot checkout. Each wallet reuses its own invoice; pending and completed payments recover when reopened. Payment requires a separate confirmation and does not activate mainnet access.
 - **Merchant checkout:** save a Business payment profile, create a payment link or QR and receive mUSD directly. Checkout retains its invoice URL during sign-in, shows the exact recipient and amount, and verifies payment before showing paid. Each invoice keeps its merchant-name snapshot. Business names are self-declared.
 - **Recovery:** hashes survive reloads; retries verify the existing transfer. Proof reuse across invoices is blocked, late transfers are shown as late paid, and direct sends stay isolated from legacy refunds.
 - **Borrow:** open, inspect, partially repay or close a BTC-backed Trove with the owning wallet. Minimum debt, fees and health are read from Mezo.

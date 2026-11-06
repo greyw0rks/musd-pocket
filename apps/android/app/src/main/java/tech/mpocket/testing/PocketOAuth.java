@@ -12,19 +12,26 @@ final class PocketOAuth {
     static final long MAX_AGE_MS = 10 * 60 * 1000;
     final String authorizationUrl;
     final String state;
+    final String provider;
     final String returnUrl;
     final long createdAt;
 
     PocketOAuth(String authorizationUrl, String state, String returnUrl, long createdAt) {
+        this(authorizationUrl, state, returnUrl, createdAt, "twitter");
+    }
+
+    PocketOAuth(String authorizationUrl, String state, String returnUrl, long createdAt, String provider) {
         if (!validValue(state, 512) || authorizationUrl == null || authorizationUrl.length() > 8192
-            || !PocketNavigation.isOAuthHost(authorizationUrl) || "oauth.telegram.org".equals(URI.create(authorizationUrl).getHost())
+            || !PocketNavigation.isOAuthHost(authorizationUrl)
             || returnUrl == null || returnUrl.length() > 8192 || !PocketNavigation.isBundledRoute(returnUrl)) {
             throw new IllegalArgumentException("Invalid sign-in request.");
         }
+        if (!"twitter".equals(provider) && !"google".equals(provider)) throw new IllegalArgumentException("Invalid provider.");
         this.authorizationUrl = authorizationUrl;
         this.state = state;
         this.returnUrl = returnUrl;
         this.createdAt = createdAt;
+        this.provider = provider;
     }
 
     static boolean isCallback(String value) {
@@ -49,12 +56,12 @@ final class PocketOAuth {
                 if (parameters.put(key, value) != null) return null;
             }
             String code = parameters.get("privy_oauth_code");
-            if (!state.equals(parameters.get("privy_oauth_state")) || !"twitter".equals(parameters.get("privy_oauth_provider"))
+            if (!state.equals(parameters.get("privy_oauth_state")) || !provider.equals(parameters.get("privy_oauth_provider"))
                 || !validValue(code, 4096)) return null;
             String[] fragment = returnUrl.split("#", 2);
             String separator = fragment[0].contains("?") ? "&" : "?";
             return fragment[0] + separator + "privy_oauth_code=" + encode(code)
-                + "&privy_oauth_state=" + encode(state) + "&privy_oauth_provider=twitter"
+                + "&privy_oauth_state=" + encode(state) + "&privy_oauth_provider=" + provider
                 + (fragment.length == 2 ? "#" + fragment[1] : "");
         } catch (Exception ignored) { return null; }
     }
