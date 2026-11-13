@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useWalletClient } from "wagmi";
+import { useSessionWallet } from "@/hooks/use-session-wallet";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Address, WalletClient } from "viem";
 import { useSession } from "@/lib/auth/session";
@@ -33,7 +33,7 @@ function message(error: unknown) {
 
 export function useWealthAction() {
   const { walletAddress } = useSession();
-  const { data: wallet } = useWalletClient();
+  const { wallet } = useSessionWallet();
   const { refresh } = usePocket();
   const cache = useQueryClient();
   const latest = useRef({

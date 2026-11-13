@@ -1,0 +1,40 @@
+{
+  "createdAt": "2026-11-06T22:05:02.031Z",
+  "sourceCommit": "9c66cfd",
+  "androidVersion": "0.2.4",
+  "versionCode": 6,
+  "checks": {
+    "typescript": true,
+    "scopedEslintErrors": 0,
+    "backendTests": {
+      "savingsWealthUsersMerchantsRewards": 106,
+      "paymentsRecovery": 39
+    },
+    "mobileScreenLayouts": {
+      "screens": 29,
+      "widths": [
+        320,
+        390,
+        640
+      ]
+    },
+    "floatingDockLayouts": 9,
+    "sessionWalletAndCacheRegression": true,
+    "preciseInterestAnd16PixelSpinner": true,
+    "historicalClaimPayoutsVerified": true,
+    "viteBuild": true,
+    "androidAssemblyAndLint": true,
+    "signedApkAssetAndCertificateVerification": true,
+    "vercelProductionBuild": true
+  },
+  "production": {
+    "deploymentId": "dpl_BikD2SPQMqyXD1P7EBU4p9KU9hdd",
+    "url": "https://mpocket.tech",
+    "deploymentUrl": "https://musd-pocket-p1yh69c7w-greyw0rks-projects.vercel.app",
+    "buildSeconds": 71
+  },
+  "localWebsiteBuild": "The release worktree shares node_modules by symlink; local Turbopack and webpack could not resolve it. Clean Vercel production build succeeded.",
+  "physicalAndroidDeviceTested": false,
+  "realAccountLoginPerformed": false,
+  "financialSigningPerformed": false
+}

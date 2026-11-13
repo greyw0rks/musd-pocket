@@ -1,0 +1,27 @@
+{
+  "createdAt": "2026-11-06T20:55:37.473Z",
+  "providers": {
+    "twitter": {
+      "authEnabled": null,
+      "oauthEnabled": true,
+      "initiationStatus": 200,
+      "authorizationHost": "x.com",
+      "errorCode": null
+    },
+    "google": {
+      "authEnabled": null,
+      "oauthEnabled": true,
+      "initiationStatus": 200,
+      "authorizationHost": "accounts.google.com",
+      "errorCode": null
+    },
+    "telegram": {
+      "authEnabled": false,
+      "oauthEnabled": false,
+      "initiationStatus": 403,
+      "authorizationHost": null,
+      "errorCode": "disallowed_login_method"
+    }
+  },
+  "accountLoginPerformed": false
+}

@@ -1,0 +1,16 @@
+{
+  "createdAt": "2026-11-06T20:39:14.766Z",
+  "applied": true,
+  "tableExists": true,
+  "before": {
+    "users": 6,
+    "payments": 16,
+    "invoices": 1
+  },
+  "after": {
+    "users": 6,
+    "payments": 16,
+    "invoices": 1
+  },
+  "accountDataModified": false
+}

@@ -18,6 +18,7 @@ import {
 import { PageHeading, ScreenHeader } from "@/components/pocket/ui/ScreenHeader";
 import { ErrorState, ListSkeleton } from "@/components/pocket/ui/States";
 import { formatMusd } from "@/lib/mezo/borrow-format";
+import { formatMusd as exactMusd } from "@/lib/mezo/musd";
 import { parseDecimalToWei, weiToDecimalInput } from "@/lib/mezo/borrow-math";
 
 /**
@@ -107,12 +108,12 @@ function Vault({ view, refreshing }: { view: EarnView; refreshing: boolean }) {
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [claimedWei, setClaimedWei] = useState<bigint | null>(null);
   const [hash, setHash] = useState<string | null>(() =>
     actions.pendingClaimHash(),
   );
-  const [pendingClaimHash, setPendingClaimHash] = useState<string | null>(() =>
-    actions.pendingClaimHash(),
-  );
+  const [claimPending, setClaimPending] = useState(() => actions.hasPendingClaim());
+  const [claimRetryable, setClaimRetryable] = useState(() => actions.canRetryClaim());
 
   const principal = BigInt(view.principal);
   const claimable =
@@ -128,7 +129,7 @@ function Vault({ view, refreshing }: { view: EarnView; refreshing: boolean }) {
 
   const parsed = parseDecimalToWei(amount);
   const overCeiling = parsed !== null && ceiling !== null && parsed > ceiling;
-  const canSubmit = parsed !== null && parsed > 0n && !overCeiling && !busy;
+  const canSubmit = parsed !== null && parsed > 0n && !overCeiling && !busy && !claimPending;
 
   /** Both writes end the same way: clear the field, then believe only the chain. */
   async function run() {
@@ -136,6 +137,7 @@ function Vault({ view, refreshing }: { view: EarnView; refreshing: boolean }) {
     setBusy(true);
     setError(null);
     setHash(null);
+    setClaimedWei(null);
 
     const result =
       mode === "save"
@@ -166,12 +168,14 @@ function Vault({ view, refreshing }: { view: EarnView; refreshing: boolean }) {
     void wallet.refetch();
   }
 
-  async function claim() {
+  async function claim(checkOnly = false) {
     setBusy(true);
     setError(null);
     setHash(null);
-    const result = await actions.claim();
-    setPendingClaimHash(actions.pendingClaimHash());
+    setClaimedWei(null);
+    const result = await actions.claim({ checkOnly });
+    setClaimPending(actions.hasPendingClaim());
+    setClaimRetryable(actions.canRetryClaim());
     if (result.hash) setHash(result.hash);
     setBusy(false);
     if (!result.ok) {
@@ -179,6 +183,7 @@ function Vault({ view, refreshing }: { view: EarnView; refreshing: boolean }) {
       return;
     }
     setHash(result.hash);
+    setClaimedWei(result.claimedWei ?? null);
     queryClient.invalidateQueries({ queryKey: ["earn"] });
     void wallet.refetch();
   }
@@ -249,23 +254,34 @@ function Vault({ view, refreshing }: { view: EarnView; refreshing: boolean }) {
           </div>
         </div>
         <p className="pk-interest-value">
-          {claimable === null ? "—" : `${formatMusd(claimable)} MUSD`}
+          {claimable === null ? "—" : `${exactMusd(claimable)} MUSD`}
         </p>
 
-        {pendingClaimHash || (claimable !== null && claimable > 0n) ? (
+        {claimPending || (claimable !== null && claimable > 0n) ? (
           <div style={{ marginTop: 12 }}>
             <Button
               full
               variant="secondary"
               className="pk-finance-secondary"
               loading={busy}
-              onClick={claim}
+              onClick={() => void claim()}
             >
-              {pendingClaimHash ? "Check claim confirmation" : "Claim interest"}
+              {claimRetryable ? "Review claim again" : claimPending ? "Check claim confirmation" : "Claim interest"}
             </Button>
+            {claimRetryable ? (
+              <Button full variant="ghost" disabled={busy} onClick={() => void claim(true)}>
+                Check claim confirmation
+              </Button>
+            ) : null}
           </div>
         ) : null}
       </div>
+
+      {claimedWei !== null ? (
+        <p className="pk-m" role="status" style={{ marginTop: 12, overflowWrap: "anywhere" }}>
+          {exactMusd(claimedWei)} mUSD interest confirmed in your wallet.
+        </p>
+      ) : null}
 
       <div className="pk-finance-workspace">
         <FinanceTabs
@@ -362,7 +378,7 @@ function Vault({ view, refreshing }: { view: EarnView; refreshing: boolean }) {
           style={{ marginTop: 12, lineHeight: 1.6, overflowWrap: "anywhere" }}
         >
           {error
-            ? `Broadcast as ${hash} — this screen will catch up when it confirms.`
+            ? `Transaction: ${hash}. Check its confirmation before repeating the action.`
             : `Done. ${hash}`}
         </p>
       ) : null}

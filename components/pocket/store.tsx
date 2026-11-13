@@ -47,6 +47,7 @@ import type {
 import type { AddressRecipientResult } from "@/features/payments/address-recipient";
 import { addressRecipient } from "@/features/payments/address-recipient";
 import { ApiError } from "@/lib/auth/client";
+import { RECEIPT_GOOGLE_RESULT } from "@/lib/receipts/google-events";
 import type {
   ScreenId,
   ScreenParams,
@@ -738,6 +739,16 @@ export function PocketProvider({
     [sessions],
   );
 
+  useEffect(() => {
+    let active = true;
+    const linked = (event: Event) => {
+      if (!(event as CustomEvent<{ saved?: boolean }>).detail?.saved) return;
+      void sessions.getSession().then(next => { if (active && next) setSession(next); }).catch(() => {});
+    };
+    window.addEventListener(RECEIPT_GOOGLE_RESULT, linked);
+    return () => { active = false; window.removeEventListener(RECEIPT_GOOGLE_RESULT, linked); };
+  }, [sessions]);
+
   const signOut = useCallback(async () => {
     await sessions.signOut();
     setSession(null);
@@ -752,7 +763,7 @@ export function PocketProvider({
     setBalance(null);
     setTransactions([]);
     setRequestLog([]);
-    reset("welcome");
+    reset("auth");
   }, [sessions, reset]);
 
   /* ------------------------------------------------------- notifications */

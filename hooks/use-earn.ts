@@ -3,10 +3,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "@/lib/auth/session";
 import { useApi } from "@/lib/auth/client";
+import { CHAIN_ID } from "@/lib/mezo/config";
+import { activeEarn } from "@/lib/mezo/earn";
 
 /**
  * Shared read of the signed-in user's Mezo Savings Vault position, keyed
- * `["earn"]` so a deposit, a withdrawal or a claim invalidates one key and
+ * by wallet, chain and vault so account changes cannot reuse another position.
+ * A deposit, withdrawal or claim invalidates the `["earn"]` prefix and
  * every view of the vault refetches the same server-computed snapshot.
  *
  * The route answers with everything stringified, because these are 18-decimal
@@ -35,12 +38,12 @@ export type EarnView = {
 };
 
 export function useEarn() {
-  const { user } = useSession();
+  const { user, walletAddress } = useSession();
   const api = useApi();
 
   return useQuery({
-    queryKey: ["earn"],
-    enabled: Boolean(user),
+    queryKey: ["earn", CHAIN_ID, activeEarn.savingsVault, walletAddress],
+    enabled: Boolean(user && walletAddress),
     queryFn: () => api<{ earn: EarnView }>("/api/earn").then((r) => r.earn),
     refetchInterval: 60_000,
   });

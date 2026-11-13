@@ -96,7 +96,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
     screen: "home",
     target: "nav",
     title: "Three places",
-    body: "Home is here, with your payment history under View All. Swap exchanges tokens in your wallet. Wealth brings together Savings, your MEZO locks and Mezo pools.",
+    body: "Home is here, with your payment history under View All. Swap exchanges tokens in your wallet. Wealth brings together Savings, your BTC locks and Mezo pools.",
     place: "above",
   },
   {

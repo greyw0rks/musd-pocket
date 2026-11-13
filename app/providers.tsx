@@ -14,6 +14,9 @@ import {
 } from "@/lib/wallet/privy";
 import { SessionProvider, NoAuthSessionProvider } from "@/lib/auth/session";
 import { MfaGate } from "@/lib/wallet/mfa-gate";
+import { ReferralAttribution } from "@/components/ReferralAttribution";
+import { ReceiptGoogleSync } from "@/lib/receipts/google-client";
+import { PrivyOAuthReturn } from "@/components/auth/PrivySignIn";
 
 function useQueryClient() {
   const [queryClient] = useState(
@@ -45,7 +48,7 @@ function PrivyProviders({ children }: { children: ReactNode }) {
       <MfaGate />
       <QueryClientProvider client={queryClient}>
         <PrivyWagmiProvider config={wagmiConfig}>
-          <SessionProvider>{children}</SessionProvider>
+          <SessionProvider><PrivyOAuthReturn /><ReferralAttribution /><ReceiptGoogleSync />{children}</SessionProvider>
         </PrivyWagmiProvider>
       </QueryClientProvider>
     </PrivyProvider>

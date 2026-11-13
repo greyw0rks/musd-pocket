@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { AuthError, errorResponse, requireIdentity } from "@/lib/auth/request";
 import { getUserByWallet } from "@/lib/users/service";
-import { claimWelcomeReward, welcomeRewardStatus } from "@/lib/rewards/service";
+import { welcomeRewardStatus } from "@/lib/rewards/service";
 
 export const maxDuration = 60;
 
@@ -14,11 +14,14 @@ async function verifiedUser(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
+    const status = await welcomeRewardStatus(
+      await verifiedUser(req),
+      req.nextUrl.searchParams.get("txHash"),
+    );
     return Response.json(
-      await welcomeRewardStatus(
-        await verifiedUser(req),
-        req.nextUrl.searchParams.get("txHash"),
-      ),
+      status.state === "claimed" || status.state === "wallet-claimed" || status.pendingTxHash
+        ? status
+        : { ...status, state: "unavailable", reason: "The welcome reward has ended. Use the testnet faucet to get started." },
       {
         headers: { "Cache-Control": "private, no-store" },
       },
@@ -28,15 +31,11 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    // No amount, address, account ID, or signature comes from the request body.
-    const status = await claimWelcomeReward(await verifiedUser(req));
-    return Response.json(status, {
-      status: status.pendingTxHash ? 202 : 200,
-      headers: { "Cache-Control": "private, no-store" },
-    });
-  } catch (error) {
-    return errorResponse(error);
-  }
+export async function POST() {
+  // Older APKs must not request a new server-funded lock after retirement.
+  // GET remains available for recovery of historical claims.
+  return Response.json(
+    { error: "The welcome reward has ended. Use the testnet faucet to get started." },
+    { status: 410, headers: { "Cache-Control": "private, no-store" } },
+  );
 }

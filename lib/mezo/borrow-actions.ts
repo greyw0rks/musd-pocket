@@ -1,4 +1,5 @@
 import type { WalletClient } from "viem";
+import { assertCurrentSigner } from "@/lib/wallet/session-wallet";
 import { getPublicClient, MUSD_ABI } from "./musd";
 import { MUSD_ADDRESS, CHAIN_ID, activeBorrow } from "./config";
 import { TROVE_MANAGER_ABI, PRICE_FEED_ABI } from "./borrow";
@@ -160,7 +161,7 @@ export function createBorrowActions(deps: {
    * protocol's contract at the same address, which is the one mistake here that
    * cannot be walked back.
    */
-  function signer(): { wallet: WalletClient } | { error: string } {
+  async function signer(): Promise<{ wallet: WalletClient } | { error: string }> {
     const wallet = getWalletClient();
     if (!wallet?.account) {
       return { error: "Your wallet is not ready yet. Try again in a moment." };
@@ -168,6 +169,8 @@ export function createBorrowActions(deps: {
     if (wallet.chain && wallet.chain.id !== CHAIN_ID) {
       return { error: "Switch to Mezo to borrow." };
     }
+    try { await assertCurrentSigner(wallet, getWalletClient, rpc()); }
+    catch (e) { return { error: e instanceof Error ? e.message : "Could not verify your Pocket wallet. Try again." }; }
     return { wallet };
   }
 
@@ -248,6 +251,8 @@ export function createBorrowActions(deps: {
     done: string,
   ): Promise<BorrowWriteResult> {
     let hash: `0x${string}`;
+    try { await assertCurrentSigner(wallet, getWalletClient, rpc()); }
+    catch (e) { return { ok: false, error: e instanceof Error ? e.message : "Could not verify your Pocket wallet. Nothing was signed." }; }
     try {
       hash = await send();
     } catch (e) {
@@ -385,7 +390,7 @@ export function createBorrowActions(deps: {
         return { ok: false, error: "Enter how much MUSD to borrow." };
       }
 
-      const signed = signer();
+      const signed = await signer();
       if ("error" in signed) return { ok: false, error: signed.error };
 
       const t = await terms();
@@ -511,7 +516,7 @@ export function createBorrowActions(deps: {
         return { ok: false, error: "Enter an amount to repay." };
       }
 
-      const signed = signer();
+      const signed = await signer();
       if ("error" in signed) return { ok: false, error: signed.error };
 
       const signerAddress = signed.wallet.account!.address as `0x${string}`;
@@ -602,7 +607,7 @@ export function createBorrowActions(deps: {
      * choice rather than as "repay everything".
      */
     async close(): Promise<BorrowWriteResult> {
-      const signed = signer();
+      const signed = await signer();
       if ("error" in signed) return { ok: false, error: signed.error };
 
       const signerAddress = signed.wallet.account!.address as `0x${string}`;

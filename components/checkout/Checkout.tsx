@@ -14,14 +14,30 @@ import { checkoutBlockReason } from "@/lib/requests/rules";
 import { Button } from "@/components/ui/button";
 import { PaymentLink } from "./PaymentLink";
 
-export function Checkout({ shortId }: { shortId: string }) {
+export function Checkout({
+  shortId,
+  embedded = false,
+}: {
+  shortId: string;
+  embedded?: boolean;
+}) {
   const { walletAddress } = useSession();
   return (
-    <ActiveCheckout key={`${shortId}:${walletAddress}`} shortId={shortId} />
+    <ActiveCheckout
+      key={`${shortId}:${walletAddress}`}
+      shortId={shortId}
+      embedded={embedded}
+    />
   );
 }
 
-function ActiveCheckout({ shortId }: { shortId: string }) {
+function ActiveCheckout({
+  shortId,
+  embedded,
+}: {
+  shortId: string;
+  embedded: boolean;
+}) {
   const { walletAddress } = useSession();
   const { data: wallet } = useWalletClient();
   const api = useApi();
@@ -240,24 +256,41 @@ function ActiveCheckout({ shortId }: { shortId: string }) {
     request && walletAddress
       ? checkoutBlockReason(request, walletAddress, now)
       : null;
+  const Container = embedded ? "div" : "main";
+  const Heading = embedded ? "h2" : "h1";
+  const title = paid
+    ? embedded
+      ? "You're on the waitlist"
+      : request?.status === "LATE_PAID"
+        ? "Payment received after expiry"
+        : "Payment confirmed"
+    : owner
+      ? "Your payment request"
+      : embedded
+        ? "Review your payment"
+        : "Pay with Pocket";
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col gap-5 px-5 py-8">
-      <Link href="/home" className="text-sm text-primary">
-        ← Back to Pocket
-      </Link>
+    <Container
+      className={
+        embedded
+          ? "flex min-w-0 flex-col gap-4"
+          : "mx-auto flex min-h-dvh w-full max-w-lg flex-col gap-5 px-5 py-8"
+      }
+    >
+      {!embedded ? (
+        <Link href="/home" className="text-sm text-primary">
+          ← Back to Pocket
+        </Link>
+      ) : null}
       <header>
         <p className="text-sm text-muted">
           Mezo {CHAIN_ID === 31611 ? "testnet" : "mainnet"}
         </p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight">
-          {paid
-            ? request?.status === "LATE_PAID"
-              ? "Payment received after expiry"
-              : "Payment confirmed"
-            : owner
-              ? "Your payment request"
-              : "Pay with Pocket"}
-        </h1>
+        <Heading
+          className={`mt-1 font-semibold tracking-tight ${embedded ? "text-xl" : "text-3xl"}`}
+        >
+          {title}
+        </Heading>
       </header>
       {query.isPending ? <p role="status">Loading payment request…</p> : null}
       {query.isError ? (
@@ -395,6 +428,6 @@ function ActiveCheckout({ shortId }: { shortId: string }) {
           {error}
         </p>
       ) : null}
-    </main>
+    </Container>
   );
 }

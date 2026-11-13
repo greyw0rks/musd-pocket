@@ -1,7 +1,8 @@
-import { pendingClaim, rememberClaim } from "./claim-journal";
-import type { WalletClient } from "viem";
+import { pendingClaim, pendingClaimAttempt, rememberClaim, rememberClaimAttempt, type ClaimAttempt } from "./claim-journal";
+import { decodeEventLog, type WalletClient, type TransactionReceipt } from "viem";
+import { assertCurrentSigner } from "@/lib/wallet/session-wallet";
 import { getPublicClient, MUSD_ABI } from "./musd";
-import { MUSD_ADDRESS, CHAIN_ID } from "./config";
+import { MUSD_ADDRESS, CHAIN_ID, activeChain } from "./config";
 import { SAVINGS_VAULT_ABI, activeEarn, readClaimableYield } from "./earn";
 
 /**
@@ -77,7 +78,7 @@ export const MUSD_ALLOWANCE_ABI = [
 ] as const;
 
 export type EarnWriteResult =
-  | { ok: true; hash: `0x${string}` }
+  | { ok: true; hash: `0x${string}`; claimedWei?: bigint }
   | { ok: false; error: string; hash?: `0x${string}` };
 
 const claimsInFlight = new Map<string, Promise<EarnWriteResult>>();
@@ -99,12 +100,25 @@ function musd(v: bigint): string {
  * mind that their money had a problem.
  */
 function isUserRejection(e: unknown): boolean {
-  const name = (e as { name?: string })?.name ?? "";
-  const message = e instanceof Error ? e.message : String(e);
-  return (
-    name === "UserRejectedRequestError" ||
-    /reject|denied|declined|cancell?ed by user/i.test(message)
-  );
+  let cause = e;
+  for (let depth = 0; cause && typeof cause === "object" && depth < 8; depth++) {
+    const info = cause as { code?: number; name?: string; cause?: unknown };
+    if (info.code === 4001 || info.name === "UserRejectedRequestError") return true;
+    cause = info.cause;
+  }
+  return false;
+}
+
+/** Only explicitly named hash fields are evidence; calldata is not a hash. */
+function errorTransactionHash(error: unknown): `0x${string}` | null {
+  let cause = error;
+  for (let depth = 0; cause && typeof cause === "object" && depth < 8; depth++) {
+    const info = cause as { hash?: unknown; transactionHash?: unknown; receipt?: { transactionHash?: unknown }; cause?: unknown };
+    for (const value of [info.transactionHash, info.hash, info.receipt?.transactionHash])
+      if (typeof value === "string" && /^0x[0-9a-f]{64}$/i.test(value)) return value as `0x${string}`;
+    cause = info.cause;
+  }
+  return null;
 }
 
 export function createEarnActions(deps: {
@@ -126,7 +140,7 @@ export function createEarnActions(deps: {
    * The chain check is separate from the wallet check because depositing to the
    * wrong chain's vault is the one mistake here that cannot be walked back.
    */
-  function signer(): { wallet: WalletClient } | { error: string } {
+  async function signer(): Promise<{ wallet: WalletClient } | { error: string }> {
     const wallet = getWalletClient();
     if (!wallet?.account) {
       return { error: "Your wallet is not ready yet. Try again in a moment." };
@@ -134,6 +148,8 @@ export function createEarnActions(deps: {
     if (wallet.chain && wallet.chain.id !== CHAIN_ID) {
       return { error: "Switch to Mezo to save." };
     }
+    try { await assertCurrentSigner(wallet, getWalletClient, rpc()); }
+    catch (e) { return { error: e instanceof Error ? e.message : "Could not verify your Pocket wallet. Try again." }; }
     return { wallet };
   }
 
@@ -154,6 +170,8 @@ export function createEarnActions(deps: {
     trackClaim = false,
   ): Promise<EarnWriteResult> {
     let hash: `0x${string}`;
+    try { await assertCurrentSigner(wallet, getWalletClient, rpc()); }
+    catch (e) { return { ok: false, error: e instanceof Error ? e.message : "Could not verify your Pocket wallet. Nothing was signed." }; }
     try {
       hash = await send();
     } catch (e) {
@@ -175,7 +193,7 @@ export function createEarnActions(deps: {
         hash,
         timeout: RECEIPT_TIMEOUT_MS,
       });
-      if (trackClaim) rememberClaim(wallet.account!.address, null);
+      if (trackClaim) return await verifyClaim(wallet, hash, receipt);
       if (receipt.status === "reverted") {
         return {
           ok: false,
@@ -199,6 +217,37 @@ export function createEarnActions(deps: {
         error: `${done} was signed and broadcast, but this app could not read the receipt yet. Do not repeat it — ${hash} can be checked on the explorer.`,
       };
     }
+  }
+
+  async function verifyClaim(wallet: WalletClient, hash: `0x${string}`, receipt: TransactionReceipt): Promise<EarnWriteResult> {
+    const owner = wallet.account!.address;
+    const tx = await rpc().getTransaction({ hash });
+    if (tx.from.toLowerCase() !== owner.toLowerCase() ||
+        tx.to?.toLowerCase() !== activeEarn.savingsVault.toLowerCase() ||
+        tx.input !== "0x406cf229" || tx.value !== 0n ||
+        receipt.transactionHash !== hash ||
+        receipt.from.toLowerCase() !== owner.toLowerCase() ||
+        receipt.to?.toLowerCase() !== activeEarn.savingsVault.toLowerCase()) {
+      return { ok: false, hash, error: "The saved claim could not be verified. Check its transaction before trying again." };
+    }
+    if (receipt.status === "reverted") {
+      rememberClaim(owner, null);
+      return { ok: false, hash, error: "The claim reverted. You can try again." };
+    }
+    let claimedWei = 0n;
+    for (const log of receipt.logs) {
+      if (log.address.toLowerCase() !== MUSD_ADDRESS.toLowerCase()) continue;
+      try {
+        const decoded = decodeEventLog({ abi: MUSD_ABI, data: log.data, topics: log.topics, strict: true });
+        if (decoded.eventName === "Transfer" && decoded.args.from.toLowerCase() === activeEarn.savingsVault.toLowerCase() && decoded.args.to.toLowerCase() === owner.toLowerCase())
+          claimedWei += decoded.args.value;
+      } catch { /* Other mUSD events are unrelated to the payout. */ }
+    }
+    if (claimedWei <= 0n) {
+      return { ok: false, hash, error: "The claim confirmed, but its mUSD payout could not be verified. Check the transaction before claiming again." };
+    }
+    rememberClaim(owner, null);
+    return { ok: true, hash, claimedWei };
   }
 
   /**
@@ -245,10 +294,7 @@ export function createEarnActions(deps: {
         };
       }
       const receipt = await rpc().getTransactionReceipt({ hash });
-      rememberClaim(wallet.account!.address, null);
-      return receipt.status === "success"
-        ? { ok: true, hash }
-        : { ok: false, hash, error: "The claim reverted. You can try again." };
+      return await verifyClaim(wallet, hash, receipt);
     } catch {
       return {
         ok: false,
@@ -259,13 +305,65 @@ export function createEarnActions(deps: {
     }
   }
 
-  async function performClaim(): Promise<EarnWriteResult> {
-    const signed = signer();
+  async function recoverClaimAttempt(wallet: WalletClient, attempt: ClaimAttempt): Promise<EarnWriteResult & { canResubmit?: true }> {
+    const owner = wallet.account!.address;
+    if (attempt.invalid) return { ok: false, error: "The saved claim recovery record could not be read. Check the wallet's transaction history before claiming again." };
+    try {
+      const [latestNonce, pendingNonce, head] = await Promise.all([
+        rpc().getTransactionCount({ address: owner, blockTag: "latest" }),
+        rpc().getTransactionCount({ address: owner, blockTag: "pending" }),
+        rpc().getBlockNumber(),
+      ]);
+      if (latestNonce > attempt.nonce) {
+        // Locate the block that consumed this nonce even after a long absence.
+        // A payout log alone could also be a withdrawal and is not claim proof.
+        let low = BigInt(attempt.fromBlock);
+        let high = head;
+        while (low < high) {
+          const middle = (low + high) / 2n;
+          const count = await rpc().getTransactionCount({ address: owner, blockNumber: middle });
+          if (count > attempt.nonce) high = middle;
+          else low = middle + 1n;
+        }
+        const block = await rpc().getBlock({ blockNumber: low, includeTransactions: true });
+        const tx = block.transactions.find(tx =>
+          typeof tx !== "string" && tx.from.toLowerCase() === owner.toLowerCase() && tx.nonce === attempt.nonce);
+        if (!tx || typeof tx === "string") throw new Error("Claim transaction not indexed yet.");
+        if (tx.to?.toLowerCase() !== activeEarn.savingsVault.toLowerCase() || tx.input !== "0x406cf229" || tx.value !== 0n) {
+          rememberClaim(owner, null);
+          return { ok: false, error: "Another wallet transaction completed while this claim was being checked. Review your interest again." };
+        }
+        rememberClaim(owner, tx.hash);
+        return recoverClaim(wallet, tx.hash);
+      }
+      if (latestNonce === attempt.nonce && pendingNonce === attempt.nonce) {
+        // Any explicit retry keeps the same nonce and exact call. Even if the
+        // first response was lost, two claims cannot execute at that nonce.
+        rememberClaimAttempt(owner, { ...attempt, retryable: true });
+        return { ok: false, canResubmit: true, error: "The network has not found this claim yet. You can review the claim again or check later." };
+      }
+      rememberClaimAttempt(owner, { ...attempt, retryable: false });
+      return { ok: false, error: "Your wallet request is still awaiting confirmation. Check again shortly." };
+    } catch {
+      return { ok: false, error: "Could not check your wallet confirmation yet. Check again before making another claim." };
+    }
+  }
+
+  async function performClaim(checkOnly = false): Promise<EarnWriteResult> {
+    const signed = await signer();
     if ("error" in signed) return { ok: false, error: signed.error };
     const from = signed.wallet.account!.address;
     const vault = activeEarn.savingsVault;
     const existing = pendingClaim(from);
     if (existing) return recoverClaim(signed.wallet, existing);
+    const attempt = pendingClaimAttempt(from);
+    if (attempt) {
+      // The original can finish between showing Review again and clicking it.
+      // Reconcile before reading yield, which may already be zero after payout.
+      const recovery = await recoverClaimAttempt(signed.wallet, attempt);
+      if (checkOnly || !attempt.retryable || !recovery.canResubmit) return recovery;
+    }
+    if (checkOnly) return { ok: false, error: "There is no pending claim to check." };
 
     /*
         Asked first, because it turns the common case — pressing Claim with
@@ -313,18 +411,92 @@ export function createEarnActions(deps: {
       };
     }
 
-    return broadcast(
-      signed.wallet,
-      () => signed.wallet.writeContract(sim.request),
-      "The claim",
-      true,
-    );
+    // Provide gas and fees before Privy's confirmation rather than requiring
+    // another provider estimate after the user has accepted the claim.
+    let gas: bigint;
+    let gasPrice: bigint;
+    let reservation: ClaimAttempt;
+    try {
+      // Pin the initial nonce to the saved block so a concurrent transaction
+      // cannot move the start of recovery past the block that consumed it.
+      const blockNumber = await rpc().getBlockNumber();
+      const [estimated, price, native, latestNonce, pendingNonce] = await Promise.all([
+        rpc().estimateGas({ account: from, to: vault, data: "0x406cf229", value: 0n }),
+        rpc().getGasPrice(),
+        rpc().getBalance({ address: from }),
+        rpc().getTransactionCount({ address: from, blockNumber }),
+        rpc().getTransactionCount({ address: from, blockTag: "pending" }),
+      ]);
+      if (estimated <= 0n || price <= 0n) throw new Error("Invalid fee estimate.");
+      gas = (estimated * 130n + 99n) / 100n;
+      gasPrice = price;
+      if (native < gas * gasPrice)
+        return { ok: false, error: "Keep enough BTC in your wallet for the claim's network fee." };
+      if (attempt && (latestNonce !== attempt.nonce || pendingNonce !== attempt.nonce))
+        return recoverClaimAttempt(signed.wallet, attempt);
+      if (!attempt && latestNonce !== pendingNonce)
+        return { ok: false, error: "Another wallet transaction is pending. Wait for its confirmation before claiming interest." };
+      reservation = attempt ?? { nonce: pendingNonce, fromBlock: blockNumber.toString(), retryable: false };
+      await assertCurrentSigner(signed.wallet, getWalletClient, rpc());
+    } catch (error) {
+      return { ok: false, error: error instanceof Error && /wallet changed|Connect your Pocket wallet/.test(error.message)
+        ? error.message : "Could not prepare the claim's network fee. Nothing was signed. Try again shortly." };
+    }
+    if (!rememberClaimAttempt(from, { ...reservation, retryable: false })) {
+      rememberClaimAttempt(from, attempt);
+      return { ok: false, error: "Could not save claim recovery on this device. Nothing was signed." };
+    }
+    let hash: `0x${string}`;
+    try {
+      hash = await signed.wallet.writeContract({
+        address: vault,
+        abi: SAVINGS_VAULT_ABI,
+        functionName: "claimYield",
+        account: signed.wallet.account!,
+        chain: activeChain,
+        gas,
+        gasPrice,
+        nonce: reservation.nonce,
+        type: "legacy",
+      });
+    } catch (error) {
+      const knownHash = errorTransactionHash(error);
+      if (knownHash) {
+        rememberClaim(from, knownHash);
+        return recoverClaim(signed.wallet, knownHash);
+      }
+      if (isUserRejection(error)) {
+        // A cancelled retry cannot discard the original uncertain request.
+        if (!attempt) rememberClaim(from, null);
+        else rememberClaimAttempt(from, attempt);
+        return { ok: false, error: attempt
+          ? "You cancelled the retry. The original claim can still be checked."
+          : "You declined. Nothing was signed." };
+      }
+      console.error("[pocket] claim wallet response unavailable", { error: error instanceof Error ? error.message : String(error) });
+      return recoverClaimAttempt(signed.wallet, { ...reservation, retryable: false });
+    }
+    rememberClaim(from, hash);
+    try {
+      const receipt = await rpc().waitForTransactionReceipt({ hash, timeout: RECEIPT_TIMEOUT_MS });
+      return await verifyClaim(signed.wallet, hash, receipt);
+    } catch {
+      return { ok: false, hash, error: "Your claim was submitted, but confirmation is not available yet. Check its confirmation before claiming again." };
+    }
   }
 
   return {
     pendingClaimHash: () => {
       const wallet = getWalletClient();
       return wallet?.account ? pendingClaim(wallet.account.address) : null;
+    },
+    hasPendingClaim: () => {
+      const address = getWalletClient()?.account?.address;
+      return Boolean(address && (pendingClaim(address) || pendingClaimAttempt(address)));
+    },
+    canRetryClaim: () => {
+      const address = getWalletClient()?.account?.address;
+      return Boolean(address && !pendingClaim(address) && pendingClaimAttempt(address)?.retryable);
     },
     /**
      * Put MUSD into the Savings Vault.
@@ -340,7 +512,7 @@ export function createEarnActions(deps: {
         return { ok: false, error: "Enter how much to save." };
       }
 
-      const signed = signer();
+      const signed = await signer();
       if ("error" in signed) return { ok: false, error: signed.error };
       const from = signed.wallet.account!.address;
       const vault = activeEarn.savingsVault;
@@ -453,7 +625,7 @@ export function createEarnActions(deps: {
         return { ok: false, error: "Enter how much to take out." };
       }
 
-      const signed = signer();
+      const signed = await signer();
       if ("error" in signed) return { ok: false, error: signed.error };
       const from = signed.wallet.account!.address;
       const vault = activeEarn.savingsVault;
@@ -518,9 +690,9 @@ export function createEarnActions(deps: {
      * figure the screen shows is a preview, and the chain decides the real one
      * at the moment of the call. The confirmed transaction determines the final payout.
      */
-    async claim(): Promise<EarnWriteResult> {
+    async claim(options?: { checkOnly?: boolean }): Promise<EarnWriteResult> {
       const address = getWalletClient()?.account?.address;
-      if (!address) return performClaim();
+      if (!address) return performClaim(options?.checkOnly);
       const key = `pocket:savings-claim:${CHAIN_ID}:${address.toLowerCase()}`;
       const existing = claimsInFlight.get(key);
       if (existing) return existing;
@@ -531,14 +703,14 @@ export function createEarnActions(deps: {
             { ifAvailable: true },
             async (lock) =>
               lock
-                ? performClaim()
+                ? performClaim(options?.checkOnly)
                 : {
                     ok: false,
                     error: "A claim is already being checked in another tab.",
                   },
           );
         }
-        return performClaim();
+        return performClaim(options?.checkOnly);
       };
       const promise = work()
         .catch(

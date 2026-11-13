@@ -1,0 +1,65 @@
+{
+  "capturedAt": "2026-11-06T19:45:28.544Z",
+  "deploymentId": "dpl_8d5raytDiLMRvDdxA5dXB5C4unxv",
+  "readyState": "READY",
+  "sourceCommit": "555331f",
+  "sourceBranch": "feat/android-weekly-merchants-20261106",
+  "productionUrl": "https://mpocket.tech",
+  "downloadUrl": "https://mpocket.tech/downloads/mpocket-0.2.1.apk",
+  "apkBytes": 3123085,
+  "sha256": "4aace9a1ca2c10fd3a093c8969a3ae3d73fee7d8335ea546a55a62ab11eb0ffd",
+  "publicDownloadMatchesSignedApk": true,
+  "oldDownloadRetained": true,
+  "package": "tech.mpocket.testing",
+  "versionName": "0.2.1",
+  "versionCode": 3,
+  "signatureCertificateSha256": "34608cce75a2e10318587090b7cab6acd5aaac3b4507dd09c0fcd6e76056b57c",
+  "checks": {
+    "wealthRewardsMerchants": 75,
+    "checkout": 68,
+    "typeScript": "PASS",
+    "changedFileEslint": "PASS",
+    "cloudProductionBuild": "PASS",
+    "apkAlignment": "PASS",
+    "apkSignatures": [
+      "v2",
+      "v3"
+    ],
+    "androidLintErrors": 0,
+    "androidLintWarnings": 18,
+    "oauthRegression": "PASS; real bundled SDK, mocked provider",
+    "packagedUiLivePrivy": "PASS",
+    "merchantRewardsMobileFixtures": "PASS at 320/390px",
+    "weeklyLiveSync": "PASS; syncing=false",
+    "endpoints": [
+      {
+        "path": "/home",
+        "status": 200
+      },
+      {
+        "path": "/merchants/greylabs",
+        "status": 200
+      },
+      {
+        "path": "/api/rewards/weekly",
+        "status": 401
+      },
+      {
+        "path": "/api/waitlist/checkout",
+        "status": 405
+      },
+      {
+        "path": "/api/merchants/greylabs/coupon",
+        "status": 405
+      },
+      {
+        "path": "/api/referrals",
+        "status": 405
+      }
+    ]
+  },
+  "financialBroadcasts": 0,
+  "realAccountLoginPerformed": false,
+  "actualPhoneAcceptance": "PENDING",
+  "localBuildNotes": "First local build ran out of tmpfs space. After moving the cache, a stale absolute cache path prevented local Next build completion. Standalone TypeScript and the clean Vercel production build passed."
+}

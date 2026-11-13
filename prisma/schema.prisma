@@ -72,6 +72,16 @@ enum AccountRole {
 
 // <!-- APPEND-MARKER -->
 
+/// Private receipt preference, separate from the public user directory.
+model ReceiptPreference {
+  walletAddress String @id
+  channel       String @db.VarChar(10)
+  address       String @db.VarChar(254)
+  updatedAt     DateTime @updatedAt
+
+  @@map("receipt_preferences")
+}
+
 /// A marketing-site waitlist signup. Deliberately NOT a User — these are
 /// anonymous emails captured before launch, with no wallet or identity.
 model Waitlist {
@@ -374,4 +384,49 @@ model WelcomeRewardAttempt {
 
   @@unique([chainId, campaign, walletAddress])
   @@map("welcome_reward_attempts")
+}
+
+/// Receipt-verified task activity, dated by the mined block rather than ingestion.
+model WeeklyActivity {
+  id            String   @id @default(cuid())
+  chainId       Int
+  txHash        String
+  walletAddress String
+  kind          String
+  counterparty  String?
+  confirmedAt   DateTime
+
+  @@unique([chainId, txHash])
+  @@index([walletAddress, chainId, confirmedAt])
+  @@map("weekly_activity")
+}
+
+model ReferralCode {
+  userId    String   @id
+  code      String   @unique
+  createdAt DateTime @default(now())
+
+  @@map("referral_codes")
+}
+
+/// First attribution is permanent; an existing account cannot be invited again.
+model Referral {
+  invitedId String   @id
+  inviterId String
+  joinedAt  DateTime
+
+  @@index([inviterId, joinedAt])
+  @@map("referrals")
+}
+
+/// One fixed random offer per Pocket account; refreshes cannot reroll it.
+model MerchantCoupon {
+  id        String   @id
+  code      String   @unique
+  userId    String
+  merchant  String
+  percent   Int
+  createdAt DateTime @default(now())
+
+  @@map("merchant_coupons")
 }

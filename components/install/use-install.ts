@@ -82,6 +82,7 @@ export function dismissInstallGate(): void {
 
 function compute(): InstallSnapshot {
   const standalone =
+    Boolean((window as Window & { PocketNative?: unknown }).PocketNative) ||
     window.matchMedia("(display-mode: standalone)").matches ||
     // Safari on iOS exposes this non-standard flag instead.
     (navigator as Navigator & { standalone?: boolean }).standalone === true;
@@ -148,7 +149,7 @@ if (typeof window !== "undefined" && !listenersBound) {
     "Install Pocket" offer in the entry dialog a real one-tap prompt instead of
     a page of instructions.
   */
-  if ("serviceWorker" in navigator) {
+  if ("serviceWorker" in navigator && !(window as Window & { PocketNative?: unknown }).PocketNative) {
     navigator.serviceWorker.register("/sw.js").catch(() => {
       /* installability is an enhancement; the app works without it */
     });
@@ -158,7 +159,7 @@ if (typeof window !== "undefined" && !listenersBound) {
     // Chrome shows its own mini-infobar unless the default is prevented. We
     // want the install offered at a moment we choose, inside the gate.
     event.preventDefault();
-    deferredPrompt = event as BeforeInstallPromptEvent;
+    deferredPrompt = (window as Window & { PocketNative?: unknown }).PocketNative ? null : event as BeforeInstallPromptEvent;
     refresh();
   });
 

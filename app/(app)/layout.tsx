@@ -1,6 +1,5 @@
 import { Providers } from "@/app/providers";
 import { AuthGate } from "@/components/auth-gate";
-import { InstallGate } from "@/components/install/install-gate";
 /*
   The app's own stylesheet, and it has to be imported by a route — nothing else
   pulls it in.
@@ -39,11 +38,6 @@ import "@/components/pocket/pocket.css";
  * its services from an already-loaded user instead of racing the first fetch.
  * It also means nothing in this group renders on the server, so the alias
  * redirects above cannot live inside these pages.
- *
- * `InstallGate` sits outside `AuthGate` on purpose: the install decision is
- * made before signing in, so the session is created in the window it will live
- * in. It renders nothing until the browser state is known, and it never blocks
- * a desktop visitor — see the component for why.
  */
 export default function AppLayout({
   children,
@@ -52,9 +46,7 @@ export default function AppLayout({
 }) {
   return (
     <Providers>
-      <InstallGate>
-        <AuthGate>{children}</AuthGate>
-      </InstallGate>
+      <AuthGate>{children}</AuthGate>
     </Providers>
   );
 }

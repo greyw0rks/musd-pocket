@@ -1,0 +1,21 @@
+{
+  "capturedAt": "2026-11-06T19:11:06.460Z",
+  "applied": true,
+  "tables": {
+    "weekly_activity": true,
+    "referral_codes": true,
+    "referrals": true,
+    "merchant_coupons": true
+  },
+  "before": {
+    "users": 6,
+    "payments": 15,
+    "invoices": 1
+  },
+  "after": {
+    "users": 6,
+    "payments": 15,
+    "invoices": 1
+  },
+  "financialBroadcasts": 0
+}

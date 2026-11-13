@@ -28,6 +28,8 @@ export const useEarnActions = () => ({
   withdraw: (amount) => result("withdraw", amount),
   claim: () => result("claim"),
   pendingClaimHash: () => null,
+  hasPendingClaim: () => false,
+  canRetryClaim: () => false,
 });
 export const useMusdBalance = () => ({
   raw: 50n * unit,

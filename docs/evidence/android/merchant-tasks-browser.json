@@ -1,0 +1,21 @@
+{
+  "createdAt": "2026-11-12T23:17:25.962Z",
+  "fixtureOnly": true,
+  "realAccountLogin": false,
+  "financialSigning": false,
+  "checks": {
+    "merchantCardsAndPersistentOffer": true,
+    "couponCopyAndInAppMerch": true,
+    "noAutomaticCheckout": true,
+    "confirmedMerchantPaymentRequired": true,
+    "payUsesVerifiedMerchantRecipient": true,
+    "weeklyTasksNeedNoWelcomeClaim": true,
+    "confirmedProgressOnly": true,
+    "inviteLink": true,
+    "mobileWidths": [
+      320,
+      390
+    ],
+    "pageErrors": []
+  }
+}

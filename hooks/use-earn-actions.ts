@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useRef } from "react";
-import { useWalletClient } from "wagmi";
-import type { WalletClient } from "viem";
+import { useMemo } from "react";
+import { useSessionWallet } from "@/hooks/use-session-wallet";
 import { createEarnActions } from "@/lib/mezo/earn-actions";
+import { pendingClaim, pendingClaimAttempt } from "@/lib/mezo/claim-journal";
 
 /**
  * The Savings Vault's write actions, bound to the user's wallet.
@@ -18,13 +18,15 @@ import { createEarnActions } from "@/lib/mezo/earn-actions";
  * The same pattern as `use-borrow-actions`.
  */
 export function useEarnActions() {
-  const { data } = useWalletClient();
-
-  const walletRef = useRef<WalletClient | null>(null);
-  walletRef.current = (data as WalletClient | undefined) ?? null;
+  const { getWalletClient, address } = useSessionWallet();
 
   return useMemo(
-    () => createEarnActions({ getWalletClient: () => walletRef.current }),
-    [],
+    () => ({
+      ...createEarnActions({ getWalletClient }),
+      pendingClaimHash: () => address ? pendingClaim(address) : null,
+      hasPendingClaim: () => Boolean(address && (pendingClaim(address) || pendingClaimAttempt(address))),
+      canRetryClaim: () => Boolean(address && !pendingClaim(address) && pendingClaimAttempt(address)?.retryable),
+    }),
+    [getWalletClient, address],
   );
 }

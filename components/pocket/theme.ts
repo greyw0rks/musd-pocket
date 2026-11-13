@@ -46,9 +46,9 @@ const LIQUID_HEAVY = {
  * top of the previous one rather than shunting it sideways.
  */
 export const PAGE_MOTION: Variants = {
-  initial: { opacity: 0, y: 18, scale: 0.985 },
-  animate: { opacity: 1, y: 0, scale: 1, transition: LIQUID },
-  exit: { opacity: 0, y: -10, scale: 0.99, transition: { duration: 0.18 } },
+  initial: { opacity: 0, x: 20 },
+  animate: { opacity: 1, x: 0, transition: { duration: 0.16, ease: "easeOut" } },
+  exit: { opacity: 0, transition: { duration: 0.1 } },
 };
 
 /** A modal moment rather than a place — the send screen. */

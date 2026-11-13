@@ -10,10 +10,8 @@
  * Two things are worth stating plainly, because both are places where a
  * plausible implementation would lie:
  *
- *  1. `setReceipts` persists nothing. There is no receipt-address column on the
- *     server, so the method returns the session unchanged and the toggle falls
- *     back. A silent no-op is the honest outcome; writing the link into local
- *     state would make a "Connected" label that no reload would keep.
+ *  1. Receipt preferences are private and saved separately from public profile
+ *     fields. Google addresses are resolved by the authenticated server.
  *  2. `provider` is inferred, not reported. The server records an X handle, and
  *     Privy knows the real method, but the two are not joined up in this
  *     payload, so a non-X sign-in is labelled `email` as the closest available
@@ -73,6 +71,7 @@ export function sessionFromUser(
       */
       avatarUrl: user.avatarUrl ?? undefined,
       joinedAt: user.createdAt,
+      receipts: user.receipts ?? undefined,
     },
     provider: providerOf(user),
     wallet: walletAddress
@@ -171,9 +170,11 @@ export function createApiSessionService(deps: {
         : (lookup.reason ?? "That username is taken.");
     },
 
-    async setReceipts(): Promise<Session> {
-      // No column exists for this. See the header: returning the unchanged
-      // session lets the UI's toggle fall back to "Not set", which is true.
+    async setReceipts(link): Promise<Session> {
+      await fetchAuthed("/api/users/me/receipts", {
+        method: link ? "PUT" : "DELETE",
+        ...(link ? { body: JSON.stringify(link.channel === "google" ? { channel: "google" } : link) } : {}),
+      });
       return readSession();
     },
   };

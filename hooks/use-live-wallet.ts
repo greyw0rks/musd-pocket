@@ -3,8 +3,9 @@
 import { useEffect, useMemo } from "react";
 import { useWallets } from "@privy-io/react-auth";
 import { useSetActiveWallet } from "@privy-io/wagmi";
-import { useAccount, useBalance } from "wagmi";
-import { formatEther } from "viem";
+import { useBalance } from "wagmi";
+import { formatEther, type Address } from "viem";
+import { CHAIN_ID } from "@/lib/mezo/config";
 import { useMezoNetwork } from "@/hooks/use-mezo-network";
 import { useBtcPrice } from "@/hooks/use-btc-price";
 import { useSession } from "@/lib/auth/session";
@@ -46,9 +47,7 @@ export function btcAmount(raw: bigint): string {
 
 export interface LiveWallet {
   /**
-   * The account the readings below actually targeted — `useAccount()`, not the
-   * session's address, so the numbers and the address always describe one wallet
-   * even in the moment before the embedded wallet becomes the active one.
+   * The session wallet targeted by both mUSD and BTC reads.
    */
   address: `0x${string}`;
   /** Native BTC for gas, already formatted. `null` until the read resolves. */
@@ -68,9 +67,11 @@ export interface LiveWallet {
 }
 
 export function useLiveWallet(): LiveWallet | null {
-  const { address } = useAccount();
+  const { walletAddress } = useSession();
+  const address = (walletAddress ?? undefined) as Address | undefined;
   const { data: native } = useBalance({
     address,
+    chainId: CHAIN_ID,
     query: { enabled: Boolean(address) },
   });
   const { networkName, expectedChainId, wrongNetwork } = useMezoNetwork();
@@ -167,14 +168,10 @@ export function EmbeddedWalletActivator() {
   );
 
   const target = useMemo(() => {
-    // One wallet is unambiguous whatever the session says — and this is the
-    // case that has to keep working while the session is still loading.
-    if (embedded.length === 1) return embedded[0];
-
     if (walletAddress) {
       // `walletAddress` is lowercased by the session; the SDK checksums.
       const named = embedded.find(
-        (w) => w.address.toLowerCase() === walletAddress,
+        (w) => w.address.toLowerCase() === walletAddress.toLowerCase(),
       );
       if (named) return named;
     }
@@ -183,7 +180,12 @@ export function EmbeddedWalletActivator() {
   }, [embedded, walletAddress]);
 
   useEffect(() => {
-    if (target) setActiveWallet(target).catch(() => {});
+    let cancelled = false;
+    if (target) void (async () => {
+      await target.switchChain(CHAIN_ID);
+      if (!cancelled) await setActiveWallet(target);
+    })().catch(() => console.warn("[pocket] Mezo wallet activation is not ready"));
+    return () => { cancelled = true; };
   }, [target, setActiveWallet]);
 
   return null;

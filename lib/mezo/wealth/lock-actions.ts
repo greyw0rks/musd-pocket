@@ -2,7 +2,7 @@ import { encodeFunctionData, erc20Abi, formatUnits, type Address } from "viem";
 import { CHAIN_ID } from "../config";
 import { getPublicClient } from "../musd";
 import { assertWealthNetwork } from "./transactions";
-import { ESCROW, LOCK_ABI, MAX_LOCK_TIME, MEZO_ASSET } from "./contracts";
+import { LOCK_CONTRACTS, LOCK_ABI, MEZO_LOCK_ABI, LOCK_MAX_TIME_SLOT, type LockAsset } from "./contracts";
 import { exactAmount, roundedLockEnd } from "./math";
 import type { WealthPlan } from "./types";
 
@@ -12,40 +12,44 @@ export type LockIntent =
   | { kind: "extend"; tokenId: string; weeks: number }
   | { kind: "withdraw" | "permanent" | "start-unlock"; tokenId: string };
 
-export async function readLockAccount(owner: Address) {
+export async function readLockAccount(owner: Address, asset: LockAsset = "btc") {
   await assertWealthNetwork();
   const rpc = getPublicClient();
-  const [balance, token, decimals, implementation] = await Promise.all([
+  const { asset: lockToken, escrow: ESCROW, implementation: expectedImplementation, maxLockTime } = LOCK_CONTRACTS[asset];
+  const [balance, token, decimals, implementation, storedMaxTime] = await Promise.all([
     rpc.readContract({
-      address: MEZO_ASSET.address,
+      address: lockToken.address,
       abi: erc20Abi,
       functionName: "balanceOf",
       args: [owner],
     }),
     rpc.readContract({ address: ESCROW, abi: LOCK_ABI, functionName: "token" }),
     rpc.readContract({
-      address: MEZO_ASSET.address,
+      address: lockToken.address,
       abi: erc20Abi,
       functionName: "decimals",
     }),
-    // The 208-week duration is verified against this deployed implementation.
+    // Token and duration checks are interpreted only for this known layout.
     rpc.getStorageAt({
       address: ESCROW,
       slot: "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
     }),
+    rpc.getStorageAt({ address: ESCROW, slot: LOCK_MAX_TIME_SLOT }),
   ]);
   if (
     implementation?.slice(-40).toLowerCase() !==
-    "9665873019a05bee102903c9df602da06555ae0a"
+    expectedImplementation.slice(2).toLowerCase()
   )
     throw new Error(
       "The lock contract was upgraded. Its rules need to be verified before using locks.",
     );
+  if (!storedMaxTime || BigInt(storedMaxTime) !== maxLockTime)
+    throw new Error("The lock duration rules changed. Review the contract before using locks.");
   if (
-    token.toLowerCase() !== MEZO_ASSET.address.toLowerCase() ||
+    token.toLowerCase() !== lockToken.address.toLowerCase() ||
     decimals !== 18
   )
-    throw new Error("The lock contract's MEZO configuration changed.");
+    throw new Error(`The lock contract's ${lockToken.symbol} configuration changed.`);
   return { balance };
 }
 
@@ -53,40 +57,43 @@ async function readPosition(
   owner: Address,
   tokenId: bigint,
   blockNumber: bigint,
+  asset: LockAsset,
 ) {
   const rpc = getPublicClient();
+  const { escrow: ESCROW, asset: lockToken } = LOCK_CONTRACTS[asset];
+  const abi = asset === "btc" ? LOCK_ABI : MEZO_LOCK_ABI;
   const [holder, locked, voted, escrowType, vestingEnd] = await Promise.all([
     rpc.readContract({
       address: ESCROW,
-      abi: LOCK_ABI,
+      abi,
       functionName: "ownerOf",
       args: [tokenId],
       blockNumber,
     }),
     rpc.readContract({
       address: ESCROW,
-      abi: LOCK_ABI,
+      abi,
       functionName: "locked",
       args: [tokenId],
       blockNumber,
     }),
     rpc.readContract({
       address: ESCROW,
-      abi: LOCK_ABI,
+      abi,
       functionName: "voted",
       args: [tokenId],
       blockNumber,
     }),
     rpc.readContract({
       address: ESCROW,
-      abi: LOCK_ABI,
+      abi,
       functionName: "escrowType",
       args: [tokenId],
       blockNumber,
     }),
     rpc.readContract({
       address: ESCROW,
-      abi: LOCK_ABI,
+      abi,
       functionName: "vestingEnd",
       args: [tokenId],
       blockNumber,
@@ -98,15 +105,21 @@ async function readPosition(
     throw new Error(
       "This position is managed or deposited in another lock. Its manager must release it first.",
     );
-  if (locked.amount <= 0n) throw new Error("This lock has no MEZO remaining.");
+  if (locked.amount <= 0n) throw new Error(`This lock has no ${lockToken.symbol} remaining.`);
   return { ...locked, voted, vestingEnd };
 }
 
 export async function quoteLock(
   owner: Address,
   intent: LockIntent,
+  asset: LockAsset = "btc",
 ): Promise<WealthPlan> {
-  await readLockAccount(owner);
+  if (asset === "mezo" && (intent.kind === "create" || intent.kind === "increase"))
+    throw new Error("New lock deposits use BTC. Existing MEZO positions can still be extended or withdrawn.");
+  await readLockAccount(owner, asset);
+  const { escrow: ESCROW, asset: lockToken, name, maxLockTime } = LOCK_CONTRACTS[asset];
+  const symbol = lockToken.symbol;
+  const unlockWait = asset === "btc" ? "a new wait of up to 30 days" : "a new 208-week countdown";
   const rpc = getPublicClient();
   const block = await rpc.getBlock();
   const tokenId =
@@ -116,14 +129,14 @@ export async function quoteLock(
   if (intent.kind !== "create" && (!tokenId || tokenId >= 2n ** 256n))
     throw new Error("Choose a valid lock.");
   const position = tokenId
-    ? await readPosition(owner, tokenId, block.number)
+    ? await readPosition(owner, tokenId, block.number, asset)
     : null;
   let data: `0x${string}`;
   let title: string;
   let expectedEnd: bigint | null = null;
   const spends: WealthPlan["spends"] = [];
   const details: WealthPlan["details"] = [];
-  if (tokenId) details.push({ label: "Position", value: `veMEZO #${tokenId}` });
+  if (tokenId) details.push({ label: "Position", value: `${name} #${tokenId}` });
   if (intent.kind === "create" || intent.kind === "increase") {
     const amount = exactAmount(intent.amount, 18);
     if (
@@ -137,15 +150,15 @@ export async function quoteLock(
         position.vestingEnd > block.timestamp)
     )
       throw new Error(
-        "An expired or unvested grant lock cannot accept more MEZO.",
+        `An expired or unvested grant lock cannot accept more ${symbol}.`,
       );
-    spends.push({ asset: MEZO_ASSET, amount, spender: ESCROW });
-    details.push({ label: "MEZO to lock", value: formatUnits(amount, 18) });
+    spends.push({ asset: lockToken, amount, spender: ESCROW });
+    details.push({ label: `${symbol} to lock`, value: formatUnits(amount, 18) });
     if (intent.kind === "create") {
       const { duration, end } = roundedLockEnd(
         block.timestamp,
         intent.weeks,
-        MAX_LOCK_TIME,
+        maxLockTime,
       );
       expectedEnd = end;
       data = encodeFunctionData({
@@ -169,7 +182,7 @@ export async function quoteLock(
     const { duration, end } = roundedLockEnd(
       block.timestamp,
       intent.weeks,
-      MAX_LOCK_TIME,
+      maxLockTime,
     );
     if (end <= position!.end)
       throw new Error("Choose an unlock date later than the existing one.");
@@ -187,9 +200,9 @@ export async function quoteLock(
       throw new Error(
         "Remove this position's assigned votes before withdrawing.",
       );
-    title = "Withdraw MEZO";
+    title = `Withdraw ${symbol}`;
     details.push({
-      label: "MEZO returned to your wallet",
+      label: `${symbol} returned to your wallet`,
       value: formatUnits(position!.amount, 18),
     });
     data = encodeFunctionData({
@@ -204,7 +217,7 @@ export async function quoteLock(
     details.push({
       label: "Withdrawal",
       value:
-        "No scheduled expiry. Starting an unlock later begins a 208-week countdown.",
+        `No scheduled expiry. Starting an unlock later begins ${unlockWait}.`,
     });
     data = encodeFunctionData({
       abi: LOCK_ABI,
@@ -218,12 +231,12 @@ export async function quoteLock(
       throw new Error(
         "Remove this position's assigned votes before starting its unlock countdown.",
       );
-    expectedEnd = roundedLockEnd(block.timestamp, 208, MAX_LOCK_TIME).end;
-    title = "Start 208-week unlock";
+    expectedEnd = ((block.timestamp + maxLockTime) / 604800n) * 604800n;
+    title = asset === "btc" ? "Start BTC unlock" : "Start 208-week unlock";
     details.push({
-      label: "MEZO remains locked",
+      label: `${symbol} remains locked`,
       value:
-        "This starts a new 208-week countdown; it does not withdraw your MEZO.",
+        `This starts ${unlockWait}; it does not withdraw your ${symbol}.`,
     });
     data = encodeFunctionData({
       abi: LOCK_ABI,
@@ -246,10 +259,10 @@ export async function quoteLock(
     spends,
     call: { to: ESCROW, data, value: 0n },
     validate: async () => {
-      await readLockAccount(owner);
+      await readLockAccount(owner, asset);
       const now = await rpc.getBlock();
       if (tokenId) {
-        const current = await readPosition(owner, tokenId, now.number);
+        const current = await readPosition(owner, tokenId, now.number, asset);
         if (
           current.amount !== position!.amount ||
           current.end !== position!.end ||
@@ -264,11 +277,10 @@ export async function quoteLock(
         intent.kind === "extend" ||
         intent.kind === "start-unlock"
       ) {
-        const weeks = "weeks" in intent ? intent.weeks : 208;
-        if (
-          roundedLockEnd(now.timestamp, weeks, MAX_LOCK_TIME).end !==
-          expectedEnd
-        )
+        const end = intent.kind === "start-unlock"
+          ? ((now.timestamp + maxLockTime) / 604800n) * 604800n
+          : roundedLockEnd(now.timestamp, "weeks" in intent ? intent.weeks : 0, maxLockTime).end;
+        if (end !== expectedEnd)
           throw new Error(
             "The weekly unlock date changed. Review a fresh quote.",
           );

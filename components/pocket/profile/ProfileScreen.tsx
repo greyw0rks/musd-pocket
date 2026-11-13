@@ -51,6 +51,7 @@ export function ProfileScreen({
   const { session, signOut } = usePocket();
   const [confirming, setConfirming] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
   const [receiptsOpen, setReceiptsOpen] = useState(false);
 
   const user = session?.user;
@@ -58,10 +59,11 @@ export function ProfileScreen({
   const wallet = WALLET_COPY[session?.wallet.status ?? "none"];
 
   async function confirmSignOut() {
+    setSignOutError(null);
     setSigningOut(true);
-    await signOut();
-    setSigningOut(false);
-    setConfirming(false);
+    try { await signOut(); setConfirming(false); }
+    catch { setSignOutError("Sign-out could not finish. Please try again."); }
+    finally { setSigningOut(false); }
   }
 
   return (
@@ -231,6 +233,7 @@ export function ProfileScreen({
         onClose={() => (signingOut ? undefined : setConfirming(false))}
         title="Sign out?"
       >
+        {signOutError ? <p role="alert" className="pk-m mb-3 text-center">{signOutError}</p> : null}
         <p className="pk-m text-center leading-relaxed">
           Your session ends. Your wallet and anything in it stay with your
           account — signing back in brings them straight back.

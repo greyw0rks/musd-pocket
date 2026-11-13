@@ -1,0 +1,13 @@
+{
+  "createdAt": "2026-11-06T21:54:36.454Z",
+  "checks": {
+    "sessionWalletUsedForMusdAndBtc": true,
+    "wrongActiveWalletBlocked": true,
+    "namedPrivyWalletActivatedOnMezo": true,
+    "wrongChainBlocked": true,
+    "stableGetterFollowsLogoutAndNewSession": true,
+    "earnAndBorrowCachesSeparateAccounts": true
+  },
+  "sessionAndConnectorMocked": true,
+  "signingPerformed": false
+}

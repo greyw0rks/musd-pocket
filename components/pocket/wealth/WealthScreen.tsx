@@ -40,7 +40,7 @@ export function WealthScreen({
         <WealthRow
           icon={<LockIcon size={18} />}
           title="Lock"
-          subtitle="Create, extend and withdraw your MEZO locks"
+          subtitle="Create, extend and withdraw your BTC locks"
           onPress={onLocks}
         />
         <WealthRow
@@ -79,8 +79,8 @@ export function LockScreen({ onBack }: { onBack: () => void }) {
   return (
     <div className={`${SCREEN} pk-finance pk-scr--plain`}>
       <ScreenHeader title="Locks" subtitle="Mezo testnet" onBack={onBack} />
-      <FinanceIntro title="Make your MEZO count">
-        Create a lock, add tokens, and manage your veMEZO positions.
+      <FinanceIntro title="Put your BTC to work">
+        Create a BTC lock, add BTC, and manage your veBTC positions.
       </FinanceIntro>
       <LocksPanel open />
     </div>

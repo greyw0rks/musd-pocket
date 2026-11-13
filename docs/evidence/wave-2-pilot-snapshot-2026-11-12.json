@@ -1,0 +1,67 @@
+{
+  "capturedAt": "2026-11-12T21:59:17.731Z",
+  "databaseReadOnly": true,
+  "usersByRole": [
+    {
+      "role": "MERCHANT",
+      "count": 2
+    },
+    {
+      "role": "PERSONAL",
+      "count": 4
+    }
+  ],
+  "completedFaucets": 4,
+  "payments": [
+    {
+      "mode": "UNCLASSIFIED",
+      "status": "FAILED",
+      "count": 1
+    },
+    {
+      "mode": "DIRECT",
+      "status": "PAID",
+      "count": 11
+    },
+    {
+      "mode": "UNCLASSIFIED",
+      "status": "PAID",
+      "count": 5
+    }
+  ],
+  "invoicesByStatus": [
+    {
+      "status": "PAID",
+      "count": 1
+    }
+  ],
+  "requiredTables": {
+    "weekly_activity": true,
+    "referral_codes": true,
+    "referrals": true,
+    "merchant_coupons": true,
+    "receipt_preferences": true
+  },
+  "firstInvoice": {
+    "shortId": "89YAGVPYD8ZXYE6FJWZUK652",
+    "chainId": 31611,
+    "token": "0x118917a40faf1cd7a13db0ef56c86de7973ac503",
+    "amount": "100",
+    "status": "PAID",
+    "creatorAddress": "0x0a5e59ca4f182561de80172c6da5db927091ea29",
+    "recipientAddress": "0x0a5e59ca4f182561de80172c6da5db927091ea29",
+    "payerAddress": "0xe66d1c48792a320c16d7abd90c835b25a0ac37db",
+    "merchantName": "Pocket",
+    "txHash": "0x056b918e9620de6ef203312880f6dc6872e8db71ac2d7edf59c58f074a363195",
+    "paidAt": "2026-11-03T22:39:35.000Z",
+    "createdAt": "2026-11-03T22:08:53.672Z"
+  },
+  "builderInvoiceConfirmed": true,
+  "atomicPaymentRecordMatches": true,
+  "classification": "Builder-operated testnet payment; independent customer demand is not established.",
+  "independentCustomerEvidenceProvided": false,
+  "fulfillmentEvidenceProvided": false,
+  "customerFeedbackProvided": false,
+  "financialBroadcasts": 0,
+  "databaseWrites": 0
+}

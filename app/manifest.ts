@@ -16,7 +16,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Pocket — mUSD wallet",
     short_name: "Pocket",
     description:
-      "Send mUSD, borrow against BTC and manage Savings, swaps and MEZO locks from your own wallet.",
+      "Send mUSD, borrow against BTC and manage Savings, swaps and BTC locks from your own wallet.",
     id: "/home",
     start_url: "/home",
     scope: "/",

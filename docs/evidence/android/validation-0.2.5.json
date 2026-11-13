@@ -1,0 +1,49 @@
+{
+  "createdAt": "2026-11-13T08:32:59.998Z",
+  "sourceBranch": "release/wave-2-20261112",
+  "sourceBaseCommit": "218d95be374cac94dd33a62812ea7e408134c290",
+  "androidVersion": "0.2.5",
+  "versionCode": 7,
+  "checks": {
+    "typescript": true,
+    "scopedEslintErrors": 0,
+    "automatedTests": {
+      "savingsWealthWalletUsersMerchantsRewards": 132,
+      "checkoutWaitlist": 68,
+      "paymentsRecovery": 39,
+      "reconciliation": 18,
+      "total": 257
+    },
+    "mobileScreenLayouts": {
+      "screens": 29,
+      "widths": [
+        320,
+        390,
+        640
+      ],
+      "rerunForFinalSource": true
+    },
+    "floatingDockLayouts": 9,
+    "sessionWalletAndCacheRegression": true,
+    "postConfirmationClaimRecovery": true,
+    "historicalClaimPayoutsVerified": true,
+    "viteBuild": true,
+    "androidAssemblyAndLint": true,
+    "signedApkAssetAndCertificateVerification": true,
+    "packagedWebAssets": 253,
+    "localProductionWebBuild": true,
+    "btcForkLifecycleTests": 2,
+    "tenSlidePitchLayoutAndNavigation": true
+  },
+  "validationNotes": {
+    "scopedLint": "Changed production TypeScript, tests and verification scripts pass. The existing mobile-session fixture has three pre-existing no-explicit-any findings in a broader lint attempt.",
+    "localBuildWarnings": "Optional connector dependencies and dynamic imports produce dependency warnings; production build and TypeScript complete successfully.",
+    "btcLifecycle": "Local fork uses deployed veBTC code with a fixture token replacing native BTC; no live BTC lock created.",
+    "sourceRevision": "Exact published source and deployment are recorded in ../android-0.2.5-release.json after publication."
+  },
+  "physicalAndroidDeviceTested": false,
+  "realAccountLoginPerformed": false,
+  "financialSigningPerformed": false,
+  "independentCustomerEvidenceProvided": false,
+  "existingPitchVideoChanged": false
+}

@@ -1,7 +1,9 @@
-.private/
+.private
 .gradle/
 **/build/
 local.properties
 *.apk
+*.idsig
 *.aab
 node_modules/
+app/src/main/assets/web/

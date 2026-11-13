@@ -2,7 +2,7 @@ import type { Address } from "viem";
 import { formatUnits } from "viem";
 import { getPublicClient } from "./musd";
 import { CHAIN_ID } from "./config";
-import { TESTNET_VEMEZO, WELCOME_ESCROW_ABI } from "@/lib/rewards/abi";
+import { LOCK_CONTRACTS, LOCK_ABI, MEZO_LOCK_ABI, type LockAsset } from "./wealth/contracts";
 
 export type MezoLock = {
   tokenId: string;
@@ -12,17 +12,22 @@ export type MezoLock = {
 };
 
 /** Enumerates the current owner's NFTs, including transferred and extended locks. */
-export async function readMezoLocks(owner: Address, page = 0) {
+export async function readMezoLocks(owner: Address, page = 0, asset: LockAsset = "btc") {
   const client = getPublicClient();
+  const { escrow, asset: lockToken } = LOCK_CONTRACTS[asset];
+  const abi = asset === "btc" ? LOCK_ABI : MEZO_LOCK_ABI;
   if (CHAIN_ID !== 31611 || (await client.getChainId()) !== CHAIN_ID) {
     throw new Error("Lock reads are configured for Mezo testnet.");
   }
   if (!Number.isSafeInteger(page) || page < 0)
     throw new Error("Invalid lock page.");
   const blockNumber = await client.getBlockNumber();
+  const token = await client.readContract({ address: escrow, abi, functionName: "token", blockNumber });
+  if (token.toLowerCase() !== lockToken.address.toLowerCase())
+    throw new Error(`This lock contract does not hold ${lockToken.symbol}.`);
   const count = await client.readContract({
-    address: TESTNET_VEMEZO,
-    abi: WELCOME_ESCROW_ABI,
+    address: escrow,
+    abi,
     functionName: "balanceOf",
     args: [owner],
     blockNumber,
@@ -33,23 +38,23 @@ export async function readMezoLocks(owner: Address, page = 0) {
   const locks = await Promise.all(
     Array.from({ length: size }, async (_, i) => {
       const tokenId = await client.readContract({
-        address: TESTNET_VEMEZO,
-        abi: WELCOME_ESCROW_ABI,
+        address: escrow,
+        abi,
         functionName: "ownerToNFTokenIdList",
         args: [owner, start + BigInt(i)],
         blockNumber,
       });
       const [position, currentOwner] = await Promise.all([
         client.readContract({
-          address: TESTNET_VEMEZO,
-          abi: WELCOME_ESCROW_ABI,
+          address: escrow,
+          abi,
           functionName: "locked",
           args: [tokenId],
           blockNumber,
         }),
         client.readContract({
-          address: TESTNET_VEMEZO,
-          abi: WELCOME_ESCROW_ABI,
+          address: escrow,
+          abi,
           functionName: "ownerOf",
           args: [tokenId],
           blockNumber,

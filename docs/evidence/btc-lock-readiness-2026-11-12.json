@@ -1,0 +1,45 @@
+{
+  "checkedAt": "2026-11-13T06:00:13.365Z",
+  "chainId": 31611,
+  "blockNumber": "16749030",
+  "owner": "0xe66d1c48792a320c16d7abd90c835b25a0ac37db",
+  "officialDeploymentSource": "https://github.com/mezo-org/tigris/blob/0a3b5e840ac8e187cc705fbeddcf00f88b09247e/solidity/deployments/testnet/VeBTC.json",
+  "nativeBtcEqualsErc20Balance": true,
+  "btcDecimals": 18,
+  "btcSymbol": "BTC",
+  "positions": [
+    {
+      "asset": "btc",
+      "escrow": "0xB63fcCd03521Cf21907627bd7fA465C129479231",
+      "token": "0x7b7C000000000000000000000000000000000000",
+      "implementation": "0x0000000000000000000000006bf4894dd2e113682db9d06555a0bfca9892917e",
+      "maximumLockSeconds": "2592000",
+      "maximumLockDays": 30,
+      "maxDurationStorageSlot": "0x0000000000000000000000000000000000000000000000000000000000000052",
+      "totalCount": "0",
+      "locks": []
+    },
+    {
+      "asset": "mezo",
+      "escrow": "0xaCE816CA2bcc9b12C59799dcC5A959Fb9b98111b",
+      "token": "0x7B7c000000000000000000000000000000000001",
+      "implementation": "0x0000000000000000000000009665873019a05bee102903c9df602da06555ae0a",
+      "maximumLockSeconds": "125798400",
+      "maximumLockDays": 1456,
+      "maxDurationStorageSlot": "0x0000000000000000000000000000000000000000000000000000000000000052",
+      "totalCount": "0",
+      "locks": []
+    }
+  ],
+  "observedProtocolPosition": {
+    "tokenId": "425",
+    "owner": "0xdB407A06E5CedF2fd4f8C5C557338908B2776978",
+    "amountWei": "500000000000000",
+    "end": "1795651200",
+    "permanent": false,
+    "pocketCustomerEvidence": false
+  },
+  "clientLockAsset": "BTC",
+  "liveBtcLockCreated": false,
+  "financialBroadcasts": 0
+}

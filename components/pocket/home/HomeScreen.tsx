@@ -160,25 +160,23 @@ export function HomeScreen({
 
         <div className="pk-row" style={{ gap: 8 }}>
           {/*
-            The faucet, and after it the rewards it turns into. One slot, two
-            occupants: while a claim is owed it is a tap to claim, and once the
-            claim is spent the same tap becomes the rewards promise. `loading`
-            keeps the slot drawn — empty, disabled — so the bar does not shift
-            a beat after the first paint.
+            The faucet funds onboarding; after a claim this slot opens the
+            weekly activity checklist. Keep the loading slot drawn so the
+            toolbar does not shift after the first paint.
           */}
           {faucet.state === "hidden" ? null : (
             /*
               One hook for both occupants of the slot: the tour step is about
-              the faucet, and after a claim the same spot is the rewards
-              promise, so the spotlight follows it there instead of going dark.
+              the faucet, and after a claim the same spot is the weekly
+              checklist, so the spotlight follows it there.
             */
             <span className="inline-flex" data-tour="faucet">
               {faucet.state === "claimed" ? (
                 <button
                   type="button"
                   onClick={() => setRewardsOpen(true)}
-                  aria-label="Rewards"
-                  title="Rewards"
+                  aria-label="Weekly tasks"
+                  title="Weekly tasks"
                   className="pk-ib"
                 >
                   <RewardsIcon size={20} />
@@ -286,6 +284,7 @@ export function HomeScreen({
           </motion.button>
         ))}
       </div>
+
 
       <div data-tour="activity">
         <div className="pk-row pk-sp" style={{ margin: "20px 0 4px" }}>

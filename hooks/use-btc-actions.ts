@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
-import { useWalletClient } from "wagmi";
-import type { WalletClient } from "viem";
+import { useCallback, useMemo } from "react";
+import { useSessionWallet } from "@/hooks/use-session-wallet";
 import { ApiError, useApi } from "@/lib/auth/client";
 import { createBtcActions } from "@/lib/mezo/btc-actions";
 
@@ -56,15 +55,12 @@ export type BtcRecordRequest = {
  * The two are joined into one object only so a screen has one thing to hold.
  */
 export function useBtcActions() {
-  const { data } = useWalletClient();
+  const { getWalletClient } = useSessionWallet();
   const fetchAuthed = useApi();
 
-  const walletRef = useRef<WalletClient | null>(null);
-  walletRef.current = (data as WalletClient | undefined) ?? null;
-
   const send = useMemo(
-    () => createBtcActions({ getWalletClient: () => walletRef.current }),
-    [],
+    () => createBtcActions({ getWalletClient }),
+    [getWalletClient],
   );
 
   /**

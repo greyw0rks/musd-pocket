@@ -1,19 +1,18 @@
 "use client";
 
-import { useAccount, useReadContract } from "wagmi";
+import { useReadContract } from "wagmi";
+import { useSession } from "@/lib/auth/session";
+import type { Address } from "viem";
 import { MUSD_ABI, formatMusd } from "@/lib/mezo/musd";
 import { MUSD_ADDRESS, CHAIN_ID } from "@/lib/mezo/config";
 
 /**
- * Reads the connected wallet's mUSD balance on the active Mezo chain.
- *
- * `enabled` lets a caller switch the read off entirely, for a mount that has
- * nothing to read yet — before `EmbeddedWalletActivator` has made the Privy
- * wallet the active account, `useAccount()` returns an address that is not the
- * one holding the money.
+ * Reads the session wallet's mUSD balance on the configured Mezo chain,
+ * including while the signing connector is still becoming ready.
  */
 export function useMusdBalance(options?: { enabled?: boolean }) {
-  const { address } = useAccount();
+  const { walletAddress } = useSession();
+  const address = (walletAddress ?? undefined) as Address | undefined;
 
   const query = useReadContract({
     abi: MUSD_ABI,

@@ -18,7 +18,9 @@
     "test:reconcile": "node --experimental-strip-types lib/settlement/reconcile.decision.test.ts",
     "test:tour": "node --experimental-strip-types components/pocket/walkthrough/tour.test.ts",
     "postinstall": "prisma generate",
-    "test:wealth": "vitest run --config vitest.wealth.config.ts"
+    "test:wealth": "vitest run --config vitest.wealth.config.ts",
+    "build:android-ui": "vite build --config apps/mobile-client/vite.config.ts",
+    "build:android": "bash apps/android/build-app.sh"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -46,19 +48,22 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4",
+    "@tailwindcss/vite": "^4.3.4",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^4.7.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
     "prisma": "6.19.3",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5",
-    "@playwright/test": "^1.64.1",
-    "vitest": "^3.2.7",
-    "tsx": "^4.23.15"
+    "vite": "^6.4.5",
+    "vitest": "^3.2.7"
   },
   "packageManager": "pnpm@11.19.0"
 }
