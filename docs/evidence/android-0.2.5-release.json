@@ -1,0 +1,27 @@
+{
+  "createdAt": "2026-11-13T08:56:34.832Z",
+  "sourceCommit": "3096e5c9c55e30bc0bffc603a801a47bdd9a93d8",
+  "downloadUrl": "https://mpocket.tech/downloads/mpocket-0.2.5.apk",
+  "deploymentId": "dpl_B5ga9KZ2o3JUfyMB6s7gj7fLSj9P",
+  "versionName": "0.2.5",
+  "versionCode": 7,
+  "apkBytes": 3139763,
+  "sha256": "de8b74d91927599b6cf03cc1abc1561e6ddf0f66977ab5d1baf6c07fbc305cad",
+  "checks": {
+    "liveDownloadMatchesSignedApk": true,
+    "signingCertificateAssociationPresent": true,
+    "callbackPageReturnsToAndroidPackage": true,
+    "callbackStripsQueryFromHistory": true,
+    "callbackHasNoManifest": true,
+    "incompleteCallbackExplained": true,
+    "webHomeHasNoInstallGate": true,
+    "googleCallbackReturnsToApp": true,
+    "telegramRemovedFromLogin": true,
+    "receiptPreferencesRequireAuthentication": true,
+    "couponEndpointsRequireAuthentication": true
+  },
+  "productionBrowserTransport": "Node HTTP forwards actual production bytes into Chromium",
+  "actualAndroidDeviceTested": false,
+  "accountLoginPerformed": false,
+  "transactionSigningPerformed": false
+}

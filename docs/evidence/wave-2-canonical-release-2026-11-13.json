@@ -1,0 +1,99 @@
+{
+  "checkedAt": "2026-11-13T08:59:05.726Z",
+  "origin": "https://mpocket.tech",
+  "publicSourceCommit": "3096e5c9c55e30bc0bffc603a801a47bdd9a93d8",
+  "releaseCommit": "04466bf66273790ba4becf18ede7e4367aebcd11",
+  "pullRequest": "https://github.com/greyw0rks/musd-pocket/pull/19",
+  "canonicalDeploymentId": "dpl_B5ga9KZ2o3JUfyMB6s7gj7fLSj9P",
+  "canonicalDeploymentUrl": "https://musd-pocket-6kcz8ugbl-greyw0rks-projects.vercel.app",
+  "deploymentState": "READY",
+  "githubCommitVercelStatus": "success",
+  "githubCommitDeploymentMatchesCanonical": true,
+  "mergedTreeMatchesValidatedRelease": true,
+  "assets": [
+    {
+      "path": "downloads/mpocket-0.2.5.apk",
+      "status": 200,
+      "bytes": 3139763,
+      "sha256": "de8b74d91927599b6cf03cc1abc1561e6ddf0f66977ab5d1baf6c07fbc305cad",
+      "matchesLocal": true
+    },
+    {
+      "path": "downloads/mpocket-0.2.5.apk.sha256",
+      "status": 200,
+      "bytes": 84,
+      "sha256": "9a2dfe3e92b1073ff1ff5d116cdda956d1a11b59592f743702a95e6e2d79e28a",
+      "matchesLocal": true
+    },
+    {
+      "path": "pitch-deck.pdf",
+      "status": 200,
+      "bytes": 325139,
+      "sha256": "60286b8f6f3b2d0ab6695232e73215ee43302812c54fcfd548883c43a68d649d",
+      "matchesLocal": true
+    },
+    {
+      "path": "pitch-deck.html",
+      "status": 200,
+      "bytes": 244328,
+      "sha256": "7a27854deee28800b3bff5f23c891e0597add54ba6512aa41160dfe2a767bed3",
+      "matchesLocal": true
+    },
+    {
+      "path": ".well-known/assetlinks.json",
+      "status": 200,
+      "bytes": 392,
+      "sha256": "b4fc0f413cf5338e08d330b1c511f7a7686448a231f3d4d692b53ccc632563a6",
+      "matchesLocal": true
+    }
+  ],
+  "routes": [
+    {
+      "path": "/home",
+      "method": "GET",
+      "status": 200,
+      "cacheControl": "public, max-age=0, must-revalidate"
+    },
+    {
+      "path": "/auth/android",
+      "method": "GET",
+      "status": 200,
+      "cacheControl": "no-store"
+    },
+    {
+      "path": "/api/rewards/weekly",
+      "method": "GET",
+      "status": 401,
+      "cacheControl": "public, max-age=0, must-revalidate"
+    },
+    {
+      "path": "/api/waitlist/checkout",
+      "method": "POST",
+      "status": 401,
+      "cacheControl": "public, max-age=0, must-revalidate"
+    },
+    {
+      "path": "/api/merchants/greylabs/coupon",
+      "method": "GET",
+      "status": 401,
+      "cacheControl": "public, max-age=0, must-revalidate"
+    },
+    {
+      "path": "/api/rewards/welcome",
+      "method": "GET",
+      "status": 401,
+      "cacheControl": "public, max-age=0, must-revalidate"
+    },
+    {
+      "path": "/api/rewards/welcome",
+      "method": "POST",
+      "status": 410,
+      "cacheControl": "private, no-store"
+    }
+  ],
+  "existingPitchVideoChanged": false,
+  "financialSigningPerformed": false,
+  "accountLoginPerformed": false,
+  "physicalAndroidDeviceTested": false,
+  "independentCustomerEvidenceProvided": false
+}

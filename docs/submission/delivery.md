@@ -4,6 +4,8 @@ Android 0.2.5 publishes the current mobile product and its matching web source. 
 
 [Android APK](https://mpocket.tech/downloads/mpocket-0.2.5.apk) · [Release notes](../android-0.2.5-handoff.md) · [Validation](../evidence/android/validation-0.2.5.json) · [BTC fork results](../evidence/btc-lock-fork-2026-11-13.json).
 
+[PR #19](https://github.com/greyw0rks/musd-pocket/pull/19) merged as `3096e5c`; its Vercel deployment `dpl_B5ga9KZ2o3JUfyMB6s7gj7fLSj9P` is Ready and serves the canonical domain. Live APK/deck/association hashes match the tested release. Android callback and anonymous login checks pass; weekly, waitlist and merchant APIs require authentication, and new welcome claims return HTTP 410. [Canonical release verification](../evidence/wave-2-canonical-release-2026-11-13.json).
+
 November 13 verification passed 257 automated checks: 132 Savings/Wealth/wallet/profile/merchant/reward, 68 checkout/waitlist, 39 payments/recovery and 18 reconciliation. Type checking, focused lint, the production web build, ten-slide deck layout/navigation and signed-APK verification passed. All 253 packaged web assets match the mobile build. Two local-fork BTC lifecycle tests use a fixture token; they create no live BTC lock. The retained mobile checks cover 29 app screens at 320, 390 and 640 pixels. Physical Android account/signing flows remain unverified.
 
 The first 100-testnet-mUSD invoice was paid on November 3 by the builder's Trove/Savings wallet. Its PAID invoice and Activity record agree in the dated database snapshot. It is a builder test; independent customer purchase, fulfillment, feedback and repeat use remain pending. [Pilot record](pilot-record.md).
