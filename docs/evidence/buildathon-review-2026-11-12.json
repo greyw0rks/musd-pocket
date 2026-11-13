@@ -1,0 +1,255 @@
+{
+  "reviewedAt": "2026-11-12T21:36:03Z",
+  "scope": {
+    "localReleasePath": "/home/greyw0rks/mpocket-weekly-release-20261106",
+    "localReleaseCommit": "218d95be374cac94dd33a62812ea7e408134c290",
+    "publicMainCommit": "a4ead5bfcbd1229a299a146cd757d04240e5481f",
+    "publicMainCommitDate": "2026-11-06T23:56:40Z",
+    "newerUncommittedUiWorkReviewed": false,
+    "programRulesSource": "User-supplied Mezo Buildathon rules",
+    "wave2BuildPeriodEnds": "2026-11-15",
+    "exactSubmissionCutoffTimezoneProvided": false
+  },
+  "canonical": {
+    "origin": "https://mpocket.tech",
+    "deploymentId": "dpl_8XujujMeChT4i7gQgJitSDVckivi",
+    "deploymentUrl": "https://musd-pocket-5dyylzlr9-greyw0rks-projects.vercel.app",
+    "deploymentCreatedAt": "2026-11-06T23:56:43Z",
+    "endpoints": [
+      {
+        "path": "/home",
+        "status": 200
+      },
+      {
+        "path": "/pitch-deck.pdf",
+        "status": 200,
+        "bytes": 62512,
+        "sha256": "c63f710786a60a8584412965874328665543297b1aa205d9dd23c5912e9f2388",
+        "deckSourceUpdatedAt": "2026-11-03"
+      },
+      {
+        "path": "/downloads/mpocket-0.2.4.apk",
+        "status": 404
+      },
+      {
+        "path": "/auth/android",
+        "status": 404
+      },
+      {
+        "path": "/api/rewards/weekly",
+        "status": 404
+      },
+      {
+        "path": "/api/merchants/greylabs/coupon",
+        "status": 404
+      },
+      {
+        "path": "/api/waitlist/checkout",
+        "status": 404
+      },
+      {
+        "path": "/api/requests/89YAGVPYD8ZXYE6FJWZUK652",
+        "status": 401
+      }
+    ]
+  },
+  "retainedNewerDeployment": {
+    "deploymentId": "dpl_ESGTTJ9DQXDwZTKJaf2513WSmoGP",
+    "deploymentUrl": "https://musd-pocket-7sal28di9-greyw0rks-projects.vercel.app",
+    "deploymentCreatedAt": "2026-11-06T22:25:25Z",
+    "assets": [
+      {
+        "path": "/pitch-deck.pdf",
+        "status": 200,
+        "bytes": 325614,
+        "sha256": "e7d11f374e9393d2f1fc5f3183c9164f59cb918d498eb20ca2baf5e90b37056b",
+        "matchesLocalRelease": true
+      },
+      {
+        "path": "/downloads/mpocket-0.2.4.apk",
+        "status": 200,
+        "bytes": 3135667,
+        "sha256": "27c26f4ced5a2604669f7e5aaa1ed3b07b1fa5294752bf7e071533f13f7e2949",
+        "matchesLocalRelease": true
+      }
+    ]
+  },
+  "publicRepository": {
+    "url": "https://github.com/greyw0rks/musd-pocket",
+    "private": false,
+    "defaultBranch": "main",
+    "treeTruncated": false,
+    "latestFilesAbsentFromDefaultBranch": [
+      "hooks/use-session-wallet.ts",
+      "lib/merchants/access.ts",
+      "lib/waitlist/checkout.ts",
+      "public/downloads/mpocket-0.2.4.apk"
+    ],
+    "publicSubmissionDraftStillNovember3Version": true
+  },
+  "freshTests": {
+    "wealthSavingsWalletUsersMerchantsRewards": 106,
+    "checkoutAndWaitlist": 68,
+    "paymentsAndRecovery": 39,
+    "reconciliationDecisions": 18,
+    "total": 231,
+    "allPassed": true,
+    "execution": "Existing Vitest and Node binaries; pnpm automatic dependency reconciliation aborted on shared node_modules before running tests.",
+    "nodeModulesReinstalled": false
+  },
+  "freshChainReads": {
+    "checkedAt": "2026-11-12",
+    "chainId": 31611,
+    "latestBlock": 16741784,
+    "receipts": [
+      {
+        "kind": "claim1",
+        "hash": "0x43149c59ae2cafafdc764a234ba6df7050a3981218cebd83ca633caaa608cfdf",
+        "status": 1,
+        "block": 16494652,
+        "from": "0xe66d1c48792a320c16d7abd90c835b25a0ac37db",
+        "to": "0x6f461c68b2c5492c0f5ccec5a264d692aa7a8e16",
+        "musdTransfers": [
+          {
+            "from": "0x6f461c68b2c5492c0f5ccec5a264d692aa7a8e16",
+            "to": "0xe66d1c48792a320c16d7abd90c835b25a0ac37db",
+            "mUSD": "187.366117347141378"
+          }
+        ]
+      },
+      {
+        "kind": "claim2",
+        "hash": "0x5271739bb3e06a0f1233efc0ac85df7d9b79e47126242236b28d29a4ecb7a3af",
+        "status": 1,
+        "block": 16524955,
+        "from": "0xe66d1c48792a320c16d7abd90c835b25a0ac37db",
+        "to": "0x6f461c68b2c5492c0f5ccec5a264d692aa7a8e16",
+        "musdTransfers": [
+          {
+            "from": "0x6f461c68b2c5492c0f5ccec5a264d692aa7a8e16",
+            "to": "0xe66d1c48792a320c16d7abd90c835b25a0ac37db",
+            "mUSD": "0.00228183663115"
+          }
+        ]
+      },
+      {
+        "kind": "repay",
+        "hash": "0x77596c3ad14f654f73952c2f5dfdcb05bbe8d30e93ff205bc5935ab6d70c31e7",
+        "status": 1,
+        "block": 16555345,
+        "from": "0xe66d1c48792a320c16d7abd90c835b25a0ac37db",
+        "to": "0xcdf7028ceab81fa0c6971208e83fa7872994bee5",
+        "musdTransfers": [
+          {
+            "from": "0x0000000000000000000000000000000000000000",
+            "to": "0x4ddd70f4c603b6089c07875be02fedfd626b80af",
+            "mUSD": "4.344986019977369418"
+          },
+          {
+            "from": "0xe66d1c48792a320c16d7abd90c835b25a0ac37db",
+            "to": "0x0000000000000000000000000000000000000000",
+            "mUSD": "10"
+          }
+        ]
+      },
+      {
+        "kind": "waitlist",
+        "hash": "0x056b918e9620de6ef203312880f6dc6872e8db71ac2d7edf59c58f074a363195",
+        "status": 1,
+        "block": 16555888,
+        "from": "0xe66d1c48792a320c16d7abd90c835b25a0ac37db",
+        "to": "0x118917a40faf1cd7a13db0ef56c86de7973ac503",
+        "musdTransfers": [
+          {
+            "from": "0xe66d1c48792a320c16d7abd90c835b25a0ac37db",
+            "to": "0x0a5e59ca4f182561de80172c6da5db927091ea29",
+            "mUSD": "100"
+          }
+        ]
+      },
+      {
+        "kind": "open",
+        "hash": "0xa6f7cdd5570fd32f2ead694375072f30bdd26a4623e5b31df29337a31876b752",
+        "status": 1,
+        "block": 16555337,
+        "from": "0xe66d1c48792a320c16d7abd90c835b25a0ac37db",
+        "to": "0xcdf7028ceab81fa0c6971208e83fa7872994bee5",
+        "musdTransfers": [
+          {
+            "from": "0x0000000000000000000000000000000000000000",
+            "to": "0x4ddd70f4c603b6089c07875be02fedfd626b80af",
+            "mUSD": "717.869469793438112592"
+          },
+          {
+            "from": "0x0000000000000000000000000000000000000000",
+            "to": "0x4ddd70f4c603b6089c07875be02fedfd626b80af",
+            "mUSD": "2"
+          },
+          {
+            "from": "0x0000000000000000000000000000000000000000",
+            "to": "0xe66d1c48792a320c16d7abd90c835b25a0ac37db",
+            "mUSD": "2000"
+          },
+          {
+            "from": "0x0000000000000000000000000000000000000000",
+            "to": "0x8fa3ef45137c3aff337e42f98023c1d7dd3666c0",
+            "mUSD": "200"
+          }
+        ]
+      },
+      {
+        "kind": "close",
+        "hash": "0xa5cc358a589f8966b76c20d6d2881e765e50d25eeec2da2723406d4ec8ed93f6",
+        "status": 1,
+        "block": 16555351,
+        "from": "0xe66d1c48792a320c16d7abd90c835b25a0ac37db",
+        "to": "0xcdf7028ceab81fa0c6971208e83fa7872994bee5",
+        "musdTransfers": [
+          {
+            "from": "0x0000000000000000000000000000000000000000",
+            "to": "0x4ddd70f4c603b6089c07875be02fedfd626b80af",
+            "mUSD": "3.530301058841076506"
+          },
+          {
+            "from": "0xe66d1c48792a320c16d7abd90c835b25a0ac37db",
+            "to": "0x0000000000000000000000000000000000000000",
+            "mUSD": "1992.000040389198735212"
+          },
+          {
+            "from": "0x8fa3ef45137c3aff337e42f98023c1d7dd3666c0",
+            "to": "0x0000000000000000000000000000000000000000",
+            "mUSD": "200"
+          }
+        ]
+      },
+      {
+        "kind": "welcome",
+        "hash": "0x798fd4f01b0e9ae68a322ab0848345f655e527e85b1c8f7356ff4d575d74ff48",
+        "status": 1,
+        "block": 16555327,
+        "from": "0xba46d08b9e298e8e70096fc238da207139bccab7",
+        "to": "0xa78709beb3841aac1ed8fc3d8dedf74d55f62432",
+        "musdTransfers": []
+      }
+    ],
+    "waitlistTransactionReadable": true,
+    "waitlistTransactionError": null
+  },
+  "materialGaps": {
+    "currentTwoMinutePitchVideoUrlProvided": false,
+    "akindoFormInspected": false,
+    "akindoSubmissionConfirmationInspected": false,
+    "threeDatedFutureMilestonesProvided": false,
+    "independentCustomerDemandEvidenced": false,
+    "physicalAndroidAccountFlowsVerified": false,
+    "receiptEmailDeliveryConfigured": false
+  },
+  "reviewActions": {
+    "applicationCodeChanged": false,
+    "deploymentChanged": false,
+    "githubChanged": false,
+    "databaseChanged": false,
+    "financialBroadcasts": 0,
+    "publicMessagesSent": 0
+  }
+}

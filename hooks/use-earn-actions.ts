@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useSessionWallet } from "@/hooks/use-session-wallet";
 import { createEarnActions } from "@/lib/mezo/earn-actions";
-import { pendingClaim } from "@/lib/mezo/claim-journal";
+import { pendingClaim, pendingClaimAttempt } from "@/lib/mezo/claim-journal";
 
 /**
  * The Savings Vault's write actions, bound to the user's wallet.
@@ -21,7 +21,12 @@ export function useEarnActions() {
   const { getWalletClient, address } = useSessionWallet();
 
   return useMemo(
-    () => ({ ...createEarnActions({ getWalletClient }), pendingClaimHash: () => address ? pendingClaim(address) : null }),
+    () => ({
+      ...createEarnActions({ getWalletClient }),
+      pendingClaimHash: () => address ? pendingClaim(address) : null,
+      hasPendingClaim: () => Boolean(address && (pendingClaim(address) || pendingClaimAttempt(address))),
+      canRetryClaim: () => Boolean(address && !pendingClaim(address) && pendingClaimAttempt(address)?.retryable),
+    }),
     [getWalletClient, address],
   );
 }

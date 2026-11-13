@@ -68,6 +68,6 @@ try {
   assert.deepEqual(errors, []);
   const checks = { sessionWalletUsedForMusdAndBtc: true, wrongActiveWalletBlocked: true, namedPrivyWalletActivatedOnMezo: true, wrongChainBlocked: true, stableGetterFollowsLogoutAndNewSession: true, earnAndBorrowCachesSeparateAccounts: true };
   await mkdir("docs/evidence/android", { recursive: true });
-  await writeFile("docs/evidence/android/session-wallet-0.2.4.json", JSON.stringify({ createdAt: new Date().toISOString(), checks, sessionAndConnectorMocked: true, signingPerformed: false }, null, 2) + "\n");
+  await writeFile("docs/evidence/android/session-wallet-0.2.5.json", JSON.stringify({ createdAt: new Date().toISOString(), checks, sessionAndConnectorMocked: true, signingPerformed: false }, null, 2) + "\n");
   console.log(JSON.stringify(checks));
 } finally { await browser.close(); }

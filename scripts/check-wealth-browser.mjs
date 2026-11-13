@@ -6,17 +6,10 @@ import { chromium } from "@playwright/test";
 const require = createRequire(import.meta.url);
 const { build } = createRequire(require.resolve("tsx/package.json"))("esbuild");
 const root = process.cwd();
-const cssFiles = (await readdir(".next/dev/static/chunks")).filter((file) =>
-  /(app_globals|components_pocket_pocket).*\.css$/.test(file),
-);
-const css =
-  (
-    await Promise.all(
-      cssFiles.map((file) =>
-        readFile(`.next/dev/static/chunks/${file}`, "utf8"),
-      ),
-    )
-  ).join("\n") + (await readFile("components/pocket/pocket.css", "utf8"));
+const assets = "apps/android/app/src/main/assets/web/assets";
+const cssFiles = (await readdir(assets)).filter(file => file.endsWith(".css"));
+assert.ok(cssFiles.length, "Build the Android web client before checking Wealth");
+const css = (await Promise.all(cssFiles.map(file => readFile(`${assets}/${file}`, "utf8")))).join("\n");
 const bundle = await build({
   stdin: {
     contents: `
@@ -165,14 +158,14 @@ try {
     path: "/tmp/pocket-locks-mobile.png",
     fullPage: true,
   });
-  await page.getByLabel("MEZO amount", { exact: true }).fill("20");
+  await page.getByLabel("BTC amount", { exact: true }).fill("20");
   await page.getByRole("button", { name: "Review new lock" }).click();
   await dialog
-    .getByRole("button", { name: "Approve 20 MEZO", exact: true })
+    .getByRole("button", { name: "Approve 20 BTC", exact: true })
     .waitFor();
   assert.deepEqual(await calls(), []);
   await dialog
-    .getByRole("button", { name: "Approve 20 MEZO", exact: true })
+    .getByRole("button", { name: "Approve 20 BTC", exact: true })
     .click();
   await dialog
     .getByRole("button", { name: "Create lock", exact: true })
@@ -187,13 +180,13 @@ try {
   await dialog.getByText("Transaction confirmed.", { exact: true }).waitFor();
   assert.deepEqual(await calls(), ["approve", "createLock"]);
   await closeReview();
-  // Existing locks are managed here, including the long permanent unlock.
+  // Existing locks are managed here, including the permanent unlock countdown.
   await page.getByRole("button", { name: "Start unlock", exact: true }).click();
-  await dialog.getByText(/does not withdraw your MEZO/).waitFor();
+  await dialog.getByText(/does not withdraw your BTC/).waitFor();
   await closeReview();
   await page.getByRole("button", { name: "Manage #43", exact: true }).click();
-  await page.getByLabel("MEZO to add to #43").fill("2");
-  await page.getByRole("button", { name: "Review added MEZO" }).click();
+  await page.getByLabel("BTC to add to #43").fill("2");
+  await page.getByRole("button", { name: "Review added BTC" }).click();
   await dialog
     .getByRole("button", { name: "Add to lock", exact: true })
     .click();
@@ -214,7 +207,7 @@ try {
     .getByRole("button", { name: "Withdraw", exact: true })
     .click();
   await dialog
-    .getByRole("button", { name: "Withdraw MEZO", exact: true })
+    .getByRole("button", { name: "Withdraw BTC", exact: true })
     .click();
   await dialog.getByText("Transaction confirmed.", { exact: true }).waitFor();
   await closeReview();

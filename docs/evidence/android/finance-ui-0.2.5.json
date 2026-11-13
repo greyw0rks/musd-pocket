@@ -1,0 +1,141 @@
+{
+  "createdAt": "2026-11-12T23:17:26.574Z",
+  "layouts": [
+    {
+      "id": "home",
+      "width": 289,
+      "x": 15.5,
+      "y": 768,
+      "height": 58,
+      "bottom": 826,
+      "radius": 30,
+      "buttons": [
+        46,
+        46,
+        46
+      ]
+    },
+    {
+      "id": "swap",
+      "width": 289,
+      "x": 15.5,
+      "y": 768,
+      "height": 58,
+      "bottom": 826,
+      "radius": 30,
+      "buttons": [
+        46,
+        46,
+        46
+      ]
+    },
+    {
+      "id": "wealth",
+      "width": 289,
+      "x": 15.5,
+      "y": 768,
+      "height": 58,
+      "bottom": 826,
+      "radius": 30,
+      "buttons": [
+        46,
+        46,
+        46
+      ]
+    },
+    {
+      "id": "home",
+      "width": 299.5,
+      "x": 45.25,
+      "y": 768,
+      "height": 58,
+      "bottom": 826,
+      "radius": 30,
+      "buttons": [
+        46,
+        46,
+        46
+      ]
+    },
+    {
+      "id": "swap",
+      "width": 299.5,
+      "x": 45.25,
+      "y": 768,
+      "height": 58,
+      "bottom": 826,
+      "radius": 30,
+      "buttons": [
+        46,
+        46,
+        46
+      ]
+    },
+    {
+      "id": "wealth",
+      "width": 299.5,
+      "x": 45.25,
+      "y": 768,
+      "height": 58,
+      "bottom": 826,
+      "radius": 30,
+      "buttons": [
+        46,
+        46,
+        46
+      ]
+    },
+    {
+      "id": "home",
+      "width": 325,
+      "x": 157.5,
+      "y": 768,
+      "height": 58,
+      "bottom": 826,
+      "radius": 30,
+      "buttons": [
+        46,
+        46,
+        46
+      ]
+    },
+    {
+      "id": "swap",
+      "width": 325,
+      "x": 157.5,
+      "y": 768,
+      "height": 58,
+      "bottom": 826,
+      "radius": 30,
+      "buttons": [
+        46,
+        46,
+        46
+      ]
+    },
+    {
+      "id": "wealth",
+      "width": 325,
+      "x": 157.5,
+      "y": 768,
+      "height": 58,
+      "bottom": 826,
+      "radius": 30,
+      "buttons": [
+        46,
+        46,
+        46
+      ]
+    }
+  ],
+  "tabClicksNavigate": true,
+  "buttonSpinner": {
+    "width": 16,
+    "height": 16,
+    "contained": true
+  },
+  "smallInterestAndConfirmedPayoutVisible": true,
+  "postConfirmationRecoveryControls": true,
+  "financialActionsMocked": true,
+  "signingPerformed": false
+}

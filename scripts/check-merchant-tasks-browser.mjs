@@ -95,7 +95,7 @@ try {
   await page.getByRole('heading',{name:'Verified merchants'}).scrollIntoViewIfNeeded();
   await page.screenshot({path:'docs/evidence/android/send-merchants.png'});
   await page.getByRole('button',{name:'Open rewards',exact:true}).click();
-  const rewards=page.getByRole('dialog',{name:'Rewards & locks',exact:true});
+  const rewards=page.getByRole('dialog',{name:'Weekly tasks',exact:true});
   await rewards.getByRole('checkbox',{name:'Send mUSD to 5 friends',exact:true}).waitFor();
   assert.equal(await rewards.getByRole('checkbox').count(),7);
   assert.equal(await rewards.getByRole('checkbox',{name:'Send mUSD to 5 friends',exact:true}).getAttribute('aria-checked'),'false');
@@ -108,7 +108,9 @@ try {
   assert.equal(await page.evaluate(()=>window.fixtureCopied),'https://mpocket.tech/home?ref='+ 'a'.repeat(24));
   await rewards.getByRole('heading',{name:"This week's tasks",exact:true}).scrollIntoViewIfNeeded();
   await page.screenshot({path:'docs/evidence/android/weekly-tasks.png'});
-  checks.claimedWelcomeShowsWeeklyTasks=true;checks.confirmedProgressOnly=true;checks.inviteLink=true;
+  assert.equal(await rewards.getByText(/Claim 20|Welcome reward/).count(),0);
+  await rewards.getByRole('checkbox',{name:'Lock BTC',exact:true}).waitFor();
+  checks.weeklyTasksNeedNoWelcomeClaim=true;checks.confirmedProgressOnly=true;checks.inviteLink=true;
   for(const width of [320,390]){await page.setViewportSize({width,height:844});assert.equal(await rewards.evaluate(el=>el.scrollWidth<=el.clientWidth),true);}
   checks.mobileWidths=[320,390];assert.deepEqual(errors,[]);checks.pageErrors=errors;
   await writeFile('docs/evidence/android/merchant-tasks-browser.json',JSON.stringify({createdAt:new Date().toISOString(),fixtureOnly:true,realAccountLogin:false,financialSigning:false,checks},null,2)+'\n');console.log(JSON.stringify(checks,null,2));

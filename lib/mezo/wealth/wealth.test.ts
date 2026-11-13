@@ -40,10 +40,14 @@ vi.mock("../musd", () => ({
     getGasPrice: async () => 10n,
     getBalance: async () => f.native,
     estimateGas: async () => 50000n,
-    getStorageAt: async () =>
-      f.upgraded
+    getStorageAt: async ({ address, slot }: { address: string; slot: string }) =>
+      slot === `0x${"52".padStart(64, "0")}`
+        ? `0x${(address.toLowerCase() === "0xb63fccd03521cf21907627bd7fa465c129479231" ? 2592000n : 125798400n).toString(16).padStart(64, "0")}`
+        : f.upgraded
         ? "0x00"
-        : "0x0000000000000000000000009665873019a05bee102903c9df602da06555ae0a",
+        : address.toLowerCase() === "0xb63fccd03521cf21907627bd7fa465c129479231"
+          ? "0x0000000000000000000000006bf4894dd2e113682db9d06555a0bfca9892917e"
+          : "0x0000000000000000000000009665873019a05bee102903c9df602da06555ae0a",
     readContract: f.readContract,
     call: f.call,
     getTransaction: f.getTransaction,
@@ -68,6 +72,8 @@ import { quoteLock } from "./lock-actions";
 import { quoteSwap } from "./swap";
 import {
   ESCROW,
+  BTC_ASSET,
+  LOCK_CONTRACTS,
   FACTORY,
   LOCK_ABI,
   MAX_LOCK_TIME,
@@ -97,7 +103,7 @@ beforeEach(() => {
   f.upgraded = false;
   f.holder = f.owner;
   f.lockAmount = 20n * unit;
-  f.lockEnd = f.time + 13n * 604800n;
+  f.lockEnd = f.time + 3n * 604800n;
   f.permanent = false;
   f.voted = false;
   f.escrowType = 0;
@@ -106,7 +112,8 @@ beforeEach(() => {
     const pool = POOLS.find((p) => p.id === f.poolId)!;
     switch (functionName) {
       case "token":
-        return "0x7B7c000000000000000000000000000000000001";
+        return address.toLowerCase() === ESCROW.toLowerCase()
+          ? BTC_ASSET.address : LOCK_CONTRACTS.mezo.asset.address;
       case "token0":
         return pool.token0.address;
       case "token1":
@@ -348,8 +355,11 @@ describe("lock lifecycle", () => {
       args: [20n * unit, 4n * 604800n],
     });
     expect(plan.call.to).toBe(ESCROW);
+    expect(plan.spends[0]).toMatchObject({ asset: BTC_ASSET, spender: ESCROW });
+    expect(plan.call.value).toBe(0n);
     expect(roundedLockEnd(f.time, 4, MAX_LOCK_TIME).end % 604800n).toBe(0n);
     expect(() => roundedLockEnd(f.time, 209, MAX_LOCK_TIME)).toThrow();
+    await expect(quoteLock(f.owner, { kind: "create", amount: "0.001", weeks: 5 })).rejects.toThrow("supported lock duration");
   });
   it("requires current ownership and refuses early withdrawals", async () => {
     await expect(
@@ -360,11 +370,29 @@ describe("lock lifecycle", () => {
       quoteLock(f.owner, { kind: "increase", tokenId: "1", amount: "1" }),
     ).rejects.toThrow("owned");
   });
+  it("keeps previous MEZO positions withdrawable without accepting new MEZO deposits", async () => {
+    f.lockEnd = f.time;
+    const previous = await quoteLock(f.owner, { kind: "withdraw", tokenId: "941" }, "mezo");
+    expect(previous.call.to).toBe(LOCK_CONTRACTS.mezo.escrow);
+    expect(previous.title).toBe("Withdraw MEZO");
+    await expect(quoteLock(f.owner, { kind: "create", amount: "20", weeks: 4 }, "mezo")).rejects.toThrow("use BTC");
+    await expect(quoteLock(f.owner, { kind: "increase", tokenId: "941", amount: "20" }, "mezo")).rejects.toThrow("use BTC");
+  });
+  it("reserves native BTC for fees as well as the ERC-20 precompile lock amount", async () => {
+    const plan = await quoteLock(f.owner, { kind: "create", amount: "0.001", weeks: 4 });
+    f.native = 10n ** 15n;
+    await expect(prepareWealthStep(plan)).rejects.toThrow("Keep enough BTC");
+    f.native += 1000000n;
+    const step = await prepareWealthStep(plan);
+    expect(step.call.to).toBe(BTC_ASSET.address);
+    expect(decodeFunctionData({ abi: erc20Abi, data: step.call.data }).args).toEqual([ESCROW, 10n ** 15n]);
+    expect(step.call.value).toBe(0n);
+  });
   it("permits expired withdrawals but blocks assigned votes and managed positions", async () => {
     f.lockEnd = f.time;
     expect(
       (await quoteLock(f.owner, { kind: "withdraw", tokenId: "1" })).title,
-    ).toBe("Withdraw MEZO");
+    ).toBe("Withdraw BTC");
     f.voted = true;
     await expect(
       quoteLock(f.owner, { kind: "withdraw", tokenId: "1" }),
@@ -377,10 +405,10 @@ describe("lock lifecycle", () => {
   });
   it("requires a later extension and does not add to unvested grants", async () => {
     await expect(
-      quoteLock(f.owner, { kind: "extend", tokenId: "1", weeks: 4 }),
+      quoteLock(f.owner, { kind: "extend", tokenId: "1", weeks: 2 }),
     ).rejects.toThrow("later");
     expect(
-      (await quoteLock(f.owner, { kind: "extend", tokenId: "1", weeks: 26 }))
+      (await quoteLock(f.owner, { kind: "extend", tokenId: "1", weeks: 4 }))
         .title,
     ).toBe("Extend lock");
     f.vestingEnd = f.time + 500n;
@@ -395,7 +423,8 @@ describe("lock lifecycle", () => {
       kind: "start-unlock",
       tokenId: "1",
     });
-    expect(plan.title).toBe("Start 208-week unlock");
+    expect(plan.title).toBe("Start BTC unlock");
+    expect(plan.details.some(item => item.value.includes("up to 30 days"))).toBe(true);
     expect(
       plan.details.some((item) => item.value.includes("does not withdraw")),
     ).toBe(true);
@@ -498,7 +527,7 @@ describe("wallet execution and recovery", () => {
     expect(readPendingWealth(f.owner)).toBeNull();
   });
   it("uses an explicit zero-reset step for an insufficient nonzero allowance", async () => {
-    f.allowances.set("0x7b7c000000000000000000000000000000000001", 1n);
+    f.allowances.set(BTC_ASSET.address.toLowerCase(), 1n);
     const step = await prepareWealthStep(await plan());
     expect(
       decodeFunctionData({ abi: erc20Abi, data: step.call.data }).args,
@@ -506,7 +535,7 @@ describe("wallet execution and recovery", () => {
   });
   it("requires a fresh review after the approval step changes", async () => {
     const step = await prepareWealthStep(await plan());
-    f.allowances.set("0x7b7c000000000000000000000000000000000001", 20n * unit);
+    f.allowances.set(BTC_ASSET.address.toLowerCase(), 20n * unit);
     await expect(
       executeWealthStep(
         step,

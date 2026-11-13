@@ -1,4 +1,4 @@
-.private/
+.private
 .gradle/
 **/build/
 local.properties

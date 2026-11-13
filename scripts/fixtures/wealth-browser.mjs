@@ -4,7 +4,7 @@ import {
   ESCROW,
   FACTORY,
   LOCK_ABI,
-  MEZO_ASSET,
+  BTC_ASSET,
   POOLS,
   ROUTER_ABI,
 } from "@/lib/mezo/wealth/contracts";
@@ -92,8 +92,9 @@ const rpc = {
   getChainId: async () => 31611,
   getBlock: async () => ({ number: 77n, timestamp: time }),
   getBlockNumber: async () => 77n,
-  getStorageAt: async () =>
-    "0x0000000000000000000000009665873019a05bee102903c9df602da06555ae0a",
+  getStorageAt: async ({ slot }) => slot === `0x${"52".padStart(64, "0")}`
+    ? `0x${(30n * 86400n).toString(16).padStart(64, "0")}`
+    : "0x0000000000000000000000006bf4894dd2e113682db9d06555a0bfca9892917e",
   getGasPrice: async () => 1000000n,
   estimateGas: async () => 100000n,
   getBalance: async () => 100n * unit,
@@ -127,7 +128,7 @@ const rpc = {
     const otherUnit = 10n ** BigInt(pool.token1.decimals);
     switch (functionName) {
       case "token":
-        return MEZO_ASSET.address;
+        return BTC_ASSET.address;
       case "token0":
         return pool.token0.address;
       case "token1":

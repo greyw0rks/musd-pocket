@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import { chromium } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 
-const versionName = process.env.MPOCKET_VERSION ?? "0.2.4";
+const versionName = process.env.MPOCKET_VERSION ?? "0.2.5";
 assert.match(versionName, /^\d+\.\d+\.\d+$/);
 const downloadUrl = `https://mpocket.tech/downloads/mpocket-${versionName}.apk`;
 const expected = await readFile(`public/downloads/mpocket-${versionName}.apk`);
@@ -58,7 +58,7 @@ try {
   const result = {
     createdAt: new Date().toISOString(), sourceCommit: execFileSync("/home/greyw0rks/ubuntu-to-debian-migration/bin/rtk", ["proxy", "git", "rev-parse", "HEAD"], { encoding: "utf8" }).trim(), downloadUrl,
     deploymentId: process.env.MPOCKET_DEPLOYMENT_ID ?? null,
-    versionName, versionCode: Number(process.env.MPOCKET_VERSION_CODE ?? 6), apkBytes: received.length, sha256,
+    versionName, versionCode: Number(process.env.MPOCKET_VERSION_CODE ?? 7), apkBytes: received.length, sha256,
     checks: { liveDownloadMatchesSignedApk: true, signingCertificateAssociationPresent: true,
       callbackPageReturnsToAndroidPackage: true, callbackStripsQueryFromHistory: true,
       callbackHasNoManifest: true, incompleteCallbackExplained: true, webHomeHasNoInstallGate: true,

@@ -72,7 +72,7 @@ export const EmbeddedWalletActivator = () => null;
 export const useBorrow = () => ({ data: { hasTrove: false, status: 0, statusLabel: "Not opened", collateral: "0", debt: "0", price: null, mcr: "1100000000000000000", collateralRatio: null, ltv: null, liquidationPrice: null, health: "none" }, isPending: false, isError: false, error: null, refetch: refresh, isFetching: false });
 export const useFaucet = () => ({ data: null, loading: false, refresh, claim: null, amounts: { btc: "0.00001", musd: "20" }, funded: true, claiming: false, claimFaucet: refresh, clearError: noop });
 export const useEarn = () => ({ data: { shares: "0", principal: "0", totalShares: "0", hasPosition: false, claimableYield: "0", vaultAcceptsMusd: true }, isPending: false, isError: false, error: null, refetch: refresh, isFetching: false });
-export const useEarnActions = () => ({ pendingClaimHash: () => null });
+export const useEarnActions = () => ({ pendingClaimHash: () => null, hasPendingClaim: () => false, canRetryClaim: () => false });
 export const useBorrowActions = () => ({});
 export const useBtcActions = () => ({});
 export const useMusdBalance = () => ({ data: 0n, raw: 0n, formatted: "0", isLoading: false, refetch: refresh });

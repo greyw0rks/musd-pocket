@@ -1,6 +1,6 @@
 # Pocket pilot guide
 
-Use the Mezo testnet build. For local testing open `http://localhost:3000/home`; remote testers need a deployed preview URL. Each tester uses their own account and wallet. Record observations below; a passed local test is not an independent user result.
+Use the [Mezo testnet app](https://mpocket.tech/home) or [Android 0.2.5](https://mpocket.tech/downloads/mpocket-0.2.5.apk). For local testing open `http://localhost:3000/home`. Each tester uses their own account and wallet. Record observations below; a passed local test is not an independent user result.
 
 ## Merchant and customer
 
@@ -15,18 +15,18 @@ Use the Mezo testnet build. For local testing open `http://localhost:3000/home`;
 
 1. Verify the dock reads **Home · Swap · Wealth**. Open Wealth, visit Vault, Lock and Pools, then return using Back. Payment history is still under Home → View All.
 2. Compare Savings principal and claimable interest with chain reads. An unavailable read should show unknown, not zero. Claim only if there is positive yield and you intend the transaction.
-3. After a claim, record its receipt and mUSD received. Reload during a pending confirmation and check the saved claim rather than signing again.
-4. In Lock, compare veMEZO IDs, ownership, balances and expiry with the explorer. With MEZO and BTC for gas, enter a small intended amount, review the exact weekly unlock date, approve MEZO, then separately confirm Create lock. Record the NFT, amount and owner. Use Manage to add MEZO or extend; verify the resulting amount/date. Withdraw a position only after its unlock date. For a permanent position, review Start unlock and verify that it describes a **new 208-week wait**, not an immediate withdrawal. Do not commit to that duration just for a quick test.
+3. After a claim, record its receipt and actual mUSD received. If an error appears after wallet confirmation, use Check claim confirmation. A lost response can be recovered using its saved hash or nonce. Review claim again, when offered, preserves the original nonce. Reload during pending confirmation and check the existing claim.
+4. In Lock, compare veBTC IDs, ownership, amounts and expiry with the explorer. With BTC for both principal and gas, enter a small intended amount, review the exact weekly unlock date, approve the BTC ERC-20 precompile, then separately confirm Create lock. Record the NFT, amount and owner. Use Manage to add BTC or extend; verify the resulting amount/date. The testnet maximum is 30 days, rounded down to a weekly boundary. Withdraw only after the unlock date. A permanent BTC lock's Start unlock sets a date up to 30 days away. The Existing MEZO tab preserves previous positions; those permanent locks retain the protocol's 208-week countdown.
 5. In Pools, choose a funded pair and enter both deposit amounts. Review estimates, minimum amounts, slippage and the receiving wallet. Approve each asset separately, then separately confirm Add liquidity. Check the LP balance, remove a chosen percentage, and compare both returned tokens with the receipt. Claim fees when the displayed claimable amount is positive. An empty pool should explain that its first deposit sets the price; stable first deposits must contain equal normalized amounts.
 6. Open Swap from the dock. Choose a liquid pair and direction. Enter a small intended amount, review the estimated and minimum received amounts, pool fee, slippage and recipient. Complete any approval, then separately confirm the swap. Verify input spent and output received. Switch direction and verify the input asset and amount field change correctly. An empty pair must explain why it cannot quote.
 7. For any pending swap/pool/lock transaction, close and reopen the screen (or reload) and use Check confirmation. This must not prompt another signature. Rejecting a wallet request must not show success. If the wallet provides no hash, check its history; clear the saved request only when it was never sent. Each tester uses their own wallet; no server operator should sign on their behalf.
 
-## Welcome reward (after activation)
+## Faucet and weekly tasks
 
-1. A funded, eligible account should see 20 testnet MEZO and the estimated weekly unlock date.
-2. Claim once. Record campaign, transaction hash, NFT ID, owner, amount and final expiry.
-3. Refresh during confirmation, close/reopen Rewards, and reload the app. The same claim should be recovered.
-4. Reopen Rewards after success. It should show the delivered position and no second claim button. An unfunded/paused campaign should explain its unavailable state.
+1. Use the testnet faucet for starting BTC and mUSD. The welcome reward has ended.
+2. Open Home → Weekly tasks. The checklist is available immediately and includes Lock BTC.
+3. Complete an intended payment or protocol action and verify its task progress follows the confirmed receipt. Different-friend sends must use five distinct wallets; referrals require qualifying new accounts.
+4. Tasks reset each Monday at 00:00 UTC. The checklist does not promise a weekly token payout.
 
 ## Borrow repayment (requires an active loan)
 

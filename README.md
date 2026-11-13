@@ -1,14 +1,16 @@
 # mUSD Pocket
 
-Send, request and receive mUSD from your own embedded wallet. Borrow against BTC through Mezo Troves and manage Savings, swaps, MEZO locks and liquidity in the same mobile app.
+Borrow mUSD against BTC on Mezo and spend it through social payments and merchant checkout from your own embedded wallet. Manage Savings, swaps, BTC locks and liquidity in the same mobile app.
 
 **App:** [mpocket.tech](https://mpocket.tech/home) · **Network:** Mezo testnet (31611)
 
-**Android:** [mPocket 0.2.4 APK](https://mpocket.tech/downloads/mpocket-0.2.4.apk) · [Release notes](docs/android-0.2.4-handoff.md). Install over the existing app. The floating dock is restored; Vault, Borrow and Swap use the session wallet on Mezo, interest claims verify the actual payout, and button loading rings stay at 16px. Sign-out opens Privy; Telegram has been removed from login. Private receipt preferences persist, with Google account linking. Send → Verified merchants unlocks one random 10–30% Greylabs code after any confirmed positive mUSD payment to `@grey_labs`; merchandise previews stay inside the app. Weekly tasks are confirmed from activity.
+**Android:** [mPocket 0.2.5 APK](https://mpocket.tech/downloads/mpocket-0.2.5.apk) · [Release notes](docs/android-0.2.5-handoff.md). Install over the existing app. Vault claims prepare BTC fees before confirmation and recover a lost wallet response without claiming that nothing moved. New locks use BTC; previous MEZO positions remain manageable. Weekly tasks are available immediately, and the testnet faucet supplies starting funds.
 
 **Track:** Track 2 — Access and Distribution for MUSD/MEZO
 
 **Pitch:** [PDF](docs/submission/pitch-deck.pdf) · [editable slides](docs/submission/pitch-deck.json) · [HTML](docs/submission/pitch-deck.html)
+
+**Submission:** [AKINDO fields and dated milestones](docs/submission/akindo-fields.md) · [Wave 2 update](docs/submission/submission.md) · [Merchant pilot record](docs/submission/pilot-record.md)
 
 ## How payments work
 
@@ -27,7 +29,7 @@ flowchart LR
 
 Normal payments do not use PocketVault or debit an internal ledger. Legacy vault and modeled cross-chain settlement code remains for earlier records; only explicitly classified legacy payments enter that reconciler. Base and Ethereum are not live cross-chain payment routes in this build.
 
-Mezo gas is paid in **BTC**. Payers pay gas from their own wallets for payments, borrowing, Savings and Wealth. Receiving requires no transaction. The funded testnet faucet sends **0.015 BTC and 300 mUSD** once per account. Welcome rewards are separately relayed; universal gas sponsorship is not implemented.
+Mezo gas is paid in **BTC**. Payers pay gas from their own wallets for payments, borrowing, Savings and Wealth. Receiving requires no transaction. The funded testnet faucet sends **0.015 BTC and 300 mUSD** once per account. The welcome reward has ended; universal gas sponsorship is not implemented.
 
 ## Wave 2 product
 
@@ -35,12 +37,12 @@ Mezo gas is paid in **BTC**. Payers pay gas from their own wallets for payments,
 - **Merchant checkout:** save a Business payment profile, create a payment link or QR and receive mUSD directly. Checkout retains its invoice URL during sign-in, shows the exact recipient and amount, and verifies payment before showing paid. Each invoice keeps its merchant-name snapshot. Business names are self-declared.
 - **Recovery:** hashes survive reloads; retries verify the existing transfer. Proof reuse across invoices is blocked, late transfers are shown as late paid, and direct sends stay isolated from legacy refunds.
 - **Borrow:** open, inspect, partially repay or close a BTC-backed Trove with the owning wallet. Minimum debt, fees and health are read from Mezo.
-- **Savings:** deposit, withdraw and claim yield. Claimable interest includes stored yield and uncheckpointed global-index accrual; unavailable reads stay unknown. Claims report the actual mUSD payout verified from the receipt and preserve unverified pending hashes to prevent another signature.
+- **Savings:** deposit, withdraw and claim yield. Claimable interest includes stored yield and uncheckpointed global-index accrual; unavailable reads stay unknown. Claims report the actual mUSD payout from the receipt. A lost wallet response preserves its hash or reserved nonce; checking confirmation does not request another signature. Explicit retries keep the original nonce so only one claim can execute.
 - **Swap:** exchange mUSD with BTC, mUSDC or mUSDT through verified testnet pools, with fees, minimum received, slippage and deadline shown.
-- **Wealth:** manage Vault, MEZO locks and pools in Pocket. Lock creation, top-up, extension, expired withdrawal and permanent-lock lifecycle; pool liquidity add/remove and fee claims.
-- **Welcome:** **20 testnet MEZO** per account and wallet, locked into a user-owned veMEZO NFT for two weekly epochs (7–14 days after rounding). The first claim is verified: NFT #941, 20 MEZO, recipient ownership, and `AlreadyClaimed` on a read-only replay. The campaign retains 80 MEZO for four claims.
+- **Wealth:** manage Vault, BTC locks and pools in Pocket. Create, top up, extend and withdraw eligible veBTC positions. The Existing MEZO tab preserves access to previous locks. Pool actions include liquidity add/remove and fee claims.
+- **Weekly tasks:** confirmed payments, referrals, borrowing, repayment, liquidity, swaps and BTC locks. Tasks reset weekly and do not promise a token payout.
 
-This build's dock is **Home · Swap · Wealth**. Activity remains under Home → View All. Each approval and final Wealth action needs its own confirmation. Permanent-lock Start unlock begins a new **208-week countdown**.
+This build's dock is **Home · Swap · Wealth**. Activity remains under Home → View All. Each approval and final Wealth action needs its own confirmation. BTC lock duration is capped at **30 days** on this testnet contract, with weekly rounding. Starting a permanent BTC lock's unlock sets a date up to 30 days away. Previous MEZO permanent locks retain their 208-week countdown.
 
 Home's total card keeps **mUSD and BTC** prominent. Positive balances of supported mUSDC, mUSDT, MEZO, sMUSD and pool LP tokens appear below. Tokens without a verified valuation show their amount and are excluded from the priced sum; sMUSD contributes its verified 1:1 principal.
 
@@ -59,11 +61,10 @@ An existing [liquidity addition](https://explorer.test.mezo.org/tx/0xef79292d44a
 
 On November 3, the user completed the approved 0.05-BTC / 2,000-mUSD Trove sequence. The [10-mUSD partial repayment](https://explorer.test.mezo.org/tx/0x77596c3ad14f654f73952c2f5dfdcb05bbe8d30e93ff205bc5935ab6d70c31e7) burned exactly 10 mUSD, reduced debt by exactly 10 after accounting for interest accrual, and preserved 0.05 BTC collateral. [Before/after proof](docs/evidence/wave-2-repayment-proof.json).
 
-November 3 baseline: 6 personal accounts, 4 completed faucet claims and 8 paid direct transfers. The @musd_pocket Business profile and a **100-testnet-mUSD closed-mainnet waitlist invoice** are now configured. These builder-operated records do not establish independent humans, paid customer demand or revenue. Merchant pilots and repeat-user feedback remain pending.
+The first **100-testnet-mUSD closed-mainnet waitlist invoice** was paid on November 3. Its sender is the builder wallet used for the Trove and Savings checks; the invoice and Activity record agree. It demonstrates settlement. Independent customer purchases, fulfillment, feedback and repeat use remain pending. [Payment receipt](https://explorer.test.mezo.org/tx/0x056b918e9620de6ef203312880f6dc6872e8db71ac2d7edf59c58f074a363195) · [Dated November 12 snapshot](docs/evidence/wave-2-pilot-snapshot-2026-11-12.json).
 
-Android 0.2.4 checks include **145 passing assertions**: 106 Savings/Wealth/profile/merchant/reward and 39 payment/recovery. Browser checks cover 29 screens at three widths, wallet/network/cache changes, the floating dock and claim loading states. Build and historical receipt evidence is documented separately. Fixture tokens and simulated wallets are not live-signature evidence.
+November 13 verification covers Savings/Wealth, wallet identity, profiles, merchants, weekly tasks, retired reward access, checkout, payment recovery and reconciliation. [Android 0.2.5 validation](docs/evidence/android/validation-0.2.5.json) records the test totals, screen checks, claim recovery, build and signing results. Physical Android installation and real account/signing flows remain unverified. BTC contract configuration is checked against Mezo Testnet; local fork lifecycle tests replace the native BTC precompile with a fixture token and do not create a live BTC lock.
 
-Direct transfers cannot prevent two devices broadcasting duplicate payments before the server sees either. Confirmation uses one successful receipt; reorg monitoring and duplicate-transfer refunds are not implemented. Welcome claims do not prove human uniqueness or new MUSD demand. No mainnet, revenue or guaranteed-yield claim is made.
 
 [Evidence index](docs/submission/evidence.md) · [Delivery record](docs/submission/delivery.md) · [November 3 baseline](docs/wave-2-status-2026-11-03.md)
 
@@ -72,32 +73,3 @@ Direct transfers cannot prevent two devices broadcasting duplicate payments befo
 Proposed disclosed fees on successful merchant payments, partly covering BTC gas sponsorship and operations. Ordinary P2P sends are not the initial fee target. Premium merchant reporting and reconciliation tools can follow pilot demand.
 
 Pricing and sponsorship need validation with real merchants and measured costs. This build collects no Pocket fee and claims no revenue. Mezo pool fees shown in Swap/Wealth are not Pocket revenue.
-
-## Run locally
-
-Requires Node.js 22+, pnpm and Postgres.
-
-```sh
-pnpm install --frozen-lockfile
-cp .env.example .env
-# Configure Privy, DATABASE_URL, DIRECT_URL and Mezo testnet.
-pnpm dev --hostname 127.0.0.1 --port 3000
-```
-
-Open http://localhost:3000/home. Register local and deployed origins in Privy. Use the same public Privy app ID and Mezo network for the build and server.
-
-Review additive scripts in `prisma/sql/` against the target schema. **Do not run `prisma db push` against the existing live database:** unrelated drift exists. Welcome activation needs its dedicated journal and reviewed campaign settings.
-
-```sh
-pnpm exec next typegen
-pnpm exec tsc --noEmit
-pnpm test:wealth
-pnpm test:checkout
-pnpm test:payments
-pnpm test:reconcile
-pnpm build
-node scripts/check-wealth-browser.mjs
-node scripts/check-checkout-browser.mjs
-```
-
-Set `POCKET_TEST_ORIGIN` to check another origin with the anonymous checkout smoke test. It never signs or pays. Read-only chain scripts are listed in the evidence index.

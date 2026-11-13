@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 let setup = (await readFile("scripts/check-mobile-app.mjs", "utf8")).split("const checks = {};")[0];
 setup = setup.replace('const fixture = await readFile("scripts/fixtures/mobile-session-ui.tsx", "utf8");', `let fixture = await readFile("scripts/fixtures/mobile-session-ui.tsx", "utf8");
 fixture = fixture.replace('claimableYield: "0"', 'claimableYield: fixture.fixtureYield ?? "0"')
-  .replace('export const useEarnActions = () => ({ pendingClaimHash: () => null });', 'export const useEarnActions = () => ({ pendingClaimHash: () => null, claim: () => new Promise(resolve => { fixture.fixtureResolveClaim = resolve; }) });');`);
+  .replace('export const useEarnActions = () => ({ pendingClaimHash: () => null, hasPendingClaim: () => false, canRetryClaim: () => false });', 'export const useEarnActions = () => ({ pendingClaimHash: () => null, hasPendingClaim: () => Boolean(fixture.fixtureClaimPending), canRetryClaim: () => Boolean(fixture.fixtureClaimRetryable), claim: (options) => new Promise(resolve => { fixture.fixtureClaimOptions = options; fixture.fixtureResolveClaim = resolve; }) });');`);
 const checks = `
 try {
   await page.route('**/*.ttf', async route => {
@@ -41,9 +41,9 @@ try {
     await page.waitForTimeout(300);
   }
   await mkdir('docs/evidence/android',{recursive:true});
-  await page.screenshot({path:'docs/evidence/android/floating-nav-0.2.4-light.png'});
+  await page.screenshot({path:'docs/evidence/android/floating-nav-0.2.5-light.png'});
   await page.evaluate(()=>document.documentElement.classList.add('dark'));
-  await page.screenshot({path:'docs/evidence/android/floating-nav-0.2.4-dark.png'});
+  await page.screenshot({path:'docs/evidence/android/floating-nav-0.2.5-dark.png'});
   await page.evaluate(()=>window.fixtureYield='2281836631150000');await navigate('vault');
   await page.getByText('0.00228183663115 MUSD',{exact:true}).waitFor();
   const claim = page.locator('.pk-interest-card button');await claim.click();
@@ -53,12 +53,37 @@ try {
   const spinnerStyle = await spinner.evaluate(el=>({width:parseFloat(getComputedStyle(el).width),height:parseFloat(getComputedStyle(el).height)}));
   assert.equal(spinnerStyle.width,16);assert.equal(spinnerStyle.height,16);
   assert.ok(spinnerRect.y>=buttonRect.y && spinnerRect.y+16<=buttonRect.y+buttonRect.height,'Spinner fits inside transaction button');
-  await page.screenshot({path:'docs/evidence/android/claim-loading-0.2.4.png'});
+  await page.screenshot({path:'docs/evidence/android/claim-loading-0.2.5.png'});
   await page.evaluate(()=>window.fixtureResolveClaim({ok:true,hash:'0x'+'a'.repeat(64),claimedWei:2281836631150000n}));
   await page.getByText('0.00228183663115 mUSD interest confirmed in your wallet.',{exact:true}).waitFor();
   assert.equal(await spinner.count(),0);assert.equal(await claim.isDisabled(),false);
+  await claim.click();
+  await page.evaluate(()=>{
+    window.fixtureClaimPending=true;
+    window.fixtureClaimRetryable=false;
+    window.fixtureResolveClaim({ok:false,error:'Could not check your wallet confirmation yet. Check again before making another claim.'});
+  });
+  await page.getByRole('button',{name:'Check claim confirmation',exact:true}).waitFor();
+  assert.equal(await page.getByText(/Nothing has left your wallet/).count(),0);
+  await page.getByRole('button',{name:'Check claim confirmation',exact:true}).click();
+  await page.evaluate(()=>{
+    window.fixtureClaimRetryable=true;
+    window.fixtureResolveClaim({ok:false,error:'The network has not found this claim yet. You can review the claim again or check later.'});
+  });
+  await page.getByRole('button',{name:'Review claim again',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Check claim confirmation',exact:true}).click();
+  assert.equal(await page.evaluate(()=>window.fixtureClaimOptions.checkOnly),true);
+  await page.evaluate(()=>window.fixtureResolveClaim({ok:false,error:'The claim is still awaiting confirmation.'}));
+  await page.getByRole('button',{name:'Review claim again',exact:true}).click();
+  assert.equal(await page.evaluate(()=>window.fixtureClaimOptions.checkOnly),false);
+  await page.evaluate(()=>{
+    window.fixtureClaimPending=false;
+    window.fixtureClaimRetryable=false;
+    window.fixtureResolveClaim({ok:true,hash:'0x'+'a'.repeat(64),claimedWei:2281836631150000n});
+  });
+  await page.getByText('0.00228183663115 mUSD interest confirmed in your wallet.',{exact:true}).waitFor();
   assert.deepEqual(errors,[]);
-  await writeFile('docs/evidence/android/finance-ui-0.2.4.json',JSON.stringify({createdAt:new Date().toISOString(),layouts,tabClicksNavigate:true,buttonSpinner:{...spinnerStyle,contained:true},smallInterestAndConfirmedPayoutVisible:true,financialActionsMocked:true,signingPerformed:false},null,2)+'\\n');
+  await writeFile('docs/evidence/android/finance-ui-0.2.5.json',JSON.stringify({createdAt:new Date().toISOString(),layouts,tabClicksNavigate:true,buttonSpinner:{...spinnerStyle,contained:true},smallInterestAndConfirmedPayoutVisible:true,postConfirmationRecoveryControls:true,financialActionsMocked:true,signingPerformed:false},null,2)+'\\n');
   console.log(JSON.stringify({floatingNavLayouts:layouts.length,tabClicksNavigate:true,spinnerSize:16,confirmedPayoutVisible:true}));
 } finally {await browser.close();}
 `;

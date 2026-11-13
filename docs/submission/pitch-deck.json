@@ -1,14 +1,14 @@
 {
   "title": "mPocket — Wave 2",
   "track": "Track 2: Access and Distribution for MUSD/MEZO",
-  "updatedAt": "2026-11-06",
+  "updatedAt": "2026-11-13",
   "slides": [
     {
       "layout": "cover",
-      "eyebrow": "WAVE 2 · ANDROID 0.2.4",
+      "eyebrow": "WAVE 2 · ANDROID 0.2.5",
       "title": "Bitcoin-backed money.\nEveryday use.",
-      "intro": "Pay people and merchants. Borrow against BTC. Manage Mezo assets from one wallet.",
-      "image": "docs/evidence/android/floating-nav-0.2.4-light.png",
+      "intro": "Borrow against BTC. Pay people and merchants in mUSD. Manage Mezo assets from one wallet.",
+      "image": "docs/evidence/android/floating-nav-0.2.5-light.png",
       "caption": "App interface · illustrative account and balances",
       "tags": [
         "Mezo Testnet",
@@ -61,7 +61,7 @@
         },
         {
           "title": "Wealth",
-          "body": "Save mUSD, manage MEZO locks, add or remove liquidity, and claim pool fees.",
+          "body": "Save mUSD, manage BTC locks, add or remove liquidity, and claim pool fees.",
           "accent": "dark"
         }
       ],
@@ -95,9 +95,9 @@
       "layout": "screen",
       "eyebrow": "05 / CONTINUED USE",
       "title": "A checklist built around real activity.",
-      "intro": "After the welcome bonus, weekly tasks give users a clear next action. Completion comes from confirmed activity and qualifying referrals.",
+      "intro": "Weekly tasks give users a clear next action from their first visit. Completion comes from confirmed activity and qualifying referrals.",
       "image": "docs/evidence/android/weekly-tasks.png",
-      "caption": "Rewards interface · fixture completion states",
+      "caption": "Weekly tasks · fixture completion states",
       "tasks": [
         "Send mUSD to 5 different friends",
         "Invite 3 new friends",
@@ -105,10 +105,10 @@
         "Repay a loan",
         "Add liquidity",
         "Swap mUSD",
-        "Lock MEZO"
+        "Lock BTC"
       ],
       "note": "Tasks reset weekly. The checklist does not promise a separate weekly token payout.",
-      "footer": "Welcome campaign: first 20-MEZO lock claim verified, including NFT ownership and repeat-claim refusal."
+      "footer": "Starting funds come from the existing testnet faucet. The welcome reward has ended."
     },
     {
       "layout": "finance",
@@ -155,8 +155,8 @@
           "accent": "yellow"
         },
         {
-          "title": "MEZO locks",
-          "body": "Create, top up, extend and withdraw eligible locks. Permanent-lock exit starts a 208-week countdown.",
+          "title": "BTC locks",
+          "body": "Create, top up, extend and withdraw veBTC positions. Testnet maximum: 30 days, rounded weekly. Previous MEZO positions remain manageable.",
           "accent": "purple"
         },
         {
@@ -179,16 +179,16 @@
       ],
       "metrics": [
         {
-          "value": "145",
-          "label": "Finance / payment tests"
+          "value": "257",
+          "label": "Automated checks passed"
         },
         {
           "value": "29",
           "label": "App screens at 3 widths"
         },
         {
-          "value": "253",
-          "label": "Packaged assets byte-checked"
+          "value": "2",
+          "label": "Verified Savings payouts"
         }
       ],
       "cards": [
@@ -198,10 +198,10 @@
         },
         {
           "title": "Account consistency",
-          "body": "Balance reads and signing clients follow the session wallet on Mezo. Position caches separate accounts; unresolved claim hashes remain saved."
+          "body": "Reads and signing follow the session wallet on Mezo. Claims save a hash or nonce after an uncertain wallet response and recover the actual payout."
         }
       ],
-      "footer": "Android 0.2.4 build, lint, certificate, alignment and live APK checks passed. Device account flows remain unverified."
+      "footer": "Android 0.2.5 validation covers build, lint, certificate, alignment and APK assets. Physical device/account flows remain unverified."
     },
     {
       "layout": "business",
@@ -227,21 +227,21 @@
     },
     {
       "layout": "next",
-      "eyebrow": "10 / NEXT MILESTONE",
-      "title": "The product is live.\nNow prove repeat use.",
-      "intro": "Recruit independent merchant customers, observe their first payment and fulfillment, then measure whether they come back.",
+      "eyebrow": "10 / ROADMAP",
+      "title": "Pilot. Measure.\nPrepare for Mainnet.",
+      "intro": "Three planned milestones after the buildathon, starting with independent merchant customers and repeat use.",
       "cards": [
         {
-          "title": "Pilot",
-          "body": "Start with one merchant and two independent customers. These are planning targets."
+          "title": "Nov 16–30, 2026",
+          "body": "Pilot one merchant and two independent customers. Capture fulfillment, feedback, repeat use and Android account acceptance."
         },
         {
-          "title": "Measure",
-          "body": "Settled invoices, distinct payers, fulfillment, friction and returning users."
+          "title": "Dec 1–15, 2026",
+          "body": "Improve merchant reporting and reconciliation. Measure gas, operations and support costs to validate a disclosed fee."
         },
         {
-          "title": "Deliver",
-          "body": "Record the Android/account journey and customer feedback. Keep test payments separate from adoption."
+          "title": "Dec 16, 2026–Jan 15, 2027",
+          "body": "Prepare a limited Mezo Mainnet pilot. Use verified recovery, protocol integrations and merchant feedback to set launch scope."
         }
       ],
       "links": [
@@ -250,15 +250,15 @@
           "url": "https://mpocket.tech/home"
         },
         {
-          "label": "Android 0.2.4",
-          "url": "https://mpocket.tech/downloads/mpocket-0.2.4.apk"
+          "label": "Android 0.2.5",
+          "url": "https://mpocket.tech/downloads/mpocket-0.2.5.apk"
         },
         {
           "label": "Source + evidence",
           "url": "https://github.com/greyw0rks/musd-pocket"
         }
       ],
-      "footer": "Built by greyw0rks · All financial evidence is testnet. No independent adoption or revenue is claimed."
+      "footer": "Planned milestones · Built by greyw0rks · All financial evidence is testnet. Independent adoption and revenue remain unproved."
     }
   ]
 }

@@ -9,6 +9,11 @@ const f = vi.hoisted(() => ({
   writeContract: vi.fn(),
   getChainId: vi.fn(),
   getAddresses: vi.fn(),
+  estimateGas: vi.fn(),
+  getGasPrice: vi.fn(),
+  getBalance: vi.fn(),
+  getTransactionCount: vi.fn(),
+  getBlock: vi.fn(),
 }));
 vi.mock("./musd", async (original) => ({
   ...await original<typeof import("./musd")>(),
@@ -16,7 +21,7 @@ vi.mock("./musd", async (original) => ({
 }));
 import { activeEarn, getEarnPosition, readClaimableYield } from "./earn";
 import { createEarnActions } from "./earn-actions";
-import { pendingClaim, rememberClaim } from "./claim-journal";
+import { pendingClaim, pendingClaimAttempt, rememberClaim, rememberClaimAttempt } from "./claim-journal";
 import { encodeEventTopics, encodeAbiParameters, type WalletClient } from "viem";
 import { MUSD_ABI } from "./musd";
 import { MUSD_ADDRESS } from "./config";
@@ -44,6 +49,11 @@ beforeEach(() => {
   vi.resetAllMocks();
   f.getChainId.mockResolvedValue(31611);
   f.getAddresses.mockResolvedValue([wallet]);
+  f.estimateGas.mockResolvedValue(100000n);
+  f.getGasPrice.mockResolvedValue(10n);
+  f.getBalance.mockResolvedValue(unit);
+  f.getTransactionCount.mockResolvedValue(7);
+  f.getBlock.mockResolvedValue({ number: 55n, transactions: [{ from: wallet, to: activeEarn.savingsVault, input: "0x406cf229", value: 0n, hash, nonce: 7 }] });
   f.getTransaction.mockResolvedValue({ from: wallet, to: activeEarn.savingsVault, input: "0x406cf229", value: 0n });
   rememberClaim(wallet, null);
   f.readContract.mockImplementation(
@@ -66,6 +76,96 @@ beforeEach(() => {
   f.waitForTransactionReceipt.mockResolvedValue(claimReceipt());
 });
 describe("Savings accounting and claim recovery", () => {
+  it("prepares BTC gas and saves recovery before the wallet prompt", async () => {
+    f.writeContract.mockImplementation(async request => {
+      expect(request).toMatchObject({ gas: 130000n, gasPrice: 10n, nonce: 7, type: "legacy", chain: { id: 31611 } });
+      expect(pendingClaimAttempt(wallet)).toMatchObject({ nonce: 7, retryable: false });
+      return hash;
+    });
+    expect(await actions.claim()).toMatchObject({ ok: true });
+    expect(pendingClaimAttempt(wallet)).toBeNull();
+  });
+  it("refuses the prompt when the fee estimate or BTC balance is unavailable", async () => {
+    f.estimateGas.mockRejectedValue(new Error("RPC unavailable"));
+    expect(await actions.claim()).toMatchObject({ ok: false, error: expect.stringContaining("Nothing was signed") });
+    expect(f.writeContract).not.toHaveBeenCalled();
+    expect(pendingClaimAttempt(wallet)).toBeNull();
+    f.estimateGas.mockResolvedValue(100000n);
+    f.getBalance.mockResolvedValue(0n);
+    expect(await actions.claim()).toMatchObject({ ok: false, error: expect.stringContaining("enough BTC") });
+    expect(f.writeContract).not.toHaveBeenCalled();
+  });
+  it("recovers a post-confirmation error that contains a transaction hash", async () => {
+    f.writeContract.mockRejectedValue(Object.assign(new Error("Provider lost confirmation"), { cause: { transactionHash: hash } }));
+    f.getTransactionReceipt.mockResolvedValue(claimReceipt());
+    expect(await actions.claim()).toEqual({ ok: true, hash, claimedWei: 199n * unit });
+    expect(f.writeContract).toHaveBeenCalledTimes(1);
+  });
+  it("locates a mined claim by its reserved nonce when the wallet loses the hash", async () => {
+    f.writeContract.mockImplementation(async () => {
+      f.getTransactionCount.mockResolvedValue(8);
+      throw new Error("Provider response timed out after confirmation");
+    });
+    f.getTransactionReceipt.mockResolvedValue(claimReceipt());
+    expect(await actions.claim()).toEqual({ ok: true, hash, claimedWei: 199n * unit });
+    expect(f.getBlock).toHaveBeenCalledWith({ blockNumber: 55n, includeTransactions: true });
+    expect(f.writeContract).toHaveBeenCalledTimes(1);
+  });
+  it("keeps an unknown wallet submission and checks it without asking for another signature", async () => {
+    f.writeContract.mockImplementation(async () => {
+      f.getTransactionCount.mockRejectedValue(new Error("RPC offline"));
+      throw new Error("Provider response unavailable");
+    });
+    expect(await actions.claim()).toMatchObject({ ok: false, error: expect.stringContaining("confirmation") });
+    expect(pendingClaimAttempt(wallet)).toMatchObject({ nonce: 7, retryable: false });
+    expect(actions.hasPendingClaim()).toBe(true);
+    expect(await actions.claim()).toMatchObject({ ok: false });
+    expect(f.writeContract).toHaveBeenCalledTimes(1);
+  });
+  it("an explicit retry reuses the original nonce so only one claim can execute", async () => {
+    f.writeContract.mockRejectedValueOnce(new Error("Provider did not return a hash"));
+    expect(await actions.claim()).toMatchObject({ ok: false });
+    expect(actions.canRetryClaim()).toBe(true);
+    expect(await actions.claim({ checkOnly: true })).toMatchObject({ ok: false });
+    expect(f.writeContract).toHaveBeenCalledTimes(1);
+    expect(await actions.claim()).toMatchObject({ ok: true });
+    expect(f.writeContract.mock.calls.map(([request]) => request.nonce)).toEqual([7, 7]);
+  });
+  it("preserves the original uncertain submission when the user cancels a retry", async () => {
+    rememberClaimAttempt(wallet, { nonce: 7, fromBlock: "55", retryable: true });
+    f.writeContract.mockRejectedValue({ cause: { code: 4001 } });
+    expect(await actions.claim()).toMatchObject({ ok: false, error: expect.stringContaining("original claim") });
+    expect(pendingClaimAttempt(wallet)).not.toBeNull();
+  });
+  it("recovers the original when it confirms before an explicit retry", async () => {
+    rememberClaimAttempt(wallet, { nonce: 7, fromBlock: "55", retryable: true });
+    f.getTransactionCount.mockResolvedValue(8);
+    f.readContract.mockResolvedValue(0n);
+    f.getTransactionReceipt.mockResolvedValue(claimReceipt());
+    expect(await actions.claim()).toEqual({ ok: true, hash, claimedWei: 199n * unit });
+    expect(pendingClaimAttempt(wallet)).toBeNull();
+    expect(f.writeContract).not.toHaveBeenCalled();
+  });
+  it("does not reuse retry permission when confirmation cannot be checked", async () => {
+    rememberClaimAttempt(wallet, { nonce: 7, fromBlock: "55", retryable: true });
+    f.getTransactionCount.mockRejectedValue(new Error("RPC unavailable"));
+    expect(await actions.claim()).toMatchObject({ ok: false, error: expect.stringContaining("Could not check") });
+    expect(pendingClaimAttempt(wallet)).not.toBeNull();
+    expect(f.writeContract).not.toHaveBeenCalled();
+  });
+  it("clears a newly declined wallet prompt", async () => {
+    f.writeContract.mockRejectedValue({ cause: { code: 4001 } });
+    expect(await actions.claim()).toMatchObject({ ok: false, error: "You declined. Nothing was signed." });
+    expect(pendingClaimAttempt(wallet)).toBeNull();
+  });
+  it("does not mistake a different transaction at the reserved nonce for a claim", async () => {
+    rememberClaimAttempt(wallet, { nonce: 7, fromBlock: "55", retryable: false });
+    f.getTransactionCount.mockResolvedValue(8);
+    f.getBlock.mockResolvedValue({ transactions: [{ from: wallet, to: MUSD_ADDRESS, input: "0x", value: 0n, hash, nonce: 7 }] });
+    expect(await actions.claim()).toMatchObject({ ok: false, error: expect.stringContaining("Another wallet transaction") });
+    expect(pendingClaimAttempt(wallet)).toBeNull();
+    expect(f.writeContract).not.toHaveBeenCalled();
+  });
   it("includes uncheckpointed interest even when stored yield is zero", async () => {
     expect(await readClaimableYield(wallet)).toBe(200n * unit);
     expect(

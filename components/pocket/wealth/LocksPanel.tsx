@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { formatUnits, parseUnits, type Address } from "viem";
+import { parseUnits, type Address } from "viem";
 import { ArrowRight, LockKeyhole, Clock3, CalendarDays } from "lucide-react";
 import { useMezoLocks } from "@/hooks/use-mezo-locks";
 import { useWealthAction } from "@/hooks/use-wealth-action";
@@ -9,6 +9,7 @@ import { useSession } from "@/lib/auth/session";
 import { timeToUnlock } from "@/lib/mezo/locks";
 import { ACTIVE_ENV, CHAIN_ID } from "@/lib/mezo/config";
 import { formatTokenBalance } from "@/lib/mezo/wealth/format";
+import { LOCK_CONTRACTS, type LockAsset } from "@/lib/mezo/wealth/contracts";
 import {
   quoteLock,
   readLockAccount,
@@ -22,15 +23,17 @@ import {
 } from "@/components/pocket/ui/Finance";
 import { ActionReview } from "./ActionReview";
 
-const DURATIONS = [1, 2, 4, 13, 26, 52, 104, 208];
+const DURATIONS = [1, 2, 3, 4, 13, 26, 52, 104, 208];
 function Duration({
   value,
   onChange,
   disabled,
+  asset,
 }: {
   value: number;
   onChange: (value: number) => void;
   disabled: boolean;
+  asset: LockAsset;
 }) {
   return (
     <FinanceSelect
@@ -40,7 +43,7 @@ function Duration({
       disabled={disabled}
       onChange={(event) => onChange(Number(event.target.value))}
     >
-      {DURATIONS.map((weeks) => (
+      {DURATIONS.filter(weeks => BigInt(weeks) * 604800n <= LOCK_CONTRACTS[asset].maxLockTime).map((weeks) => (
         <option key={weeks} value={weeks}>
           {weeks} {weeks === 1 ? "week" : "weeks"}
         </option>
@@ -67,6 +70,9 @@ export function LocksPanel({ open }: { open: boolean }) {
   );
 }
 function WalletLocks({ open, owner }: { open: boolean; owner: Address }) {
+  const [asset, setAsset] = useState<LockAsset>("btc");
+  const config = LOCK_CONTRACTS[asset];
+  const symbol = config.asset.symbol;
   const [page, setPage] = useState(0);
   const [now, setNow] = useState(() => Date.now());
   const [amount, setAmount] = useState("");
@@ -74,11 +80,11 @@ function WalletLocks({ open, owner }: { open: boolean; owner: Address }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [mode, setMode] = useState<"increase" | "extend">("increase");
   const [extra, setExtra] = useState("");
-  const [extendWeeks, setExtendWeeks] = useState(13);
-  const query = useMezoLocks(open, page);
+  const [extendWeeks, setExtendWeeks] = useState(4);
+  const query = useMezoLocks(open, page, asset);
   const account = useQuery({
-    queryKey: ["mezo-lock-account", CHAIN_ID, owner],
-    queryFn: () => readLockAccount(owner),
+    queryKey: ["mezo-lock-account", CHAIN_ID, config.escrow, owner],
+    queryFn: () => readLockAccount(owner, asset),
     enabled: open,
     refetchInterval: open ? 15000 : false,
   });
@@ -89,53 +95,62 @@ function WalletLocks({ open, owner }: { open: boolean; owner: Address }) {
     return () => window.clearInterval(timer);
   }, [open]);
   const review = (intent: LockIntent) =>
-    void action.review(() => quoteLock(owner, intent));
+    void action.review(() => quoteLock(owner, intent, asset));
   return (
-    <section className="pk-locks" aria-label="Your MEZO locks">
+    <section className="pk-locks" aria-label="Your locks">
+      <FinanceTabs
+        label="Lock asset"
+        value={asset}
+        disabled={action.busy}
+        options={[{ value: "btc", label: "BTC" }, { value: "mezo", label: "Existing MEZO" }]}
+        onChange={(value) => {
+          setAsset(value);
+          setPage(0);
+          setSelected(null);
+          setAmount("");
+          setExtra("");
+          setExtendWeeks(value === "btc" ? 4 : 13);
+        }}
+      />
       <div className="pk-finance-hero pk-finance-hero--soft pk-lock-wallet">
         <div className="pk-finance-hero-top">
-          <span className="pk-eyebrow">Available to lock</span>
+          <span className="pk-eyebrow">{asset === "btc" ? "Available to lock" : "In your wallet"}</span>
           <LockKeyhole size={22} aria-hidden="true" />
         </div>
         <p className="pk-finance-value">
           {account.data ? formatTokenBalance(account.data.balance, 18) : "—"}{" "}
-          <small>MEZO</small>
+          <small>{symbol}</small>
         </p>
         <p className="pk-m">
           {account.isError
-            ? "Could not read your MEZO balance"
+            ? `Could not read your ${symbol} balance`
             : account.data
               ? "In your Pocket wallet"
               : "Reading your wallet…"}
         </p>
       </div>
-      <div className="pk-finance-workspace">
+      {asset === "btc" ? <div className="pk-finance-workspace">
         <div className="pk-lock-form-heading">
           <h3>Create a lock</h3>
-          <span className="pk-pill">veMEZO</span>
+          <span className="pk-pill">veBTC</span>
         </div>
         <AmountField
-          symbol="MEZO"
-          label="MEZO amount"
+          symbol="BTC"
+          label="BTC amount"
           inputMode="decimal"
           value={amount}
           disabled={action.busy}
           onChange={(event) => setAmount(event.target.value)}
-          placeholder="0.00"
-          onMax={
-            account.data && account.data.balance > 0n
-              ? () => setAmount(formatUnits(account.data.balance, 18))
-              : undefined
-          }
+          placeholder="0.0000"
           hint={
             account.data
-              ? `${formatTokenBalance(account.data.balance, 18)} MEZO available`
+              ? `${formatTokenBalance(account.data.balance, 18)} BTC available. Keep BTC for network fees.`
               : account.isError
-                ? "Could not read your MEZO balance"
+                ? "Could not read your BTC balance"
                 : "Reading balance…"
           }
         />
-        <Duration value={weeks} onChange={setWeeks} disabled={action.busy} />
+        <Duration value={weeks} onChange={setWeeks} disabled={action.busy} asset={asset} />
         <p className="pk-finance-note">
           Unlock dates round down to a weekly boundary. Review the exact date
           before signing.
@@ -149,7 +164,9 @@ function WalletLocks({ open, owner }: { open: boolean; owner: Address }) {
           <span>Review new lock</span>
           <ArrowRight size={18} aria-hidden="true" />
         </Button>
-      </div>
+      </div> : <p className="pk-m mt-4">
+        Manage your previous MEZO positions here. New lock deposits use BTC.
+      </p>}
       <ActionReview action={action} />
       <div className="pk-lock-section-heading">
         <h3>Your positions</h3>
@@ -199,7 +216,7 @@ function WalletLocks({ open, owner }: { open: boolean; owner: Address }) {
               </div>
               <p className="pk-lock-amount">
                 {formatTokenBalance(parseUnits(lock.amount, 18), 18)}{" "}
-                <small>MEZO</small>
+                <small>{symbol}</small>
               </p>
               <p className="pk-lock-countdown">
                 <Clock3 size={15} aria-hidden="true" />
@@ -215,11 +232,11 @@ function WalletLocks({ open, owner }: { open: boolean; owner: Address }) {
                 </p>
               ) : (
                 <p className="pk-lock-date">
-                  Start an unlock to begin the 208-week countdown.
+                  {asset === "btc" ? "Start an unlock to set a withdrawal date up to 30 days away." : "Start an unlock to begin the 208-week countdown."}
                 </p>
               )}
               <div className="pk-lock-actions">
-                {!expired ? (
+                {!expired && (asset === "btc" || !lock.permanent) ? (
                   <Button
                     className="pk-finance-secondary"
                     variant="secondary"
@@ -229,7 +246,7 @@ function WalletLocks({ open, owner }: { open: boolean; owner: Address }) {
                       setSelected(
                         selected === lock.tokenId ? null : lock.tokenId,
                       );
-                      setMode("increase");
+                      setMode(asset === "btc" ? "increase" : "extend");
                       setExtra("");
                     }}
                   >
@@ -269,25 +286,25 @@ function WalletLocks({ open, owner }: { open: boolean; owner: Address }) {
                     disabled={action.busy}
                     options={
                       lock.permanent
-                        ? [{ value: "increase", label: "Add MEZO" }]
-                        : [
-                            { value: "increase", label: "Add MEZO" },
+                        ? asset === "btc" ? [{ value: "increase", label: "Add BTC" }] : []
+                        : asset === "btc" ? [
+                            { value: "increase", label: "Add BTC" },
                             { value: "extend", label: "Extend" },
-                          ]
+                          ] : [{ value: "extend", label: "Extend" }]
                     }
                     onChange={setMode}
                   />
                   {mode === "increase" ? (
                     <AmountField
-                      symbol="MEZO"
-                      label={`MEZO to add to #${lock.tokenId}`}
+                      symbol="BTC"
+                      label={`BTC to add to #${lock.tokenId}`}
                       inputMode="decimal"
                       value={extra}
                       disabled={action.busy}
                       onChange={(event) => setExtra(event.target.value)}
                       hint={
                         account.data
-                          ? `${formatTokenBalance(account.data.balance, 18)} MEZO available`
+                          ? `${formatTokenBalance(account.data.balance, 18)} BTC available. Keep BTC for fees.`
                           : "Reading balance…"
                       }
                     />
@@ -296,6 +313,7 @@ function WalletLocks({ open, owner }: { open: boolean; owner: Address }) {
                       value={extendWeeks}
                       onChange={setExtendWeeks}
                       disabled={action.busy}
+                      asset={asset}
                     />
                   )}
                   <Button
@@ -319,7 +337,7 @@ function WalletLocks({ open, owner }: { open: boolean; owner: Address }) {
                     }
                   >
                     <span>
-                      Review {mode === "increase" ? "added MEZO" : "extension"}
+                      Review {mode === "increase" ? "added BTC" : "extension"}
                     </span>
                     <ArrowRight size={18} aria-hidden="true" />
                   </Button>

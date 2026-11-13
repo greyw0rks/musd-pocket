@@ -3,7 +3,7 @@ import { encodeFunctionData, encodeEventTopics, encodeAbiParameters, erc20Abi, z
 import { classifyTaskTransaction, isTaskCandidate, taskProgress, weekWindow } from "./weekly";
 import { MUSD_ADDRESS, activeBorrow } from "@/lib/mezo/config";
 import { BORROWER_OPERATIONS_ABI } from "@/lib/mezo/borrow-write";
-import { ROUTER, ROUTER_ABI, FACTORY, POOLS } from "@/lib/mezo/wealth/contracts";
+import { BTC_ESCROW, BTC_ASSET, LOCK_CONTRACTS, LOCK_ABI, ROUTER, ROUTER_ABI, FACTORY, POOLS } from "@/lib/mezo/wealth/contracts";
 
 const owner = "0x0000000000000000000000000000000000000011";
 const friend = "0x0000000000000000000000000000000000000022";
@@ -38,6 +38,18 @@ describe("weekly checklist", () => {
 });
 
 describe("receipt-verified task classification", () => {
+  it("requires an exact BTC deposit at veBTC and excludes previous MEZO locks", () => {
+    const input = encodeFunctionData({ abi: LOCK_ABI, functionName: "createLock", args: [10n, 604800n] });
+    const deposit = { ...send, to: BTC_ESCROW, input, logs: [transfer(owner, BTC_ESCROW, 10n, BTC_ASSET.address)] };
+    expect(isTaskCandidate(BTC_ESCROW, input)).toBe(true);
+    expect(classifyTaskTransaction(owner, deposit)?.kind).toBe("btc-lock");
+    expect(classifyTaskTransaction(owner, { ...deposit, logs: [transfer(owner, BTC_ESCROW, 9n, BTC_ASSET.address)] })).toBeNull();
+    const old = LOCK_CONTRACTS.mezo;
+    expect(isTaskCandidate(old.escrow, input)).toBe(false);
+    expect(classifyTaskTransaction(owner, { ...deposit, to: old.escrow, logs: [transfer(owner, old.escrow, 10n, old.asset.address)] })).toBeNull();
+    const now = new Date("2026-11-12T12:00:00Z");
+    expect(taskProgress([{ kind: "lock", counterparty: null, confirmedAt: now }], 0, now).find(task => task.id === "btc-lock")?.complete).toBe(false);
+  });
   it("skips approvals and unrelated calls before receipt lookup, retaining eligible transfers", () => {
     expect(isTaskCandidate(MUSD_ADDRESS, send.input)).toBe(true);
     expect(isTaskCandidate(MUSD_ADDRESS, encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [friend, 10n] }))).toBe(false);

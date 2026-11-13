@@ -1,7 +1,7 @@
 import { decodeEventLog, decodeFunctionData, erc20Abi, zeroAddress, type Address, type Hex } from "viem";
 import { CHAIN_ID, MUSD_ADDRESS, activeBorrow } from "@/lib/mezo/config";
 import { BORROWER_OPERATIONS_ABI } from "@/lib/mezo/borrow-write";
-import { ESCROW, FACTORY, LOCK_ABI, MEZO_ASSET, POOLS, ROUTER, ROUTER_ABI } from "@/lib/mezo/wealth/contracts";
+import { BTC_ESCROW, BTC_ASSET, FACTORY, LOCK_ABI, POOLS, ROUTER, ROUTER_ABI } from "@/lib/mezo/wealth/contracts";
 
 export const WEEKLY_TASKS = [
   { id: "send", title: "Send mUSD to 5 friends", detail: "Five different wallets, with confirmed transfers.", target: 5 },
@@ -10,7 +10,7 @@ export const WEEKLY_TASKS = [
   { id: "repay", title: "Repay mUSD", detail: "Make a repayment or close your loan.", target: 1 },
   { id: "pool", title: "Add to a pool", detail: "Provide liquidity to a supported mUSD pool.", target: 1 },
   { id: "swap", title: "Swap mUSD", detail: "Complete a swap into or out of mUSD.", target: 1 },
-  { id: "lock", title: "Lock MEZO", detail: "Create a lock or add MEZO to your position.", target: 1 },
+  { id: "btc-lock", title: "Lock BTC", detail: "Create a BTC lock or add BTC to your position.", target: 1 },
 ] as const;
 export type WeeklyTaskId = (typeof WEEKLY_TASKS)[number]["id"];
 export type TaskActivity = { kind: string; counterparty: string | null; confirmedAt: Date };
@@ -52,7 +52,7 @@ export function isTaskCandidate(to: string, input: Hex): boolean {
       return ["openTrove", "repayMUSD", "closeTrove"].includes(decodeFunctionData({ abi: BORROWER_OPERATIONS_ABI, data: input }).functionName);
     if (CHAIN_ID === 31611 && same(to, ROUTER))
       return ["swapExactTokensForTokens", "addLiquidity"].includes(decodeFunctionData({ abi: ROUTER_ABI, data: input }).functionName);
-    if (CHAIN_ID === 31611 && same(to, ESCROW))
+    if (CHAIN_ID === 31611 && same(to, BTC_ESCROW))
       return ["createLock", "increaseAmount"].includes(decodeFunctionData({ abi: LOCK_ABI, data: input }).functionName);
   } catch { /* Unsupported calls cannot complete a checklist item. */ }
   return false;
@@ -104,10 +104,12 @@ export function classifyTaskTransaction(owner: string, evidence: Evidence): { ki
           return { kind: "pool", counterparty: null };
       }
     }
-    if (CHAIN_ID === 31611 && same(evidence.to, ESCROW)) {
+    if (CHAIN_ID === 31611 && same(evidence.to, BTC_ESCROW)) {
       const call = decodeFunctionData({ abi: LOCK_ABI, data: evidence.input });
-      if ((call.functionName === "createLock" || call.functionName === "increaseAmount") && transferred(MEZO_ASSET.address, owner, ESCROW) > 0n)
-        return { kind: "lock", counterparty: null };
+      const amount = call.functionName === "createLock" ? call.args[0]
+        : call.functionName === "increaseAmount" ? call.args[1] : 0n;
+      if (amount > 0n && transferred(BTC_ASSET.address, owner, BTC_ESCROW) === amount)
+        return { kind: "btc-lock", counterparty: null };
     }
   } catch { /* Malformed/unsupported call is not proof of a task. */ }
   return null;
